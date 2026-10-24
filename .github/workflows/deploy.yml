@@ -35,14 +35,17 @@ jobs:
 
       - name: Deploy to Cloud Run (source build, Vertex AI via ADC — no API key)
         run: |
-          gcloud run deploy mehfil --source . \
+          gcloud run deploy festiplan --source . \
             --project "${{ vars.GCP_PROJECT_ID }}" --region us-central1 \
             --allow-unauthenticated --quiet \
-            --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLOUD_LOCATION=global,FIRESTORE_DATABASE=mehfil,GEMINI_MODEL=${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}"
+            --memory 1Gi --cpu 1 --concurrency 40 --timeout 60 --min-instances 0 --max-instances 5 \
+            --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLOUD_LOCATION=global,FIRESTORE_DATABASE=festiplan,GEMINI_MODEL=${{ vars.GEMINI_MODEL || 'gemini-3.5-flash' }}"
 
       - name: Smoke test the live service
         run: |
-          URL=$(gcloud run services describe mehfil --project "${{ vars.GCP_PROJECT_ID }}" --region us-central1 --format='value(status.url)')
+          URL=$(gcloud run services describe festiplan --project "${{ vars.GCP_PROJECT_ID }}" --region us-central1 --format='value(status.url)')
           HEALTH=$(curl -fsS --retry 5 --retry-delay 3 "$URL/api/health")
           echo "$HEALTH"
+          echo "$HEALTH" | grep -q '"status":"ok"'
+          curl -fsS -o /dev/null "$URL/"
           { echo "### Live: $URL"; echo '```json'; echo "$HEALTH"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

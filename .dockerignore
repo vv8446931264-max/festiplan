@@ -1,0 +1,14 @@
+node_modules
+.next
+coverage
+test-results
+playwright-report
+.git
+.github
+.env*
+!.env.example
+e2e
+tests
+docs
+*.md
+scripts/poster-harness

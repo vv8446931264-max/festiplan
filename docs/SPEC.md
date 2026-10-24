@@ -1,6 +1,6 @@
-# Mehfil — Product Spec
+# FestiPlan — Product Spec
 
-> *Mehfil* (महफ़िल): a gathering held for joy. **Made for moments. Built for budgets.**
+> **Made for moments. Built for budgets.**
 
 ## 1. Problem statement (verbatim)
 
@@ -12,7 +12,7 @@
 
 | Statement phrase | Feature | Where the logic lives |
 |---|---|---|
-| GenAI-powered planning assistant | Gemini turns a free-text brief into a structured plan; "Ask Mehfil" refines it in conversation | `src/lib/ai/plan.ts`, `src/lib/ai/refine.ts` |
+| GenAI-powered planning assistant | Gemini turns a free-text brief into a structured plan; "Ask FestiPlan" refines it in conversation | `src/lib/ai/plan.ts`, `src/lib/ai/refine.ts` |
 | weddings | Wedding mode: multi-function events (haldi, mehendi, sangeet, pheras, reception), family roles, muhurat-aware date notes | prompt + `templates/wedding` |
 | birthdays | Birthday mode: age-aware themes, kids/adult splits, return gifts | prompt + `templates/birthday` |
 | community events | Community mode: festivals, society melas, fundraisers, volunteer roles, permits, sponsor tiers | prompt + `templates/community` |
@@ -81,7 +81,7 @@ type AiPlan = {
 };
 
 /** Computed by code from AiPlan + PlanInput. Persisted in Firestore `plans/{id}` in the named
- *  Native-mode database `FIRESTORE_DATABASE` (= "mehfil"): `new Firestore({ databaseId })`. */
+ *  Native-mode database `FIRESTORE_DATABASE` (= "festiplan"): `new Firestore({ databaseId })`. */
 type Plan = {
   id: string; input: PlanInput; ai: AiPlan;
   budget: Allocation[]; timeline: ScheduledTask[];
@@ -125,7 +125,7 @@ type ScheduledTask = { id: string; title: string; category: string; start: strin
 - **vendors** — Gemini with the `googleMaps` grounding tool for `{category} in {city}`.
   Render **only** places from `groundingMetadata.groundingChunks` (title + Maps URI).
   No chunks → a plain Google Maps search link. Cached 24 h per (city, category).
-- **refine** — "Ask Mehfil": streaming answer grounded in the stored plan JSON
+- **refine** — "Ask FestiPlan": streaming answer grounded in the stored plan JSON
   (e.g. "make it zero-waste", "cut 20% — where?"). Suggestions only; the user
   applies budget changes with the sliders so numbers stay deterministic.
 
@@ -135,7 +135,7 @@ type ScheduledTask = { id: string; title: string; category: string; start: strin
 |---|---|---|---|
 | `/api/plan` | POST | generate + store plan, returns `{ plan, editKey }` | 5/min/IP, 8 KB cap, Zod strict, same-origin |
 | `/api/plan/[id]` | PATCH | checklist state, actuals, locked/adjusted allocations | `x-edit-key` (timing-safe hash compare), Zod strict |
-| `/api/plan/[id]/refine` | POST | streaming Ask Mehfil | 10/min/IP, 2 KB cap |
+| `/api/plan/[id]/refine` | POST | streaming Ask FestiPlan | 10/min/IP, 2 KB cap |
 | `/api/vendors` | POST | Maps-grounded vendors for a category | 10/min/IP, cache 24 h |
 | `/plan/[id]/calendar.ics` | GET | timeline export | read-only |
 | `/api/health` | GET | `{ status, ai: "vertex"|"gemini-api"|"template", store: "firestore"|"memory", model }` | none |

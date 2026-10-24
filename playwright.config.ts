@@ -1,0 +1,37 @@
+import { defineConfig, devices } from "@playwright/test";
+
+const PORT = Number(process.env.E2E_PORT ?? 3100);
+
+/**
+ * End-to-end tests run against a production build in template mode (no AI
+ * credentials, in-memory store) on a desktop and a mobile profile.
+ */
+export default defineConfig({
+  testDir: "e2e",
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 1 : 0,
+  workers: process.env.CI ? 2 : 3,
+  reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
+  timeout: 90_000,
+  use: {
+    baseURL: `http://localhost:${PORT}`,
+    trace: "retain-on-failure",
+  },
+  projects: [
+    { name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 } } },
+    { name: "mobile", use: { ...devices["Pixel 7"] } },
+  ],
+  webServer: {
+    command: `npm run build && npx next start -p ${PORT}`,
+    url: `http://localhost:${PORT}/api/health`,
+    reuseExistingServer: !process.env.CI,
+    timeout: 300_000,
+    env: {
+      RATE_LIMIT_SCALE: "50",
+      GEMINI_API_KEY: "",
+      GOOGLE_GENAI_USE_VERTEXAI: "",
+      GOOGLE_CLOUD_PROJECT: "",
+    },
+  },
+});

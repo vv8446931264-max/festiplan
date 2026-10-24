@@ -1,4 +1,4 @@
-# Mehfil — rules for anyone (human or agent) working in this repo
+# FestiPlan — rules for anyone (human or agent) working in this repo
 
 GenAI celebration & event planner for weddings, birthdays and community events:
 budgets, timelines, vendor checklists, personalized ideas.

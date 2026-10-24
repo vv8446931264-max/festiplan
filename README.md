@@ -1,4 +1,4 @@
-# Mehfil
+# FestiPlan
 
 GenAI celebration & event planner — weddings, birthdays and community events with
 budgets, timelines, vendor checklists and personalized ideas.

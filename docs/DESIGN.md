@@ -1,4 +1,4 @@
-# Mehfil — Design System
+# FestiPlan — Design System
 
 Direction: **an editorial dusk celebration** — the craft of a WebGL studio site
 (reference: oryzo.ai by Lusion) applied to a planning tool that must stay fast,
@@ -67,7 +67,7 @@ label so colour is never the only signal.
 
 | # | Chapter | DOM | Canvas |
 |---|---|---|---|
-| 0 | Hero | giant "Mehfil" wordmark, "Made for moments. Built for budgets.", Start planning CTA, scroll cue | lantern field drifts in dusk sky; pointer parallax |
+| 0 | Hero | giant "FestiPlan" wordmark, "Made for moments. Built for budgets.", Start planning CTA, scroll cue | lantern field drifts in dusk sky; pointer parallax |
 | 1 | Manifesto | "It isn't just a checklist." editorial block, serif accents | lanterns drift toward camera |
 | 2 | The brief | three oversized event cards (Wedding / Birthday / Community), demo-preset chips, the form | scene dims and slows (focus) |
 | 3 | The moment | staged progress line while Gemini works | on success: confetti burst (instanced) |

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time Google Cloud setup for Mehfil. Run locally with an Owner account:
+# One-time Google Cloud setup for FestiPlan. Run locally with an Owner account:
 #   bash scripts/gcp-bootstrap.sh <gcp-project-id> [github-owner/repo]
 # Enables APIs, creates Firestore (+ TTL on plans.expireAt), grants the Cloud Run
 # runtime identity Vertex AI + Firestore access, and lets GitHub Actions deploy via
@@ -7,10 +7,10 @@
 set -euo pipefail
 
 PROJECT_ID="${1:?usage: bash scripts/gcp-bootstrap.sh <gcp-project-id> [owner/repo]}"
-REPO="${2:-vv8446931264-max/mehfil}"
+REPO="${2:-vv8446931264-max/festiplan}"
 REGION=us-central1
 POOL=github
-DB=mehfil
+DB=festiplan
 
 # Scope the project to this run only; the global gcloud config is left untouched.
 export CLOUDSDK_CORE_PROJECT="$PROJECT_ID" CLOUDSDK_CORE_DISABLE_PROMPTS=1
@@ -75,5 +75,5 @@ gh variable set GCP_WIF_PROVIDER -R "$REPO" \
 
 echo
 echo "Done. Every green push to main now deploys to Cloud Run."
-echo "Expected live URL: https://mehfil-${PROJECT_NUMBER}.${REGION}.run.app"
+echo "Expected live URL: https://festiplan-${PROJECT_NUMBER}.${REGION}.run.app"
 echo "Put that URL in the cloud environment as LIVE_URL."
