@@ -14,9 +14,14 @@ export default defineConfig({
     setupFiles: ["tests/setup.ts"],
     coverage: {
       provider: "v8",
-      include: ["src/lib/engine/**"],
+      include: ["src/lib/**"],
       reporter: ["text", "json-summary"],
-      thresholds: { lines: 100, branches: 100, functions: 100, statements: 100 },
+      // Glob thresholds apply to each glob's own aggregate: the pure engine stays at 100 %,
+      // and all of src/lib (server, AI, store, security, contracts, client helpers) at ≥ 80 %.
+      thresholds: {
+        "src/lib/engine/**": { lines: 100, branches: 100, functions: 100, statements: 100 },
+        "src/lib/**": { lines: 80, statements: 80, functions: 80, branches: 75 },
+      },
     },
   },
 });

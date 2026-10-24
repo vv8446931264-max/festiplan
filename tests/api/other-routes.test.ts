@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET as health } from "@/app/api/health/route";
 import { POST as createPlanRoute } from "@/app/api/plan/route";
 import { POST as refine } from "@/app/api/plan/[id]/refine/route";
-import { POST as vendors } from "@/app/api/vendors/route";
 import { GET as ics } from "@/app/plan/[id]/calendar.ics/route";
 import { TEMPLATE_ANSWER_PREFIX } from "@/lib/ai/refine";
 import type { PublicPlan } from "@/lib/contracts";
@@ -44,25 +43,6 @@ describe("POST /api/plan/[id]/refine", () => {
       expect(res.status).toBe(200);
     }
     expect((await refine(jsonRequest(`/api/plan/${id}/refine`, { question: "Ideas?" }, { headers }), idCtx(id))).status).toBe(429);
-  });
-});
-
-describe("POST /api/vendors", () => {
-  it("returns a search link when no AI backend is configured", async () => {
-    const res = await vendors(jsonRequest("/api/vendors", { city: "Jaipur", category: "catering", eventType: "wedding" }), noCtx);
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({
-      places: [],
-      searchUrl: "https://www.google.com/maps/search/?api=1&query=Catering%20for%20wedding%20in%20Jaipur",
-      source: "search",
-    });
-  });
-
-  it("validates the query, the 1 KB cap and same-origin", async () => {
-    expect((await vendors(jsonRequest("/api/vendors", { city: "J", category: "catering", eventType: "wedding" }), noCtx)).status).toBe(400);
-    expect((await vendors(jsonRequest("/api/vendors", { city: "x".repeat(2000) }), noCtx)).status).toBe(413);
-    const evil = jsonRequest("/api/vendors", { city: "Jaipur", category: "venue", eventType: "wedding" }, { headers: { origin: "https://evil.example" } });
-    expect((await vendors(evil, noCtx)).status).toBe(403);
   });
 });
 

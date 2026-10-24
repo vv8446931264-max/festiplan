@@ -1,5 +1,6 @@
-# Lint, typecheck, unit tests (engine at 100% coverage), production build, then
-# Playwright end-to-end + axe on desktop and mobile. A green run on main deploys.
+# Lint (ESLint + size rules), typecheck, unit tests with coverage thresholds (engine 100 %,
+# src/lib ≥ 80 %), production build, then Playwright end-to-end + axe on desktop and mobile.
+# A green run on main deploys.
 name: ci
 
 on:

@@ -12,7 +12,7 @@
 ## Try it in 30 seconds
 
 1. Open the live link and tap **Priya's sangeet · Jaipur · 180 guests · ₹12L**.
-2. Watch the staged progress (*Reading the vibe → Drafting concepts → Balancing ₹ → Counting back from the date → Finding vendors*), then the confetti.
+2. Watch the staged progress (*Reading the vibe → Drafting concepts → Balancing ₹ → Counting back from the date → Listing who to book*), then the confetti.
 3. Drag the **Décor** slider: rupee particles re-flow between the glass columns, every other line re-balances, and the total stays **exactly ₹12,00,000** — no AI call.
 4. Tick two timeline tasks, press **Share**, open the read-only link on a phone: the same plan, server-rendered.
 
@@ -78,9 +78,9 @@ finds nothing, and **Google Fonts** self-hosted at build time via `next/font`.
 | Criterion | Evidence |
 |---|---|
 | **Code quality** | TypeScript strict, no `any`, no non-null assertions; every file < 200 lines and every function < 40 lines, **enforced in `npm run lint`** by [`scripts/check-size.mjs`](scripts/check-size.mjs); one contracts module shared by client, server and engine; a lint rule keeps Zod out of the browser bundle |
-| **Security** | Byte caps, strict schemas, same-origin checks, spoof-resistant per-IP rate limits, SHA-256 edit keys with timing-safe comparison, prompt-injection data blocks, CSP + HSTS, deny-all Firestore rules, keyless production — see [`SECURITY.md`](SECURITY.md) |
-| **Efficiency** | 154 KB gzip initial JS (113 KB is React + Next itself), 7 KB CSS; three.js only in a lazy 135 KB chunk loaded after first paint; canvases pause when hidden; plans cached; vendor lookups cached 24 h — see [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) |
-| **Testing** | **351** unit/component tests; engine at **100 %** statements, branches, functions and lines (enforced threshold); Playwright e2e on desktop **and** mobile (preset → plan → exact budget → checklist → SSR share page) — see [`docs/TESTING.md`](docs/TESTING.md) |
+| **Security** | Nonce-based CSP (no inline scripts), byte caps, strict schemas, same-origin checks, spoof-resistant per-IP rate limits (IPv6 by /64) plus a global AI cap, vendor lookups bound to a stored plan, SHA-256 edit keys with timing-safe comparison, prompt-injection data blocks, CSP + HSTS, deny-all Firestore rules, keyless production — see [`SECURITY.md`](SECURITY.md) |
+| **Efficiency** | 160 KB gzip initial JS (113 KB is React + Next itself), 7 KB CSS; memoised chapters so a slider drag re-renders only the header and budget; three.js only in a lazy 135 KB chunk loaded after first paint; canvases pause when hidden; plans cached; vendor lookups cached 24 h — see [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) |
+| **Testing** | **404** unit/component tests; engine at **100 %** and all of `src/lib` at **98 %** line coverage (both enforced thresholds); Playwright e2e on desktop **and** mobile (preset → plan → exact budget → checklist → SSR share page) — see [`docs/TESTING.md`](docs/TESTING.md) |
 | **Accessibility** | axe (WCAG 2.0–2.2 A/AA) **zero violations** on `/` and `/plan/[id]` in CI; landmarks, labels, focusable error summary, `aria-live` results, `lang` on AI text in Indian languages, 44 px targets, reduced-motion poster — see [`docs/ACCESSIBILITY.md`](docs/ACCESSIBILITY.md) |
 | **Google services** | Gemini on Vertex AI, Maps grounding, Firestore (transactions + TTL), Cloud Run with keyless auth (the bootstrap script creates a least-privilege runtime account), Cloud Build/Artifact Registry via Workload Identity Federation, Cloud Logging — each doing core work |
 

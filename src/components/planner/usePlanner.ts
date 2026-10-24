@@ -38,6 +38,25 @@ function resetScene() {
   setPalette(null);
 }
 
+/**
+ * Side effects of a new plan: remember the edit key in this browser, give the plan its
+ * own URL (so a refresh keeps it), tint the sky with the first palette and celebrate.
+ */
+function unfold(res: Result) {
+  saveEditKey(res.plan.id, res.editKey);
+  window.history.replaceState(null, "", `/plan/${res.plan.id}`);
+  setPalette(res.plan.ai.ideas[0]?.palette ?? null);
+  setMood("plan");
+  celebrate();
+}
+
+/** Back to the brief: reset the scene and URL and move focus to the brief heading. */
+function backToBrief() {
+  resetScene();
+  window.history.replaceState(null, "", "/#plan");
+  requestAnimationFrame(() => document.getElementById("brief-title")?.focus());
+}
+
 /** State machine for the planner: idle → busy → result, with validation and errors. */
 export function usePlanner(summaryRef: RefObject<HTMLDivElement | null>) {
   const brief = useBrief(summaryRef);
@@ -57,13 +76,8 @@ export function usePlanner(summaryRef: RefObject<HTMLDivElement | null>) {
       resetScene();
       return brief.report(res.issues ? issuesToErrors(res.issues) : {}, res.error);
     }
-    saveEditKey(res.plan.id, res.editKey);
-    // The plan's own URL survives a refresh; the edit key stays in this browser only.
-    window.history.replaceState(null, "", `/plan/${res.plan.id}`);
+    unfold(res);
     setResult({ plan: res.plan, editKey: res.editKey });
-    setPalette(res.plan.ai.ideas[0]?.palette ?? null);
-    setMood("plan");
-    celebrate();
   }
 
   function pickPreset(id: PresetId) {
@@ -76,9 +90,7 @@ export function usePlanner(summaryRef: RefObject<HTMLDivElement | null>) {
 
   const reset = () => {
     setResult(null);
-    resetScene();
-    window.history.replaceState(null, "", "/#plan");
-    requestAnimationFrame(() => document.getElementById("brief-title")?.focus());
+    backToBrief();
   };
 
   return { ...brief, busy, result, submit, pickPreset, reset };

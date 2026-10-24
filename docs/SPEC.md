@@ -40,7 +40,7 @@ The three demo presets are exactly these briefs (one per event type).
 The judge opens the URL and glass lanterns drift in a dusk sky. They tap
 **"Priya's sangeet · Jaipur · 180 guests · ₹12L"**. A staged progress line runs
 ("Reading the vibe → Drafting concepts → Balancing ₹ → Counting back from the date →
-Finding vendors"), confetti bursts, and the plan unfolds: three named concepts,
+Listing who to book"), confetti bursts, and the plan unfolds: three named concepts,
 ₹12,00,000 split exactly across categories with per-guest cost, a dated timeline
 counting back from the event, a vendor checklist, and real Jaipur venues/caterers
 with Google Maps links. They drag the décor slider: particles re-flow between glass
@@ -122,9 +122,11 @@ type ScheduledTask = { id: string; title: string; category: string; start: strin
   delimited data block, JSON mode with `responseSchema`, low thinking budget for
   latency, `AbortSignal.timeout`. Zod parse → one retry with the validation error →
   template fallback labelled "Template plan — AI unavailable".
-- **vendors** — Gemini with the `googleMaps` grounding tool for `{category} in {city}`.
-  Render **only** places from `groundingMetadata.groundingChunks` (title + Maps URI).
-  No chunks → a plain Google Maps search link. Cached 24 h per (city, category).
+- **vendors** — Gemini with the `googleMaps` grounding tool for `{category} in {city}`,
+  where city and event type come from a **stored plan** (the endpoint takes `{ planId, category }`,
+  so it is not an open proxy). Render **only** places from
+  `groundingMetadata.groundingChunks` (title + Maps URI). No chunks → a plain Google Maps
+  search link. Cached 24 h per (city, category, event type).
 - **refine** — "Ask FestiPlan": streaming answer grounded in the stored plan JSON
   (e.g. "make it zero-waste", "cut 20% — where?"). Suggestions only; the user
   applies budget changes with the sliders so numbers stay deterministic.
@@ -133,10 +135,10 @@ type ScheduledTask = { id: string; title: string; category: string; start: strin
 
 | Route | Method | Purpose | Guards |
 |---|---|---|---|
-| `/api/plan` | POST | generate + store plan, returns `{ plan, editKey }` | 5/min/IP, 8 KB cap, Zod strict, same-origin |
-| `/api/plan/[id]` | PATCH | checklist state, actuals, locked/adjusted allocations | `x-edit-key` (timing-safe hash compare), Zod strict |
-| `/api/plan/[id]/refine` | POST | streaming Ask FestiPlan | 10/min/IP, 2 KB cap |
-| `/api/vendors` | POST | Maps-grounded vendors for a category | 10/min/IP, cache 24 h |
+| `/api/plan` | POST | generate + store plan, returns `{ plan, editKey }` | 5/min/IP, global AI cap, 8 KB cap, Zod strict, same-origin |
+| `/api/plan/[id]` | GET / PATCH | public plan; checklist state, actuals, locked/adjusted allocations (one transaction) | `x-edit-key` (timing-safe hash compare), Zod strict, same-origin |
+| `/api/plan/[id]/refine` | POST | streaming Ask FestiPlan | 10/min/IP, global AI cap, 2 KB cap, same-origin |
+| `/api/vendors` | POST | `{ planId, category }` → Maps-grounded vendors | 10/min/IP, global AI cap, 1 KB cap, plan must exist, cache 24 h |
 | `/plan/[id]/calendar.ics` | GET | timeline export | read-only |
 | `/api/health` | GET | `{ status, ai: "vertex"|"gemini-api"|"template", store: "firestore"|"memory", model }` | none |
 

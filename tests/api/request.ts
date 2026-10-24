@@ -1,5 +1,6 @@
 import { vi } from "vitest";
 import { addDays } from "@/lib/engine";
+import type { PlanInput } from "@/lib/contracts";
 import { resetRateLimits } from "@/lib/security/rate-limit";
 import { todayIST } from "@/lib/time";
 import { sampleInput } from "../server/fixtures";
@@ -25,8 +26,8 @@ export function jsonRequest(path: string, body: unknown, init: { method?: string
 }
 
 /** A valid brief dated 90 days after today in India. */
-export function futureInput() {
-  return sampleInput({ eventDate: addDays(todayIST(), 90) });
+export function futureInput(overrides: Partial<PlanInput> = {}) {
+  return sampleInput({ eventDate: addDays(todayIST(), 90), ...overrides });
 }
 
 /** Route context for `[id]` handlers. */
