@@ -10,8 +10,3 @@ export function processSingleton<T>(key: string, create: () => T): T {
   if (!registry.__festiplan.has(key)) registry.__festiplan.set(key, create());
   return registry.__festiplan.get(key) as T;
 }
-
-/** Forgets a process-wide instance (tests). */
-export function resetSingleton(key: string): void {
-  registry.__festiplan?.delete(key);
-}

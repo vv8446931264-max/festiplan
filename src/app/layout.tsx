@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Hanken_Grotesk, JetBrains_Mono, Literata } from "next/font/google";
+import { connection } from "next/server";
 import { LazySceneBackdrop } from "@/components/three/lazy";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
@@ -46,8 +47,13 @@ export const viewport: Viewport = {
   colorScheme: "dark",
 };
 
-/** Root layout: fonts, the lazy dusk backdrop and a skip link. */
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+/**
+ * Root layout: fonts, the lazy dusk backdrop and a skip link. Rendered per request
+ * (`connection()`) because every page's scripts carry the CSP nonce minted by `src/proxy.ts`;
+ * a prerendered page would ship scripts without it and be blocked.
+ */
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  await connection();
   return (
     <html lang="en" className={`${hanken.variable} ${literata.variable} ${jetbrains.variable}`}>
       <body>

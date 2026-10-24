@@ -1,29 +1,37 @@
 "use client";
 
+import { memo } from "react";
 import { CATEGORY_LABELS, PHASE_LABELS } from "@/lib/contracts/constants";
 import type { PublicPlan, ScheduledTask } from "@/lib/contracts";
-import { formatDate, googleCalendarUrl, groupByPhase, nextActions, progress } from "@/lib/engine";
+import { formatDate, googleCalendarUrl, groupByPhase, nextActions, planTitle, progress } from "@/lib/engine";
 import { SectionHead } from "./SectionHead";
 
-type Props = { plan: PublicPlan; editable: boolean; lang?: string; onToggle: (id: string, done: boolean) => void };
+type Props = {
+  planId: string;
+  input: PublicPlan["input"];
+  timeline: ScheduledTask[];
+  editable: boolean;
+  lang?: string;
+  onToggle: (id: string, done: boolean) => void;
+};
 
 /** Timeline chapter: progress, next actions and a horizontal rail of phases. */
-export function TimelineSection({ plan, editable, lang, onToggle }: Props) {
+export const TimelineSection = memo(function TimelineSection({ planId, input, timeline, editable, lang, onToggle }: Props) {
   return (
     <section id="timeline" aria-labelledby="timeline-title" className="scroll-mt-20">
       <SectionHead id="timeline" number="03" kicker="Timeline"
-        title={<>Counting back from <span className="accent">{formatDate(plan.input.eventDate)}</span>.</>}>
+        title={<>Counting back from <span className="accent">{formatDate(input.eventDate)}</span>.</>}>
         Every date is computed from your event date and each task&apos;s lead time — dependencies first.
       </SectionHead>
-      <TimelineSummary plan={plan} lang={lang} />
+      <TimelineSummary planId={planId} timeline={timeline} lang={lang} />
       <div role="region" aria-label="Timeline by phase" tabIndex={0}
         className="-mx-[var(--pad)] mt-6 flex snap-x snap-mandatory scroll-px-[var(--pad)] gap-4 overflow-x-auto px-[var(--pad)] pb-4">
-        {groupByPhase(plan.timeline).map(({ phase, tasks }) => (
+        {groupByPhase(timeline).map(({ phase, tasks }) => (
           <section key={phase} aria-labelledby={`phase-${phase}`} className="panel w-[min(85vw,380px)] shrink-0 snap-start p-5">
             <h4 id={`phase-${phase}`} className="eyebrow mb-4 text-cream">{PHASE_LABELS[phase]}</h4>
             <ol className="flex flex-col gap-3">
               {tasks.map((t) => (
-                <TaskItem key={t.id} task={t} plan={plan} editable={editable} lang={lang} onToggle={onToggle} />
+                <TaskItem key={t.id} task={t} input={input} editable={editable} lang={lang} onToggle={onToggle} />
               ))}
             </ol>
           </section>
@@ -31,18 +39,18 @@ export function TimelineSection({ plan, editable, lang, onToggle }: Props) {
       </div>
     </section>
   );
-}
+});
 
-function TimelineSummary({ plan, lang }: { plan: PublicPlan; lang?: string }) {
-  const stats = progress(plan.timeline);
-  const next = nextActions(plan.timeline, 3);
+function TimelineSummary({ planId, timeline, lang }: { planId: string; timeline: ScheduledTask[]; lang?: string }) {
+  const stats = progress(timeline);
+  const next = nextActions(timeline, 3);
   return (
     <div className="grid gap-5 lg:grid-cols-[1fr_2fr]">
       <div className="panel flex flex-col gap-3 p-6">
         <p className="eyebrow">Progress</p>
         <p className="h3 tabular">{stats.done} of {stats.total} done</p>
         <progress max={stats.total} value={stats.done} aria-label="Tasks done" className="meter" />
-        <a href={`/plan/${plan.id}/calendar.ics`} className="btn btn-ghost no-print mt-2 self-start text-sm" download>
+        <a href={`/plan/${planId}/calendar.ics`} className="btn btn-ghost no-print mt-2 self-start text-sm" download>
           Download all dates (.ics)
         </a>
       </div>
@@ -63,14 +71,14 @@ function TimelineSummary({ plan, lang }: { plan: PublicPlan; lang?: string }) {
   );
 }
 
-type ItemProps = { task: ScheduledTask; plan: PublicPlan; editable: boolean; lang?: string; onToggle: Props["onToggle"] };
+type ItemProps = { task: ScheduledTask; input: PublicPlan["input"]; editable: boolean; lang?: string; onToggle: Props["onToggle"] };
 
-function TaskItem({ task: t, plan, editable, lang, onToggle }: ItemProps) {
+function TaskItem({ task: t, input, editable, lang, onToggle }: ItemProps) {
   const calendar = googleCalendarUrl({
-    title: `${t.title} — ${plan.input.title || "FestiPlan"}`,
+    title: `${t.title} — ${planTitle(input)}`,
     date: t.due,
-    details: `Start ${formatDate(t.start)}. Event on ${formatDate(plan.input.eventDate)}.`,
-    location: plan.input.city,
+    details: `Start ${formatDate(t.start)}. Event on ${formatDate(input.eventDate)}.`,
+    location: input.city,
   });
   const id = `task-${t.id}`;
   return (
@@ -82,8 +90,8 @@ function TaskItem({ task: t, plan, editable, lang, onToggle }: ItemProps) {
           <span aria-hidden="true" className="mt-0.5 text-gold">{t.done ? "✓" : "○"}</span>
         )}
         <div className="flex min-w-0 flex-col gap-1">
-          <label htmlFor={editable ? id : undefined} lang={lang} className={`font-semibold ${t.done ? "text-muted line-through decoration-gold" : ""}`}>
-            {t.title}
+          <label htmlFor={editable ? id : undefined} className={`font-semibold ${t.done ? "text-muted line-through decoration-gold" : ""}`}>
+            <span lang={lang}>{t.title}</span>
             {!editable && <>{" "}<span className="sr-only">{t.done ? "(done)" : "(not done)"}</span></>}
           </label>
           <span className="tabular text-sm text-muted">

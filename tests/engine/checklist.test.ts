@@ -2,7 +2,6 @@
 import { describe, expect, it } from "vitest";
 import type { BudgetCategory, Phase, ScheduledTask, VendorGuide, VendorItem } from "@/lib/contracts";
 import {
-  groupByCategory,
   groupByPhase,
   nextActions,
   progress,
@@ -127,21 +126,6 @@ describe("nextActions", () => {
     expect(nextActions(timeline, 0)).toEqual([]);
     expect(nextActions(timeline, -2)).toEqual([]);
     expect(timeline.map((t) => t.id)).toEqual(before);
-  });
-});
-
-describe("groupByCategory", () => {
-  it("groups in first-seen order", () => {
-    const out = groupByCategory([item("venue", "a"), item("decor", "b"), item("venue", "c")]);
-    expect(out.map((g) => [g.category, g.items.map((i) => i.bookBy)])).toEqual([
-      ["venue", ["a", "c"]],
-      ["decor", ["b"]],
-    ]);
-  });
-
-  it("works on tasks and on an empty list", () => {
-    expect(groupByCategory([st("x", "d")]).map((g) => g.category)).toEqual(["admin"]);
-    expect(groupByCategory([])).toEqual([]);
   });
 });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { askPlan } from "@/lib/client/api";
 import { LIMITS } from "@/lib/contracts/constants";
 import { SectionHead } from "./SectionHead";
@@ -29,15 +29,20 @@ function useAsk(planId: string) {
     setAnswer("");
     setError(null);
     setBusy(true);
-    const failure = await askPlan(planId, trimmed, setAnswer, abort.current.signal);
-    setBusy(false);
-    if (failure) setError(failure);
+    try {
+      const failure = await askPlan(planId, trimmed, setAnswer, abort.current.signal);
+      if (failure) setError(failure);
+    } finally {
+      setBusy(false);
+    }
   }
+  // Leaving the plan cancels an answer that is still streaming.
+  useEffect(() => () => abort.current?.abort(), []);
   return { question, setQuestion, answer, error, busy, ask };
 }
 
 /** "Ask FestiPlan": a streamed answer grounded in this plan. Suggestions only. */
-export function AskSection({ planId, lang }: { planId: string; lang?: string }) {
+export const AskSection = memo(function AskSection({ planId, lang }: { planId: string; lang?: string }) {
   const a = useAsk(planId);
   return (
     <section id="ask" aria-labelledby="ask-title" className="no-print scroll-mt-20">
@@ -64,7 +69,7 @@ export function AskSection({ planId, lang }: { planId: string; lang?: string }) 
       </div>
     </section>
   );
-}
+});
 
 function Answer({ answer, error, busy, lang }: { answer: string; error: string | null; busy: boolean; lang?: string }) {
   return (

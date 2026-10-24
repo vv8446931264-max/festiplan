@@ -1,4 +1,6 @@
 /** Display formatting for rupees, dates and percentages (en-IN). Pure; no clock access. */
+import { EVENT_TYPE_LABELS } from "@/lib/contracts/constants";
+import type { PlanInput } from "@/lib/contracts";
 
 const INR = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -13,6 +15,11 @@ const SHORT_DATE = new Intl.DateTimeFormat("en-IN", DATE_PARTS);
 const CRORE = 10_000_000;
 const LAKH = 100_000;
 const THOUSAND = 1_000;
+const UNITS: readonly (readonly [number, string])[] = [
+  [CRORE, "Cr"],
+  [LAKH, "L"],
+  [THOUSAND, "K"],
+];
 
 /**
  * Formats whole rupees with Indian digit grouping, e.g. 1200000 → "₹12,00,000".
@@ -32,10 +39,23 @@ const trimmed = (value: number): string => value.toFixed(1).replace(/\.0$/, "");
 export function formatINRCompact(n: number): string {
   const abs = Math.abs(n);
   const sign = n < 0 ? "-" : "";
-  if (abs >= CRORE) return `${sign}₹${trimmed(abs / CRORE)}Cr`;
-  if (abs >= LAKH) return `${sign}₹${trimmed(abs / LAKH)}L`;
-  if (abs >= THOUSAND) return `${sign}₹${trimmed(abs / THOUSAND)}K`;
-  return formatINR(n);
+  const index = UNITS.findIndex(([size]) => abs >= size);
+  if (index === -1) return formatINR(n);
+  const [size, suffix] = UNITS[index];
+  const bigger = UNITS[index - 1];
+  // Rounding can carry into the next unit: ₹99,99,999 is "₹1Cr", not "₹100L".
+  if (bigger && Number((abs / size).toFixed(1)) * size >= bigger[0]) {
+    return `${sign}₹${trimmed(abs / bigger[0])}${bigger[1]}`;
+  }
+  return `${sign}₹${trimmed(abs / size)}${suffix}`;
+}
+
+/**
+ * Display title for a plan: the user's own name for it, else "Wedding in Jaipur".
+ * @param input The plan's brief.
+ */
+export function planTitle(input: Pick<PlanInput, "title" | "eventType" | "city">): string {
+  return input.title?.trim() || `${EVENT_TYPE_LABELS[input.eventType]} in ${input.city}`;
 }
 
 const withFormatter = (fmt: Intl.DateTimeFormat, iso: string): string => {

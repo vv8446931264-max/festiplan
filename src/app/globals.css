@@ -63,8 +63,11 @@
     border-radius: 6px;
   }
 
+  /* Links are underlined so colour is never the only cue (WCAG 1.4.1). */
   a {
     color: var(--color-ember-bright);
+    text-decoration-line: underline;
+    text-decoration-thickness: 1px;
     text-underline-offset: 0.2em;
   }
 }
@@ -131,7 +134,7 @@
     border-radius: 999px;
     font-weight: 700;
     line-height: 1.1;
-    text-decoration: none;
+    text-decoration-line: none;
     transition: transform 200ms var(--ease-out-soft), background-color 200ms, color 200ms;
   }
   .btn:active {

@@ -58,7 +58,7 @@ flowchart LR
 
 Details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · product spec: [`docs/SPEC.md`](docs/SPEC.md) · design system: [`docs/DESIGN.md`](docs/DESIGN.md).
 
-## Google services (each one functional)
+## Google services
 
 | Service | Used for | Code |
 |---|---|---|
@@ -67,10 +67,11 @@ Details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · product spec: [`docs/
 | **Cloud Firestore** (named Native DB, TTL) | Saved, shareable plans; checklist and actuals; transactional edits; 180-day expiry | [`store/firestore.ts`](src/lib/store/firestore.ts) |
 | **Cloud Run** | Hosting the Next.js standalone server; the service identity authenticates to Vertex AI and Firestore — no API keys | [`Dockerfile`](Dockerfile) |
 | **Cloud Build + Artifact Registry** | Source deploys from GitHub Actions via Workload Identity Federation | [`deploy.yml`](.github/workflows/deploy.yml) |
-| **Google Calendar** | Per-task "Add to Google Calendar" links | [`calendar-link.ts`](src/lib/engine/calendar-link.ts) |
-| **Google Maps** | Search fallback links when grounding returns nothing | [`format.ts`](src/lib/engine/format.ts) |
-| **Cloud Logging** | Structured JSON logs (severity, latency, request id; never user text) | [`log.ts`](src/lib/server/log.ts) |
-| **Google Fonts** | Hanken Grotesk, Literata, JetBrains Mono, self-hosted at build time | [`layout.tsx`](src/app/layout.tsx) |
+| **Cloud Logging** | Structured JSON logs (severity, latency, request id, Gemini token counts; never user text) | [`log.ts`](src/lib/server/log.ts) |
+
+Lighter integrations: **Google Calendar** "Add to Google Calendar" links per task
+([`calendar-link.ts`](src/lib/engine/calendar-link.ts)), **Google Maps** search links when grounding
+finds nothing, and **Google Fonts** self-hosted at build time via `next/font`.
 
 ## Evaluation criteria → evidence
 
@@ -79,9 +80,9 @@ Details: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) · product spec: [`docs/
 | **Code quality** | TypeScript strict, no `any`, no non-null assertions; every file < 200 lines and every function < 40 lines, **enforced in `npm run lint`** by [`scripts/check-size.mjs`](scripts/check-size.mjs); one contracts module shared by client, server and engine; a lint rule keeps Zod out of the browser bundle |
 | **Security** | Byte caps, strict schemas, same-origin checks, spoof-resistant per-IP rate limits, SHA-256 edit keys with timing-safe comparison, prompt-injection data blocks, CSP + HSTS, deny-all Firestore rules, keyless production — see [`SECURITY.md`](SECURITY.md) |
 | **Efficiency** | 154 KB gzip initial JS (113 KB is React + Next itself), 7 KB CSS; three.js only in a lazy 135 KB chunk loaded after first paint; canvases pause when hidden; plans cached; vendor lookups cached 24 h — see [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) |
-| **Testing** | **347** unit/component tests; engine at **100 %** statements, branches, functions and lines (enforced threshold); Playwright e2e on desktop **and** mobile (preset → plan → exact budget → checklist → SSR share page) — see [`docs/TESTING.md`](docs/TESTING.md) |
+| **Testing** | **351** unit/component tests; engine at **100 %** statements, branches, functions and lines (enforced threshold); Playwright e2e on desktop **and** mobile (preset → plan → exact budget → checklist → SSR share page) — see [`docs/TESTING.md`](docs/TESTING.md) |
 | **Accessibility** | axe (WCAG 2.0–2.2 A/AA) **zero violations** on `/` and `/plan/[id]` in CI; landmarks, labels, focusable error summary, `aria-live` results, `lang` on AI text in Indian languages, 44 px targets, reduced-motion poster — see [`docs/ACCESSIBILITY.md`](docs/ACCESSIBILITY.md) |
-| **Google services** | Nine services above, each doing real work |
+| **Google services** | Gemini on Vertex AI, Maps grounding, Firestore (transactions + TTL), Cloud Run with keyless auth (the bootstrap script creates a least-privilege runtime account), Cloud Build/Artifact Registry via Workload Identity Federation, Cloud Logging — each doing core work |
 
 ## Run it locally
 

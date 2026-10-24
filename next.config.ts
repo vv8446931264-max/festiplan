@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@google-cloud/firestore", "@google/genai"],
 
   headers: async () => [
+    // Pages get a per-request nonce CSP from src/proxy.ts. API responses are data, never
+    // documents: they may load nothing and may not be framed.
+    { source: "/api/:path*", headers: [{ key: "Content-Security-Policy", value: "default-src 'none'; frame-ancestors 'none'" }] },
     // Shared plans are private links: never index them, never cache them publicly.
     { source: "/plan/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
     {
@@ -19,21 +22,6 @@ const nextConfig: NextConfig = {
         { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
         { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
         { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-        {
-          key: "Content-Security-Policy",
-          value: [
-            "default-src 'self'",
-            "script-src 'self' 'unsafe-inline'",
-            "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data: blob:",
-            "font-src 'self'",
-            "connect-src 'self'",
-            "base-uri 'self'",
-            "form-action 'self'",
-            "object-src 'none'",
-            "frame-ancestors 'none'",
-          ].join("; "),
-        },
         {
           key: "Permissions-Policy",
           value: "camera=(), microphone=(), geolocation=()",

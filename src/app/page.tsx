@@ -16,7 +16,7 @@ export default function Home() {
           <div className="legible mb-10 grid gap-6 lg:grid-cols-[1fr_2fr]">
             <p className="eyebrow">Nº 02 — The brief</p>
             <div className="flex flex-col gap-4">
-              <h2 id="brief-title" className="h2">
+              <h2 id="brief-title" tabIndex={-1} className="h2 outline-none">
                 Tell us about <span className="accent text-gold">the day</span>.
               </h2>
               <p className="lead max-w-2xl text-muted">

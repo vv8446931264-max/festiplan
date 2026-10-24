@@ -1,3 +1,6 @@
+/** Milliseconds in one day — the single copy for server and AI code (the engine keeps its own, it has no imports). */
+export const DAY_MS = 86_400_000;
+
 /** India Standard Time is UTC+05:30 all year round (no daylight saving). */
 const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
 

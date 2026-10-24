@@ -1,14 +1,19 @@
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
-import type { GenerateContentParameters, ThinkingConfig } from "@google/genai";
+import type { FinishReason, GenerateContentParameters, ThinkingConfig } from "@google/genai";
+
+/** Token counts Gemini reports for one call (numbers only — safe to log). */
+export type AiUsage = { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number };
 
 /** The slice of a Gemini response FestiPlan reads. `GenerateContentResponse` satisfies it. */
 export type AiResponse = {
   readonly text?: string | undefined;
   candidates?: Array<{
+    finishReason?: FinishReason;
     groundingMetadata?: {
       groundingChunks?: Array<{ maps?: { title?: string; uri?: string } }>;
     };
   }>;
+  usageMetadata?: AiUsage;
 };
 
 /** The slice of `GoogleGenAI["models"]` FestiPlan calls — small enough to fake in tests. */
@@ -70,11 +75,6 @@ export function getAi(env: Env = process.env): AiHandle | null {
   }
   cached = { signature, handle };
   return handle;
-}
-
-/** Which AI backend is live, for `/api/health`. */
-export function aiBackend(env: Env = process.env): AiBackend | "template" {
-  return getAi(env)?.backend ?? "template";
 }
 
 /**

@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { CATEGORY_LABELS } from "@/lib/contracts/constants";
+import { useId, useState } from "react";
+import { CATEGORY_LABELS, LIMITS } from "@/lib/contracts/constants";
 import type { Allocation, BudgetCategory, PublicPlan } from "@/lib/contracts";
 import { budgetVariance, formatINR, formatPercent, overspendAlerts, type OverspendAlert } from "@/lib/engine";
 
 type Props = {
-  plan: PublicPlan;
+  input: PublicPlan["input"];
+  budget: Allocation[];
+  contingencyINR: number;
   editable: boolean;
   highlight: BudgetCategory | null;
   onHighlight: (c: BudgetCategory | null) => void;
@@ -16,15 +18,15 @@ type Props = {
 const signed = (n: number) => (n > 0 ? `+${formatINR(n)}` : formatINR(n));
 
 /** The accessible source of truth: planned vs actual per category, with totals. */
-export function BudgetTable({ plan, editable, highlight, onHighlight, onActual }: Props) {
-  const variance = budgetVariance(plan.budget);
-  const alerts = overspendAlerts(plan.budget, plan.contingencyINR);
+export function BudgetTable({ input, budget, contingencyINR, editable, highlight, onHighlight, onActual }: Props) {
+  const variance = budgetVariance(budget);
+  const alerts = overspendAlerts(budget, contingencyINR);
   return (
     <div className="mt-10">
       <div className="panel overflow-x-auto" role="region" aria-labelledby="budget-table-caption" tabIndex={0}>
         <table className="tabular w-full min-w-[640px] border-collapse text-left">
           <caption id="budget-table-caption" className="eyebrow p-5 text-left">
-            Planned vs actual · {plan.input.guests} guests
+            Planned vs actual · {input.guests} guests
           </caption>
           <thead className="text-sm text-muted">
             <tr className="border-b border-line">
@@ -37,12 +39,12 @@ export function BudgetTable({ plan, editable, highlight, onHighlight, onActual }
             </tr>
           </thead>
           <tbody>
-            {plan.budget.map((a, i) => (
+            {budget.map((a, i) => (
               <Row key={a.category} a={a} variance={variance.rows[i]?.varianceINR ?? null} editable={editable}
                 active={highlight === a.category} onHighlight={onHighlight} onActual={onActual} />
             ))}
           </tbody>
-          <Totals plan={plan} actualINR={variance.actualINR} varianceINR={variance.varianceINR} />
+          <Totals input={input} contingencyINR={contingencyINR} actualINR={variance.actualINR} varianceINR={variance.varianceINR} />
         </table>
       </div>
       <Alerts alerts={alerts} />
@@ -50,14 +52,16 @@ export function BudgetTable({ plan, editable, highlight, onHighlight, onActual }
   );
 }
 
-function Totals({ plan, actualINR, varianceINR }: { plan: PublicPlan; actualINR: number; varianceINR: number }) {
-  const { budgetINR, guests } = plan.input;
+type TotalsProps = { input: PublicPlan["input"]; contingencyINR: number; actualINR: number; varianceINR: number };
+
+function Totals({ input, contingencyINR, actualINR, varianceINR }: TotalsProps) {
+  const { budgetINR, guests } = input;
   return (
     <tfoot className="font-bold">
       <tr className="border-t border-line">
         <th scope="row" className="px-5 py-3">Contingency</th>
-        <td className="px-3 py-3 text-right">{formatINR(plan.contingencyINR)}</td>
-        <td className="px-3 py-3 text-right">{formatPercent((plan.contingencyINR / budgetINR) * 100)}</td>
+        <td className="px-3 py-3 text-right">{formatINR(contingencyINR)}</td>
+        <td className="px-3 py-3 text-right">{formatPercent((contingencyINR / budgetINR) * 100)}</td>
         <td colSpan={3} />
       </tr>
       <tr className="border-t border-line text-gold">
@@ -120,17 +124,30 @@ function Row({ a, variance, editable, active, onHighlight, onActual }: RowProps)
   );
 }
 
-function ActualInput({ label, value, onCommit }: { label: string; value: number | null; onCommit: (v: number | null) => void }) {
+type ActualProps = { label: string; value: number | null; onCommit: (v: number | null) => void };
+
+/** "Spent so far": whole rupees up to the budget cap, inline error, saves only real changes. */
+function ActualInput({ label, value, onCommit }: ActualProps) {
   const [draft, setDraft] = useState(value === null ? "" : String(value));
+  const [error, setError] = useState<string | null>(null);
+  const errorId = useId();
   const commit = () => {
     const cleaned = draft.replace(/[₹,\s]/g, "");
-    if (cleaned === "") return onCommit(null);
-    if (/^\d{1,9}$/.test(cleaned)) onCommit(Number(cleaned));
+    const n = cleaned === "" ? null : /^\d+$/.test(cleaned) ? Number(cleaned) : Number.NaN;
+    if (n !== null && (!Number.isSafeInteger(n) || n > LIMITS.budgetMax)) {
+      return setError(`Enter whole rupees, up to ${formatINR(LIMITS.budgetMax)}.`);
+    }
+    setError(null);
+    if (n !== value) onCommit(n);
   };
   return (
-    <input aria-label={`Spent so far on ${label}, in rupees`} inputMode="numeric" value={draft}
-      onChange={(e) => setDraft(e.target.value)} onBlur={commit}
-      onKeyDown={(e) => e.key === "Enter" && commit()}
-      className="field ml-auto w-32 min-h-11 py-1 text-right" placeholder="₹0" />
+    <div className="flex flex-col items-end gap-1">
+      <input aria-label={`Spent so far on ${label}, in rupees`} inputMode="numeric" value={draft}
+        aria-invalid={error !== null} aria-describedby={error ? errorId : undefined}
+        onChange={(e) => setDraft(e.target.value)} onBlur={commit}
+        onKeyDown={(e) => e.key === "Enter" && commit()}
+        className="field w-32 min-h-11 py-1 text-right" placeholder="₹0" />
+      {error && <p id={errorId} className="max-w-48 text-right text-xs font-semibold text-ember-bright">{error}</p>}
+    </div>
   );
 }

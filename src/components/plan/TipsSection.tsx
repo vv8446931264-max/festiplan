@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { Tip, TipKind } from "@/lib/contracts";
 
 const KIND_LABELS: Record<TipKind, string> = {
@@ -8,20 +9,20 @@ const KIND_LABELS: Record<TipKind, string> = {
 };
 
 /** Practical tips grouped by kind. */
-export function TipsSection({ tips, lang }: { tips: Tip[]; lang?: string }) {
+export const TipsSection = memo(function TipsSection({ tips, lang }: { tips: Tip[]; lang?: string }) {
   return (
     <section aria-labelledby="tips-title" className="reveal">
       <h3 id="tips-title" className="eyebrow mb-6 border-t border-line pt-6">
         Small things that matter
       </h3>
-      <ul lang={lang} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {tips.map((tip) => (
-          <li key={tip.text} className="panel flex flex-col gap-2 p-5">
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {tips.map((tip, i) => (
+          <li key={i} className="panel flex flex-col gap-2 p-5">
             <span className="eyebrow text-gold">{KIND_LABELS[tip.kind]}</span>
-            <span>{tip.text}</span>
+            <span lang={lang}>{tip.text}</span>
           </li>
         ))}
       </ul>
     </section>
   );
-}
+});

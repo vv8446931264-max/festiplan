@@ -13,21 +13,30 @@ async function storedPlan(store: MemoryStore): Promise<Plan> {
 }
 
 describe("MemoryStore", () => {
-  it("creates, reads and updates deep copies", async () => {
+  it("creates, reads and mutates deep copies", async () => {
     const store = new MemoryStore(() => Date.parse("2026-10-25T00:00:00Z"));
     const plan = await storedPlan(store);
     expect(plan.expireAt).toBeInstanceOf(Date);
     plan.input.city = "Mutated";
     expect((await store.get(plan.id))?.input.city).toBe("Jaipur");
-    await store.update({ ...plan, model: "updated" });
+    const result = await store.mutate(plan.id, (p) => ({ next: p ? { ...p, model: "updated" } : null, result: "saved" }));
+    expect(result).toBe("saved");
     expect((await store.get(plan.id))?.model).toBe("updated");
   });
 
-  it("rejects duplicate creates and updates of missing plans", async () => {
+  it("writes nothing when the mutator returns no next plan", async () => {
+    const store = new MemoryStore(() => Date.parse("2026-10-25T00:00:00Z"));
+    const plan = await storedPlan(store);
+    await store.mutate(plan.id, (p) => ({ next: null, result: p?.id }));
+    expect((await store.get(plan.id))?.model).toBe(plan.model);
+    expect(await store.mutate("missing-id", (p) => ({ next: null, result: p }))).toBeNull();
+    expect(store.size).toBe(1);
+  });
+
+  it("rejects duplicate creates", async () => {
     const store = new MemoryStore(() => Date.parse("2026-10-25T00:00:00Z"));
     const plan = await storedPlan(store);
     await expect(store.create(plan)).rejects.toThrow(/exists/);
-    await expect(store.update({ ...plan, id: "missing-id" })).rejects.toThrow(/not found/);
     expect(await store.get("nope-nope")).toBeNull();
   });
 

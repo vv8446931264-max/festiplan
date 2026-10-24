@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { isSameOrigin } from "@/lib/security/origin";
-import { clientIp } from "@/lib/security/ip";
+import { clientKey } from "@/lib/security/ip";
 import { rateLimit, scaledLimit } from "@/lib/security/rate-limit";
 import { logEvent } from "./log";
 
@@ -46,18 +46,35 @@ export const sameOrigin: Guard = (req) =>
   isSameOrigin(req) ? null : problem(403, "This request has to come from the FestiPlan site itself.");
 
 /**
- * Per-IP fixed-window limit for one route, scaled by `RATE_LIMIT_SCALE`.
+ * Per-client fixed-window limit for one route, scaled by `RATE_LIMIT_SCALE`. The client is
+ * the IPv4 address or the IPv6 /64 network (`clientKey`).
  * Over the limit → 429 with a `Retry-After` header.
  */
 export function perIpLimit(name: string, baseLimit: number, windowMs = 60_000): Guard {
   return (req) => {
-    const res = rateLimit(`${name}:${clientIp(req)}`, scaledLimit(baseLimit), windowMs);
+    const res = rateLimit(`${name}:${clientKey(req)}`, scaledLimit(baseLimit), windowMs);
     if (res.ok) return null;
     return problem(429, `You're going a little fast — please wait ${res.retryAfterSec} seconds and try again.`, {
       "Retry-After": String(res.retryAfterSec),
     });
   };
 }
+
+/** AI-backed requests one instance accepts per minute across every client and AI route (before scaling). */
+export const AI_GLOBAL_PER_MINUTE = 120;
+
+/**
+ * Per-instance ceiling on AI-backed requests (plan, refine, vendors) from all clients
+ * together, scaled by `RATE_LIMIT_SCALE` — a cost backstop when many IPs each stay under
+ * their own limit. Over the ceiling → 503 with a `Retry-After` header.
+ */
+export const aiGlobalLimit: Guard = () => {
+  const res = rateLimit("ai:global", scaledLimit(AI_GLOBAL_PER_MINUTE), 60_000);
+  if (res.ok) return null;
+  return problem(503, `FestiPlan is very busy right now. Please try again in ${res.retryAfterSec} seconds.`, {
+    "Retry-After": String(res.retryAfterSec),
+  });
+};
 
 /** Runs guards in order; the first non-null response wins. */
 export function runGuards(req: Request, ...guards: Guard[]): Response | null {

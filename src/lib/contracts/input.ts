@@ -47,10 +47,15 @@ export const RefineSchema = z.strictObject({
   question: z.string().trim().min(2, "Ask a question").max(L.questionMax),
 });
 
-/** Validated body for POST /api/vendors. */
+/** Plan ids as they appear in URLs: 6–32 URL-safe characters. */
+export const PLAN_ID_RE = /^[A-Za-z0-9_-]{6,32}$/;
+
+/**
+ * Validated body for POST /api/vendors. Lookups are bound to an existing plan: the city
+ * and event type come from the stored plan, never from the request.
+ */
 export const VendorQuerySchema = z.strictObject({
-  city: z.string().trim().min(L.cityMin).max(L.cityMax),
+  planId: z.string().regex(PLAN_ID_RE, "Unknown plan"),
   category: z.enum(BUDGET_CATEGORIES),
-  eventType: z.enum(EVENT_TYPES),
 });
 export type VendorQuery = z.infer<typeof VendorQuerySchema>;

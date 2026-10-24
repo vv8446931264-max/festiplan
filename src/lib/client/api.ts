@@ -81,12 +81,27 @@ export async function askPlan(
     return signal?.aborted ? null : NETWORK_ERROR;
   }
   if (!res.ok || !res.body) return toError(res, await res.json().catch(() => null)).error;
-  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+  return readStream(res.body, onText, signal);
+}
+
+const DROPPED = "The answer was cut off — the connection dropped. Ask again to get the rest.";
+
+/** Accumulates a text stream; a mid-stream failure becomes a message, an abort is silent. */
+async function readStream(
+  body: NonNullable<Response["body"]>,
+  onText: (text: string) => void,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  const reader = body.pipeThrough(new TextDecoderStream()).getReader();
   let text = "";
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) return null;
-    text += value;
-    onText(text);
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) return null;
+      text += value;
+      onText(text);
+    }
+  } catch {
+    return signal?.aborted ? null : DROPPED;
   }
 }

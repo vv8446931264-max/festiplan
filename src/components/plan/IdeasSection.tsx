@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { Idea } from "@/lib/contracts";
 import { setPalette } from "@/three/bus";
 import { SectionHead } from "./SectionHead";
@@ -8,7 +8,7 @@ import { SectionHead } from "./SectionHead";
 type Props = { ideas: Idea[]; lang?: string };
 
 /** Three concepts laid out as magazine covers, each with its palette and menu. */
-export function IdeasSection({ ideas, lang }: Props) {
+export const IdeasSection = memo(function IdeasSection({ ideas, lang }: Props) {
   const [tinted, setTinted] = useState<number | null>(0);
   const tint = (i: number) => {
     const next = tinted === i ? null : i;
@@ -22,14 +22,14 @@ export function IdeasSection({ ideas, lang }: Props) {
       </SectionHead>
       <ol className="grid gap-5 lg:grid-cols-3">
         {ideas.map((idea, i) => (
-          <li key={idea.name} className="reveal">
+          <li key={i} className="reveal">
             <IdeaCover idea={idea} index={i} lang={lang} tinted={tinted === i} onTint={() => tint(i)} />
           </li>
         ))}
       </ol>
     </section>
   );
-}
+});
 
 type CoverProps = { idea: Idea; index: number; lang?: string; tinted: boolean; onTint: () => void };
 
@@ -43,8 +43,8 @@ function IdeaCover({ idea, index, lang, tinted, onTint }: CoverProps) {
         <h4 lang={lang} className="h3">{idea.name}</h4>
         <p lang={lang} className="text-cream/90">{idea.concept}</p>
         <ul aria-label="Palette" className="flex flex-wrap gap-2">
-          {idea.palette.map((hex) => (
-            <li key={hex} className="flex items-center gap-2 rounded-full border border-line py-1 pl-1 pr-3 font-mono text-xs uppercase">
+          {idea.palette.map((hex, i) => (
+            <li key={i} className="flex items-center gap-2 rounded-full border border-line py-1 pl-1 pr-3 font-mono text-xs uppercase">
               <span aria-hidden="true" data-print-keep="" className="size-6 rounded-full border border-cream/30" style={{ background: hex }} />
               {hex}
             </li>
@@ -74,8 +74,8 @@ function List({ title, items, lang }: { title: string; items: string[]; lang?: s
     <div>
       <p className="eyebrow mb-2">{title}</p>
       <ul lang={lang} className="flex flex-col gap-1.5">
-        {items.map((item) => (
-          <li key={item} className="flex gap-2">
+        {items.map((item, i) => (
+          <li key={i} className="flex gap-2">
             <span aria-hidden="true" className="text-gold">✦</span>
             <span>{item}</span>
           </li>

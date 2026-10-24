@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useOrigin } from "@/lib/client/browser";
 import { SectionHead } from "./SectionHead";
 
@@ -34,7 +34,7 @@ function useShare(planId: string, editKey: string | null) {
 }
 
 /** Share chapter: read-only link, private edit link, print and calendar export. */
-export function ShareSection({ planId, editKey }: { planId: string; editKey: string | null }) {
+export const ShareSection = memo(function ShareSection({ planId, editKey }: { planId: string; editKey: string | null }) {
   const s = useShare(planId, editKey);
   return (
     <section id="share" aria-labelledby="share-title" className="scroll-mt-20">
@@ -45,7 +45,8 @@ export function ShareSection({ planId, editKey }: { planId: string; editKey: str
       <div className="grid gap-5 lg:grid-cols-2">
         <LinkBox id="share-link" label="Read-only link" value={s.shareUrl} onCopy={() => void s.copy(s.shareUrl, "Share link")} />
         {s.editUrl && (
-          <LinkBox id="edit-link" label="Edit link — keep it private" value={s.editUrl} onCopy={() => void s.copy(s.editUrl ?? "", "Edit link")} />
+          <LinkBox id="edit-link" label="Edit link — keep it private" value={s.editUrl} private
+            onCopy={() => void s.copy(s.editUrl ?? "", "Edit link")} />
         )}
       </div>
       <div className="no-print mt-5 flex flex-wrap gap-3">
@@ -56,11 +57,14 @@ export function ShareSection({ planId, editKey }: { planId: string; editKey: str
       <p role="status" aria-live="polite" className="mt-3 min-h-6 text-sm text-muted">{s.status}</p>
     </section>
   );
-}
+});
 
-function LinkBox({ id, label, value, onCopy }: { id: string; label: string; value: string; onCopy: () => void }) {
+type LinkBoxProps = { id: string; label: string; value: string; onCopy: () => void; private?: boolean };
+
+/** A labelled read-only URL with a copy button; the private edit link never prints. */
+function LinkBox({ id, label, value, onCopy, private: secret = false }: LinkBoxProps) {
   return (
-    <div className="panel flex flex-col gap-3 p-5">
+    <div className={`panel flex flex-col gap-3 p-5 ${secret ? "no-print" : ""}`}>
       <label htmlFor={id} className="eyebrow">{label}</label>
       <div className="flex gap-2">
         <input id={id} readOnly value={value} className="field flex-1 font-mono text-sm" onFocus={(e) => e.currentTarget.select()} />

@@ -3,10 +3,11 @@ import { beforeEach, describe, expect, it } from "vitest";
 import type { AiResponse } from "@/lib/ai/client";
 import { TtlCache } from "@/lib/ai/cache";
 import { clearVendorCache, findVendors, groundedPlaces, vendorQueryText } from "@/lib/ai/vendors";
-import type { VendorQuery, VendorResult } from "@/lib/contracts";
+import type { VendorLookup } from "@/lib/ai/vendors";
+import type { VendorResult } from "@/lib/contracts";
 import { fakeAi, promptText } from "../server/fixtures";
 
-const query: VendorQuery = { city: "Jaipur", category: "catering", eventType: "wedding" };
+const query: VendorLookup = { city: "Jaipur", category: "catering", eventType: "wedding" };
 const SEARCH = "https://www.google.com/maps/search/?api=1&query=Catering%20for%20wedding%20in%20Jaipur";
 
 const grounded = (maps: Array<{ title?: string; uri?: string } | undefined>, text = "Try Vendor X (not grounded)"): AiResponse => ({

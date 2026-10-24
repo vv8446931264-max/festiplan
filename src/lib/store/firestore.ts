@@ -4,7 +4,6 @@ import type { Mutator, PlanStore } from "./types";
 /** The slice of a Firestore document reference this adapter uses (fakeable in tests). */
 export type DocRefLike = {
   create(data: Record<string, unknown>): Promise<unknown>;
-  set(data: Record<string, unknown>): Promise<unknown>;
   get(): Promise<{ exists: boolean; data(): Record<string, unknown> | undefined }>;
 };
 
@@ -109,11 +108,5 @@ export class FirestoreStore implements PlanStore {
       const { next, result } = fn(live(fromDoc(data)));
       return { write: next ? this.toDoc(b, next) : null, result };
     });
-  }
-
-  /** Replaces `plans/{id}`. */
-  async update(plan: Plan): Promise<void> {
-    const b = await this.bind();
-    await b.doc(plan.id).set(this.toDoc(b, plan));
   }
 }

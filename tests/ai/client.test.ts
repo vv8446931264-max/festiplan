@@ -1,12 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { aiBackend, DEFAULT_MODEL, getAi, thinkingFor } from "@/lib/ai/client";
+import { DEFAULT_MODEL, getAi, thinkingFor } from "@/lib/ai/client";
 
 describe("getAi", () => {
   it("returns null (template mode) when nothing is configured", () => {
     expect(getAi({})).toBeNull();
     expect(getAi({ GEMINI_API_KEY: "  " })).toBeNull();
-    expect(aiBackend({})).toBe("template");
   });
 
   it("uses the Gemini API with a key and the default model", () => {
@@ -14,7 +13,6 @@ describe("getAi", () => {
     expect(ai?.backend).toBe("gemini-api");
     expect(ai?.model).toBe(DEFAULT_MODEL);
     expect(DEFAULT_MODEL).toBe("gemini-3.5-flash");
-    expect(aiBackend({ GEMINI_API_KEY: "test-key" })).toBe("gemini-api");
   });
 
   it("prefers Vertex AI when GOOGLE_GENAI_USE_VERTEXAI=true", () => {

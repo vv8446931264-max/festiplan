@@ -6,8 +6,6 @@ export interface PlanStore {
   create(plan: Plan): Promise<void>;
   /** Returns the plan, or null when it does not exist. */
   get(id: string): Promise<Plan | null>;
-  /** Replaces an existing plan. */
-  update(plan: Plan): Promise<void>;
   /**
    * Atomically reads a plan (null when missing), lets `fn` decide, and writes `next`
    * when it is non-null — concurrent edits never overwrite each other.

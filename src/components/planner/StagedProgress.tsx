@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /** The five stages of the plan request, shown while the server works. */
 export const STAGES = [
@@ -8,7 +8,7 @@ export const STAGES = [
   "Drafting concepts",
   "Balancing ₹",
   "Counting back from the date",
-  "Finding vendors",
+  "Listing who to book",
 ] as const;
 
 const STEP_MS = 1800;
@@ -16,9 +16,12 @@ const STEP_MS = 1800;
 /**
  * Staged progress line. Stages advance on a timer while the single request is in
  * flight and never claim completion: the last stage waits for the real response.
+ * The panel takes focus when it appears, because the form the user was in is gone.
  */
-export function StagedProgress({ city }: { city: string }) {
+export function StagedProgress() {
   const [stage, setStage] = useState(0);
+  const panel = useRef<HTMLDivElement>(null);
+  useEffect(() => panel.current?.focus(), []);
 
   useEffect(() => {
     const id = window.setInterval(
@@ -28,12 +31,10 @@ export function StagedProgress({ city }: { city: string }) {
     return () => window.clearInterval(id);
   }, []);
 
-  const label = stage === STAGES.length - 1 && city ? `Finding vendors in ${city}` : STAGES[stage];
-
   return (
-    <div className="panel p-6 sm:p-8">
+    <div ref={panel} tabIndex={-1} aria-label="Planning in progress" className="panel p-6 outline-none sm:p-8">
       <p role="status" aria-live="polite" className="h3">
-        <span className="accent text-gold">{label}</span>
+        <span className="accent text-gold">{STAGES[stage]}</span>
         <span aria-hidden="true" className="inline-block w-8 animate-pulse">
           …
         </span>

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { EVENT_TYPE_LABELS } from "@/lib/contracts/constants";
+import { useToday } from "@/lib/client/browser";
 import type { PublicPlan } from "@/lib/contracts";
-import { diffDays, formatDate, formatINR } from "@/lib/engine";
+import { diffDays, formatDate, formatINR, planTitle } from "@/lib/engine";
 import { aiLang } from "./SectionHead";
 import type { SaveState } from "./usePlanState";
 
@@ -11,18 +11,33 @@ const SAVE_TEXT: Record<SaveState, string> = {
   idle: "",
   saving: "Saving…",
   saved: "All changes saved",
-  error: "Couldn't save — your changes are still here. We'll retry on the next change.",
+  retrying: "Couldn't save yet — retrying in a moment. Your changes are kept in this tab.",
+  rejected: "That change couldn't be saved. Refresh the page to see the latest plan.",
   forbidden: "This link can't save changes. Ask the organiser for the edit link.",
 };
 
-type Props = { plan: PublicPlan; saveState: SaveState; editable: boolean; autoFocus?: boolean };
+type Props = {
+  plan: PublicPlan;
+  saveState: SaveState;
+  editable: boolean;
+  autoFocus?: boolean;
+  /** h1 on the standalone share page, h2 when the plan unfolds inside the landing page. */
+  titleAs?: "h1" | "h2";
+};
+
+/** Human countdown for whole days until the event (negative once it has passed). */
+export function countdownLabel(days: number): string {
+  if (days > 1) return `${days} days`;
+  if (days === 1) return "Tomorrow";
+  if (days === 0) return "Today";
+  return "Celebrated";
+}
 
 /** Title, the brief's key facts, the AI-source label and the summary. */
-export function PlanHeader({ plan, saveState, editable, autoFocus }: Props) {
+export function PlanHeader({ plan, saveState, editable, autoFocus, titleAs: Title = "h2" }: Props) {
   const ref = useRef<HTMLHeadingElement>(null);
   const { input } = plan;
-  const title = input.title || `${EVENT_TYPE_LABELS[input.eventType]} in ${input.city}`;
-  const daysToGo = diffDays(plan.today, input.eventDate);
+  const today = useToday() || plan.today;
   const lang = aiLang(plan);
 
   useEffect(() => {
@@ -38,15 +53,15 @@ export function PlanHeader({ plan, saveState, editable, autoFocus }: Props) {
         <SourceBadge source={plan.source} model={plan.model} />
         {!editable && <span className="eyebrow rounded-full border border-line px-3 py-1">Read-only</span>}
       </div>
-      <h2 ref={ref} id="plan-title" tabIndex={-1} className="h2 scroll-mt-24 outline-none">
-        {title}
-      </h2>
+      <Title ref={ref} id="plan-title" tabIndex={-1} className="h2 scroll-mt-24 outline-none">
+        {planTitle(input)}
+      </Title>
       <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-5">
         <Fact term="When" value={formatDate(input.eventDate)} />
         <Fact term="Where" value={input.city} />
         <Fact term="Guests" value={String(input.guests)} />
         <Fact term="Budget" value={formatINR(input.budgetINR)} />
-        <Fact term="Countdown" value={daysToGo === 1 ? "Tomorrow" : `${daysToGo} days`} />
+        <Fact term="Countdown" value={countdownLabel(diffDays(today, input.eventDate))} />
       </dl>
       <p lang={lang} className="lead max-w-4xl text-cream">
         {plan.ai.summary}

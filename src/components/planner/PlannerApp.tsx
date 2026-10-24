@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { PlanView } from "@/components/plan/PlanView";
+import { maxEventDate } from "@/lib/contracts/dates";
 import { addDays } from "@/lib/engine";
 import { ErrorSummary } from "./ErrorSummary";
 import { PlanForm } from "./PlanForm";
@@ -30,14 +31,14 @@ export function PlannerApp() {
       <PresetChips disabled={p.busy} onPick={p.pickPreset} />
       <ErrorSummary ref={summaryRef} errors={p.errors} serverError={p.serverError} />
       {p.busy ? (
-        <StagedProgress city={p.values.city.trim()} />
+        <StagedProgress />
       ) : (
         <PlanForm
           values={p.values}
           errors={p.errors}
           busy={p.busy}
           minDate={p.today ? addDays(p.today, 1) : undefined}
-          maxDate={p.today ? addDays(p.today, 365 * 3) : undefined}
+          maxDate={p.today ? maxEventDate(p.today) : undefined}
           onChange={p.update}
           onSubmit={() => void p.submit(p.values)}
         />

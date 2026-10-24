@@ -71,18 +71,6 @@ export function nextActions(timeline: ScheduledTask[], n = 3): ScheduledTask[] {
 }
 
 /**
- * Groups items by `category`, in the order each category first appears.
- * @param items Items with a string `category`.
- */
-export function groupByCategory<T extends { category: string }>(
-  items: T[],
-): { category: T["category"]; items: T[] }[] {
-  const groups = new Map<T["category"], T[]>();
-  for (const item of items) groups.set(item.category, [...(groups.get(item.category) ?? []), item]);
-  return [...groups].map(([category, grouped]) => ({ category, items: grouped }));
-}
-
-/**
  * Groups tasks by phase, in `PHASES` order (earliest first), skipping empty phases.
  * @param timeline Scheduled tasks.
  */

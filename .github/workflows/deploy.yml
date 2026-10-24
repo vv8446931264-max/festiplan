@@ -34,12 +34,26 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
 
       - name: Deploy to Cloud Run (source build, Vertex AI via ADC — no API key)
+        shell: bash
+        env:
+          PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          RUNTIME_SA: ${{ vars.GCP_RUNTIME_SA }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash' }}
         run: |
-          gcloud run deploy festiplan --source . \
-            --project "${{ vars.GCP_PROJECT_ID }}" --region us-central1 \
-            --allow-unauthenticated --quiet \
-            --memory 1Gi --cpu 1 --concurrency 40 --timeout 90 --min-instances 0 --max-instances 5 \
-            --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLOUD_LOCATION=global,FIRESTORE_DATABASE=festiplan,GEMINI_MODEL=${{ vars.GEMINI_MODEL || 'gemini-3.5-flash' }}"
+          args=(
+            --source . --project "$PROJECT_ID" --region us-central1
+            --allow-unauthenticated --quiet
+            --memory 1Gi --cpu 1 --concurrency 40 --timeout 90 --min-instances 0 --max-instances 5
+            --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=global,FIRESTORE_DATABASE=festiplan,GEMINI_MODEL=${GEMINI_MODEL}"
+          )
+          # Dedicated least-privilege runtime identity when bootstrapped with it; projects set up
+          # before GCP_RUNTIME_SA existed keep the service's current identity.
+          if [[ -n "${RUNTIME_SA}" ]]; then
+            args+=(--service-account "${RUNTIME_SA}")
+          else
+            echo "::notice::GCP_RUNTIME_SA is not set; deploying with the service's current runtime identity."
+          fi
+          gcloud run deploy festiplan "${args[@]}"
 
       - name: Smoke test the live service
         run: |

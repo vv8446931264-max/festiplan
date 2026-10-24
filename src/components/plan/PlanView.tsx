@@ -21,19 +21,26 @@ const NAV = [
   ["share", "Share"],
 ] as const;
 
-type Props = { plan: PublicPlan; editKey: string | null; autoFocus?: boolean };
+type Props = {
+  plan: PublicPlan;
+  editKey: string | null;
+  autoFocus?: boolean;
+  /** "h1" on the standalone share page. */
+  titleAs?: "h1" | "h2";
+};
 
 /**
  * The whole plan: ideas, budget, timeline, vendors, tips, Ask FestiPlan and sharing.
  * Server-renderable — browser-only work happens in effects.
  */
-export function PlanView({ plan: initial, editKey, autoFocus }: Props) {
+export function PlanView({ plan: initial, editKey, autoFocus, titleAs }: Props) {
   const s = usePlanState(initial, editKey);
-  const lang = aiLang(s.plan);
+  const { plan } = s;
+  const lang = aiLang(plan);
 
   return (
     <article aria-labelledby="plan-title" className="flex flex-col gap-20 sm:gap-28">
-      <PlanHeader plan={s.plan} saveState={s.saveState} editable={s.editable} autoFocus={autoFocus} />
+      <PlanHeader plan={plan} saveState={s.saveState} editable={s.editable} autoFocus={autoFocus} titleAs={titleAs} />
       <nav aria-label="Plan sections" className="no-print sticky top-0 z-20 -mx-[var(--pad)] overflow-x-auto bg-espresso/85 px-[var(--pad)] py-3 backdrop-blur">
         <ul className="flex gap-2">
           {NAV.map(([id, label]) => (
@@ -45,13 +52,16 @@ export function PlanView({ plan: initial, editKey, autoFocus }: Props) {
           ))}
         </ul>
       </nav>
-      <IdeasSection ideas={s.plan.ai.ideas} lang={lang} />
-      <BudgetSection plan={s.plan} editable={s.editable} onMove={s.moveBudget} onLock={s.lockBudget} onActual={s.recordActual} />
-      <TimelineSection plan={s.plan} editable={s.editable} onToggle={s.toggleTask} lang={lang} />
-      <VendorsSection plan={s.plan} editable={s.editable} onToggle={s.toggleVendor} lang={lang} />
-      <TipsSection tips={s.plan.ai.tips} lang={lang} />
-      <AskSection planId={s.plan.id} lang={lang} />
-      <ShareSection planId={s.plan.id} editKey={s.editKey} />
+      <IdeasSection ideas={plan.ai.ideas} lang={lang} />
+      <BudgetSection input={plan.input} budget={plan.budget} contingencyINR={plan.contingencyINR}
+        editable={s.editable} onMove={s.moveBudget} onLock={s.lockBudget} onActual={s.recordActual} />
+      <TimelineSection planId={plan.id} input={plan.input} timeline={plan.timeline}
+        editable={s.editable} onToggle={s.toggleTask} lang={lang} />
+      <VendorsSection planId={plan.id} input={plan.input} vendors={plan.vendors}
+        editable={s.editable} onToggle={s.toggleVendor} lang={lang} />
+      <TipsSection tips={plan.ai.tips} lang={lang} />
+      <AskSection planId={plan.id} lang={lang} />
+      <ShareSection planId={plan.id} editKey={s.editKey} />
     </article>
   );
 }

@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { CATEGORY_LABELS, PLAN_TTL_DAYS } from "@/lib/contracts";
+import { CATEGORY_LABELS, PLAN_ID_RE, PLAN_TTL_DAYS } from "@/lib/contracts";
 import type { Allocation, Plan, PlanInput, PlanPatch, PublicPlan, ScheduledTask, VendorItem } from "@/lib/contracts";
 import type { AiHandle } from "@/lib/ai/client";
 import { generateAiPlan } from "@/lib/ai/plan";
@@ -17,6 +17,7 @@ import {
 import { hashEditKey, newEditKey, verifyEditKey } from "@/lib/security/edit-key";
 import { getStore } from "@/lib/store";
 import type { PlanStore } from "@/lib/store";
+import { DAY_MS } from "@/lib/time";
 
 /** Injectable dependencies; omitted fields use the process store, env AI client and real clock. */
 export type ServiceDeps = { store?: PlanStore; ai?: AiHandle | null; now?: Date };
@@ -26,14 +27,13 @@ export type PatchResult =
   | { ok: true; plan: PublicPlan }
   | { ok: false; status: 403 | 404 | 422; error: string };
 
-const DAY_MS = 86_400_000;
-/** Plan ids accepted from URLs; checked before the store is touched. */
-export const PLAN_ID_RE = /^[A-Za-z0-9_-]{6,32}$/;
+/** The one plain-language message every route uses for a missing, expired or malformed plan id (404). */
+export const PLAN_NOT_FOUND = "We couldn't find that plan. It may have expired or the link may be incomplete.";
 
-const NOT_FOUND = { ok: false, status: 404, error: "We couldn't find that plan. It may have expired or the link may be incomplete." } as const;
+const NOT_FOUND = { ok: false, status: 404, error: PLAN_NOT_FOUND } as const;
 const FORBIDDEN = { ok: false, status: 403, error: "This link can view the plan but not change it. Open it on the device that created the plan." } as const;
 
-/** True when `id` has the shape of a plan id. */
+/** True when `id` has the shape of a plan id; checked before the store is touched. */
 export function isPlanId(id: string): boolean {
   return PLAN_ID_RE.test(id);
 }

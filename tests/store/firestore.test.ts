@@ -20,9 +20,6 @@ function fakeBinding() {
       if (docs.has(id)) throw new Error("ALREADY_EXISTS");
       docs.set(id, { ...data });
     },
-    async set(data) {
-      docs.set(id, { ...data });
-    },
     async get() {
       const data = docs.get(id);
       return { exists: data !== undefined, data: () => data };
@@ -49,7 +46,11 @@ describe("FirestoreStore", () => {
     expect(read?.expireAt).toBeInstanceOf(Date);
     expect(read?.expireAt.toISOString()).toBe(plan.expireAt);
     await expect(store.create(read ?? Object.create(null))).rejects.toThrow();
-    if (read) await store.update({ ...read, model: "changed" });
+    const seen = await store.mutate(plan.id, (p) => ({ next: p ? { ...p, model: "changed" } : null, result: p?.id }));
+    expect(seen).toBe(plan.id);
+    expect((await store.get(plan.id))?.model).toBe("changed");
+    expect(docs.get(plan.id)?.expireAt).toBeInstanceOf(FakeTimestamp);
+    await store.mutate(plan.id, () => ({ next: null, result: null }));
     expect((await store.get(plan.id))?.model).toBe("changed");
     expect(await store.get("missing-id")).toBeNull();
   });

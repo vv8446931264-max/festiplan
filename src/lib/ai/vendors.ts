@@ -1,11 +1,15 @@
 import { CATEGORY_LABELS } from "@/lib/contracts";
-import type { EventType, Place, VendorQuery, VendorResult } from "@/lib/contracts";
+import type { BudgetCategory, EventType, Place, VendorResult } from "@/lib/contracts";
 import { mapsSearchUrl } from "@/lib/engine";
 import { logEvent } from "@/lib/server/log";
+import { DAY_MS } from "@/lib/time";
 import { TtlCache } from "./cache";
 import { getAi, thinkingFor } from "./client";
 import type { AiHandle, AiResponse } from "./client";
 import { dataBlock } from "./prompts";
+
+/** One Maps lookup. The API route fills `city` and `eventType` from the stored plan. */
+export type VendorLookup = { city: string; category: BudgetCategory; eventType: EventType };
 
 /** Injectable dependencies (tests pass a fake client and a private cache). */
 export type VendorDeps = {
@@ -18,7 +22,6 @@ export type VendorDeps = {
 
 export const MAX_PLACES = 6;
 export const VENDOR_TIMEOUT_MS = 15_000;
-const DAY_MS = 24 * 60 * 60 * 1000;
 const sharedCache = new TtlCache<VendorResult>(500, DAY_MS);
 
 const EVENT_NOUN: Record<EventType, string> = {
@@ -36,7 +39,7 @@ export function clearVendorCache(): void {
 }
 
 /** The Google Maps search query for a vendor lookup, e.g. "Catering for wedding in Jaipur". */
-export function vendorQueryText(q: VendorQuery): string {
+export function vendorQueryText(q: VendorLookup): string {
   return `${CATEGORY_LABELS[q.category]} for ${EVENT_NOUN[q.eventType]} in ${q.city.trim()}`;
 }
 
@@ -61,7 +64,7 @@ export function groundedPlaces(res: AiResponse): Place[] {
   return places;
 }
 
-async function askMaps(handle: AiHandle, q: VendorQuery, timeoutMs: number): Promise<Place[]> {
+async function askMaps(handle: AiHandle, q: VendorLookup, timeoutMs: number): Promise<Place[]> {
   const prompt = `${dataBlock("CITY", q.city.trim())}\n\nFind up to ${MAX_PLACES} well-reviewed ${CATEGORY_LABELS[q.category].toLowerCase()} services for a ${EVENT_NOUN[q.eventType]} in the city above, India. List each place with one line on why it suits.`;
   const res = await handle.client.models.generateContent({
     model: handle.model,
@@ -81,7 +84,7 @@ async function askMaps(handle: AiHandle, q: VendorQuery, timeoutMs: number): Pro
  * places; with no backend, no chunks or an error it returns no places and a plain
  * Google Maps search link (always present). Successful lookups are cached for 24 h.
  */
-export async function findVendors(q: VendorQuery, deps: VendorDeps = {}): Promise<VendorResult> {
+export async function findVendors(q: VendorLookup, deps: VendorDeps = {}): Promise<VendorResult> {
   const searchUrl = mapsSearchUrl(vendorQueryText(q));
   const empty: VendorResult = { places: [], searchUrl, source: "search" };
   const handle = deps.ai === undefined ? getAi() : deps.ai;

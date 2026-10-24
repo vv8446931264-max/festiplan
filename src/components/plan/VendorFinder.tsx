@@ -3,19 +3,19 @@
 import { useState } from "react";
 import { findVendors } from "@/lib/client/api";
 import { CATEGORY_LABELS } from "@/lib/contracts/constants";
-import type { BudgetCategory, EventType, VendorResult } from "@/lib/contracts";
+import type { BudgetCategory, VendorResult } from "@/lib/contracts";
 
-type Props = { category: BudgetCategory; city: string; eventType: EventType };
+type Props = { planId: string; category: BudgetCategory; city: string };
 type State = { kind: "idle" } | { kind: "busy" } | { kind: "done"; result: VendorResult } | { kind: "error"; message: string };
 
 /** "Find real vendors" — places come only from Grounding with Google Maps. */
-export function VendorFinder({ category, city, eventType }: Props) {
+export function VendorFinder({ planId, category, city }: Props) {
   const [state, setState] = useState<State>({ kind: "idle" });
   const label = CATEGORY_LABELS[category].toLowerCase();
 
   async function search() {
     setState({ kind: "busy" });
-    const res = await findVendors({ category, city, eventType });
+    const res = await findVendors({ planId, category });
     setState(res.ok ? { kind: "done", result: res } : { kind: "error", message: res.error });
   }
 

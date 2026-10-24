@@ -58,6 +58,8 @@ export function usePlanner(summaryRef: RefObject<HTMLDivElement | null>) {
       return brief.report(res.issues ? issuesToErrors(res.issues) : {}, res.error);
     }
     saveEditKey(res.plan.id, res.editKey);
+    // The plan's own URL survives a refresh; the edit key stays in this browser only.
+    window.history.replaceState(null, "", `/plan/${res.plan.id}`);
     setResult({ plan: res.plan, editKey: res.editKey });
     setPalette(res.plan.ai.ideas[0]?.palette ?? null);
     setMood("plan");
@@ -75,6 +77,8 @@ export function usePlanner(summaryRef: RefObject<HTMLDivElement | null>) {
   const reset = () => {
     setResult(null);
     resetScene();
+    window.history.replaceState(null, "", "/#plan");
+    requestAnimationFrame(() => document.getElementById("brief-title")?.focus());
   };
 
   return { ...brief, busy, result, submit, pickPreset, reset };

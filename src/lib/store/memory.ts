@@ -50,12 +50,6 @@ export class MemoryStore implements PlanStore {
     return result;
   }
 
-  /** Replaces an existing plan; rejects when it does not exist. */
-  async update(plan: Plan): Promise<void> {
-    if (!this.plans.has(plan.id)) throw new Error("Plan not found");
-    this.plans.set(plan.id, structuredClone(plan));
-  }
-
   /** Number of stored plans (tests). */
   get size(): number {
     return this.plans.size;

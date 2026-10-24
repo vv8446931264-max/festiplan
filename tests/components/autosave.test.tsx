@@ -18,7 +18,7 @@ function mockFetch() {
 }
 
 const settle = async () => {
-  for (let i = 0; i < 5; i++) await act(async () => await Promise.resolve());
+  for (let i = 0; i < 20; i++) await act(async () => await Promise.resolve());
 };
 
 beforeEach(() => vi.useFakeTimers());
@@ -76,5 +76,54 @@ describe("useAutosave", () => {
     await act(async () => vi.advanceTimersByTime(2000));
     expect(net.calls).toHaveLength(0);
     expect(result.current.saveState).toBe("idle");
+  });
+});
+
+describe("useAutosave failures", () => {
+  function scripted(statuses: number[]) {
+    const bodies: unknown[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
+      bodies.push(JSON.parse(String(init.body)));
+      const status = statuses.shift() ?? 200;
+      if (status === 0) throw new TypeError("network down");
+      return new Response(JSON.stringify(status < 300 ? { plan: {} } : { error: "nope" }), { status });
+    }));
+    return bodies;
+  }
+
+  it("puts a transiently failed change back and retries it until it is saved", async () => {
+    const bodies = scripted([0, 503, 200]);
+    const { result } = renderHook(() => useAutosave("plan123", "k".repeat(43)));
+    act(() => result.current.queue({ tasks: [{ id: "a", done: true }] }));
+    await act(async () => vi.advanceTimersByTime(700));
+    await settle();
+    expect(result.current.saveState).toBe("retrying");
+    act(() => result.current.queue({ tasks: [{ id: "b", done: true }] }));
+    await act(async () => vi.advanceTimersByTime(2000));
+    await settle();
+    await act(async () => vi.advanceTimersByTime(4000));
+    await settle();
+    expect(result.current.saveState).toBe("saved");
+    expect(bodies.at(-1)).toEqual({ tasks: [{ id: "a", done: true }, { id: "b", done: true }] });
+  });
+
+  it("reports a rejected change without retrying it", async () => {
+    const bodies = scripted([422]);
+    const { result } = renderHook(() => useAutosave("plan123", "k".repeat(43)));
+    act(() => result.current.queue({ actuals: [{ category: "venue", actualINR: 5 }] }));
+    await act(async () => vi.advanceTimersByTime(700));
+    await settle();
+    await act(async () => vi.advanceTimersByTime(20_000));
+    expect(result.current.saveState).toBe("rejected");
+    expect(bodies).toHaveLength(1);
+  });
+
+  it("flags a wrong edit key", async () => {
+    scripted([403]);
+    const { result } = renderHook(() => useAutosave("plan123", "k".repeat(43)));
+    act(() => result.current.queue({ tasks: [{ id: "a", done: true }] }));
+    await act(async () => vi.advanceTimersByTime(700));
+    await settle();
+    expect(result.current.saveState).toBe("forbidden");
   });
 });

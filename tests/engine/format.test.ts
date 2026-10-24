@@ -7,6 +7,7 @@ import {
   formatINRCompact,
   formatPercent,
   mapsSearchUrl,
+  planTitle,
 } from "@/lib/engine/format";
 
 describe("formatINR", () => {
@@ -83,5 +84,24 @@ describe("mapsSearchUrl", () => {
       "https://www.google.com/maps/search/?api=1&query=wedding%20venues%20in%20Pune",
     );
     expect(mapsSearchUrl("a&b=c/ü")).toBe("https://www.google.com/maps/search/?api=1&query=a%26b%3Dc%2F%C3%BC");
+  });
+});
+
+describe("formatINRCompact rounding carry", () => {
+  it("promotes to the next unit when rounding reaches it", () => {
+    expect(formatINRCompact(9_999_999)).toBe("₹1Cr");
+    expect(formatINRCompact(99_960)).toBe("₹1L");
+    expect(formatINRCompact(-9_999_999)).toBe("-₹1Cr");
+    expect(formatINRCompact(9_940_000)).toBe("₹99.4L");
+  });
+});
+
+describe("planTitle", () => {
+  it("prefers the user's own name, trimmed", () => {
+    expect(planTitle({ title: "  Riya's sangeet ", eventType: "wedding", city: "Jaipur" })).toBe("Riya's sangeet");
+  });
+  it("falls back to the event type and city", () => {
+    expect(planTitle({ eventType: "community", city: "Pune" })).toBe("Community in Pune");
+    expect(planTitle({ title: "   ", eventType: "birthday", city: "Bengaluru" })).toBe("Birthday in Bengaluru");
   });
 });

@@ -1,7 +1,7 @@
 import { LIMITS, PlanPatchSchema } from "@/lib/contracts";
 import { readJson } from "@/lib/security/body";
 import { invalid, json, perIpLimit, problem, runGuards, sameOrigin, toIssues, withRoute } from "@/lib/server/http";
-import { getPublicPlan, isPlanId, patchPlan } from "@/lib/server/plan-service";
+import { PLAN_NOT_FOUND, getPublicPlan, isPlanId, patchPlan } from "@/lib/server/plan-service";
 import { todayIST } from "@/lib/time";
 
 export const runtime = "nodejs";
@@ -9,7 +9,6 @@ export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-const NOT_FOUND = "We couldn't find that plan. It may have expired or the link may be incomplete.";
 const readLimit = perIpLimit("plan-read", 120);
 const patchLimit = perIpLimit("plan-patch", 30);
 
@@ -18,9 +17,9 @@ export const GET = withRoute("GET /api/plan/[id]", async (req: Request, ctx: Ctx
   const blocked = runGuards(req, readLimit);
   if (blocked) return blocked;
   const { id } = await ctx.params;
-  if (!isPlanId(id)) return problem(404, NOT_FOUND);
+  if (!isPlanId(id)) return problem(404, PLAN_NOT_FOUND);
   const plan = await getPublicPlan(id, todayIST());
-  return plan ? json({ plan }) : problem(404, NOT_FOUND);
+  return plan ? json({ plan }) : problem(404, PLAN_NOT_FOUND);
 });
 
 /**
@@ -31,7 +30,7 @@ export const PATCH = withRoute("PATCH /api/plan/[id]", async (req: Request, ctx:
   const blocked = runGuards(req, sameOrigin, patchLimit);
   if (blocked) return blocked;
   const { id } = await ctx.params;
-  if (!isPlanId(id)) return problem(404, NOT_FOUND);
+  if (!isPlanId(id)) return problem(404, PLAN_NOT_FOUND);
   const editKey = req.headers.get("x-edit-key");
   if (!editKey) return problem(403, "Editing needs the plan's edit key. Open the plan on the device that created it.");
   const body = await readJson(req, LIMITS.patchBodyBytes);
