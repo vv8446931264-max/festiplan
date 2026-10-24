@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { savePlan } from "@/lib/client/api";
 import type { PlanPatch } from "@/lib/contracts";
 import { mergePatch } from "./patch";
@@ -49,6 +49,12 @@ export function useAutosave(planId: string, editKey: string | null) {
     [editKey, flush],
   );
 
+  useFlushOnLeave(flush, timer);
+  return { saveState, queue };
+}
+
+/** Flush with keepalive when the page is hidden or left; clear the debounce on unmount. */
+function useFlushOnLeave(flush: (keepalive?: boolean) => void, timer: RefObject<number | undefined>) {
   useEffect(() => {
     const now = () => flush(true);
     const onVisibility = () => document.visibilityState === "hidden" && now();
@@ -59,7 +65,5 @@ export function useAutosave(planId: string, editKey: string | null) {
       document.removeEventListener("visibilitychange", onVisibility);
       window.clearTimeout(timer.current);
     };
-  }, [flush]);
-
-  return { saveState, queue };
+  }, [flush, timer]);
 }
