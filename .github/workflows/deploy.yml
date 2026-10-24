@@ -38,7 +38,7 @@ jobs:
           gcloud run deploy mehfil --source . \
             --project "${{ vars.GCP_PROJECT_ID }}" --region us-central1 \
             --allow-unauthenticated --quiet \
-            --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLOUD_LOCATION=global,GEMINI_MODEL=${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}"
+            --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLOUD_LOCATION=global,FIRESTORE_DATABASE=mehfil,GEMINI_MODEL=${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}"
 
       - name: Smoke test the live service
         run: |

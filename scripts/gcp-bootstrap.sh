@@ -10,15 +10,21 @@ PROJECT_ID="${1:?usage: bash scripts/gcp-bootstrap.sh <gcp-project-id> [owner/re
 REPO="${2:-vv8446931264-max/mehfil}"
 REGION=us-central1
 POOL=github
+DB=mehfil
 
-gcloud config set project "$PROJECT_ID" >/dev/null
+# Scope the project to this run only; the global gcloud config is left untouched.
+export CLOUDSDK_CORE_PROJECT="$PROJECT_ID" CLOUDSDK_CORE_DISABLE_PROMPTS=1
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
 RUNTIME_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
 DEPLOY_SA="github-deployer@${PROJECT_ID}.iam.gserviceaccount.com"
 
-grant() { # grant <member> <role>
-  gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="$1" --role="$2" \
-    --condition=None >/dev/null || echo "WARN: could not grant $2 to $1"
+grant() { # grant <member> <role>; retries because a just-created service account propagates slowly
+  for _ in 1 2 3 4 5; do
+    gcloud projects add-iam-policy-binding "$PROJECT_ID" --member="$1" --role="$2" \
+      --condition=None >/dev/null 2>&1 && return 0
+    sleep 10
+  done
+  echo "WARN: could not grant $2 to $1"
 }
 
 echo "==> Enabling APIs"
@@ -26,11 +32,12 @@ gcloud services enable run.googleapis.com cloudbuild.googleapis.com \
   artifactregistry.googleapis.com aiplatform.googleapis.com firestore.googleapis.com \
   iamcredentials.googleapis.com sts.googleapis.com logging.googleapis.com
 
-echo "==> Firestore (Native) + TTL on plans.expireAt"
-gcloud firestore databases create --location="$REGION" --type=firestore-native 2>/dev/null \
-  || echo "    database already exists"
-gcloud firestore fields ttls update expireAt --collection-group=plans --enable-ttl --async \
-  >/dev/null || echo "WARN: TTL policy not set (retry later)"
+# A named Native-mode database, so an existing (possibly Datastore-mode) default DB is untouched.
+echo "==> Firestore Native database '$DB' + TTL on plans.expireAt"
+gcloud firestore databases create --database="$DB" --location="$REGION" --type=firestore-native \
+  2>/dev/null || echo "    database $DB already exists"
+gcloud firestore fields ttls update expireAt --database="$DB" --collection-group=plans \
+  --enable-ttl --async >/dev/null || echo "WARN: TTL policy not set (retry later)"
 
 echo "==> Runtime identity: Vertex AI, Firestore, logging, source builds"
 for role in roles/aiplatform.user roles/datastore.user roles/logging.logWriter roles/run.builder; do

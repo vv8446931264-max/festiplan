@@ -80,7 +80,8 @@ type AiPlan = {
   tips: Array<{ kind: "sustainability" | "accessibility" | "culture" | "savings"; text: string }>;
 };
 
-/** Computed by code from AiPlan + PlanInput. Persisted in Firestore `plans/{id}`. */
+/** Computed by code from AiPlan + PlanInput. Persisted in Firestore `plans/{id}` in the named
+ *  Native-mode database `FIRESTORE_DATABASE` (= "mehfil"): `new Firestore({ databaseId })`. */
 type Plan = {
   id: string; input: PlanInput; ai: AiPlan;
   budget: Allocation[]; timeline: ScheduledTask[];
