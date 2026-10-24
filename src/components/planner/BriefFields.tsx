@@ -1,6 +1,7 @@
 "use client";
 
-import { LANGS, LANG_LABELS, LIMITS, type Lang } from "@/lib/contracts";
+import { LANGS, LANG_LABELS, LIMITS } from "@/lib/contracts/constants";
+import type { Lang } from "@/lib/contracts";
 import { formatINR, formatINRCompact } from "@/lib/engine";
 import { CONSTRAINT_OPTIONS } from "@/lib/presets";
 import { Field } from "./Field";
@@ -91,7 +92,7 @@ export function PreferenceFields({ values, onChange }: FieldsProps) {
         <div className="flex flex-wrap gap-2">
           {CONSTRAINT_OPTIONS.map((tag) => (
             <label key={tag} className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border border-line px-4 text-sm transition-colors hover:border-cream has-[:checked]:border-gold has-[:checked]:bg-brown">
-              <input type="checkbox" className="size-4" checked={values.constraints.includes(tag)} onChange={() => toggle(tag)} />
+              <input type="checkbox" className="size-6 shrink-0" checked={values.constraints.includes(tag)} onChange={() => toggle(tag)} />
               {tag}
             </label>
           ))}

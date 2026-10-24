@@ -1,10 +1,6 @@
-import {
-  LIMITS,
-  checkEventDate,
-  type EventType,
-  type Lang,
-  type PlanInput,
-} from "@/lib/contracts";
+import { LIMITS } from "@/lib/contracts/constants";
+import { checkEventDate } from "@/lib/contracts/dates";
+import type { EventType, Lang, PlanInput } from "@/lib/contracts";
 
 /** Raw values held by the brief form (inputs are strings until validated). */
 export type FormValues = {

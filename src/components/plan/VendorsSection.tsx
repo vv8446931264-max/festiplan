@@ -1,6 +1,7 @@
 "use client";
 
-import { CATEGORY_LABELS, type BudgetCategory, type PublicPlan, type VendorItem } from "@/lib/contracts";
+import { CATEGORY_LABELS } from "@/lib/contracts/constants";
+import type { BudgetCategory, PublicPlan, VendorItem } from "@/lib/contracts";
 import { formatDate, progress } from "@/lib/engine";
 import { SectionHead } from "./SectionHead";
 import { VendorFinder } from "./VendorFinder";
@@ -43,7 +44,7 @@ function VendorCard({ item: v, plan, editable, lang, onToggle }: CardProps) {
         </div>
         {editable ? (
           <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
-            <input type="checkbox" className="size-5" checked={v.done} onChange={(e) => onToggle(v.category, e.target.checked)} />
+            <input type="checkbox" className="size-6 shrink-0" checked={v.done} onChange={(e) => onToggle(v.category, e.target.checked)} />
             Booked{" "}<span className="sr-only">{label}</span>
           </label>
         ) : (

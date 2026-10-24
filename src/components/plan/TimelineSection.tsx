@@ -1,6 +1,7 @@
 "use client";
 
-import { CATEGORY_LABELS, PHASE_LABELS, type PublicPlan, type ScheduledTask } from "@/lib/contracts";
+import { CATEGORY_LABELS, PHASE_LABELS } from "@/lib/contracts/constants";
+import type { PublicPlan, ScheduledTask } from "@/lib/contracts";
 import { formatDate, googleCalendarUrl, groupByPhase, nextActions, progress } from "@/lib/engine";
 import { SectionHead } from "./SectionHead";
 
@@ -76,7 +77,7 @@ function TaskItem({ task: t, plan, editable, lang, onToggle }: ItemProps) {
     <li className={`rounded-2xl border p-3 ${t.done ? "border-gold/50 bg-espresso/60" : "border-line/60"}`}>
       <div className="flex items-start gap-3">
         {editable ? (
-          <input id={id} type="checkbox" checked={t.done} onChange={(e) => onToggle(t.id, e.target.checked)} className="mt-1 size-5 shrink-0" />
+          <input id={id} type="checkbox" checked={t.done} onChange={(e) => onToggle(t.id, e.target.checked)} className="mt-0.5 size-6 shrink-0" />
         ) : (
           <span aria-hidden="true" className="mt-0.5 text-gold">{t.done ? "✓" : "○"}</span>
         )}
@@ -92,7 +93,7 @@ function TaskItem({ task: t, plan, editable, lang, onToggle }: ItemProps) {
             {t.overdue && <Badge tone="ember">Overdue</Badge>}
             {t.crunch && !t.overdue && <Badge tone="gold">Crunch — start now</Badge>}
           </span>
-          <a href={calendar} target="_blank" rel="noopener noreferrer" className="no-print text-sm">
+          <a href={calendar} target="_blank" rel="noopener noreferrer" className="no-print inline-flex min-h-8 items-center self-start text-sm">
             Add to Google Calendar<span className="sr-only">{`: ${t.title} (opens in a new tab)`}</span>
           </a>
         </div>

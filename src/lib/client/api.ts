@@ -41,12 +41,16 @@ export function createPlan(input: PlanInput) {
   });
 }
 
-/** PATCH /api/plan/[id] — saves checklist state, actuals and budget edits. */
-export function savePlan(id: string, editKey: string, patch: PlanPatch) {
+/**
+ * PATCH /api/plan/[id] — saves checklist state, actuals and budget edits.
+ * `keepalive` lets the request finish while the page is being left.
+ */
+export function savePlan(id: string, editKey: string, patch: PlanPatch, keepalive = false) {
   return call<{ plan: PublicPlan }>(`/api/plan/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "x-edit-key": editKey },
     body: JSON.stringify(patch),
+    keepalive,
   });
 }
 

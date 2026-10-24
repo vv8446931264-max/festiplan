@@ -30,7 +30,7 @@ export function BudgetSection({ plan, editable, onMove, onLock, onActual }: Prop
         {editable ? "Drag a slider — the others re-balance instantly, locked lines stay put." : "Open the edit link to adjust it."}
       </SectionHead>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
-        <div className="panel overflow-hidden p-3">
+        <div className="panel self-start overflow-hidden p-3 lg:sticky lg:top-24">
           <LazyBudgetFlow allocations={plan.budget} highlight={highlight} onHighlight={setHighlight} className="aspect-[4/3] w-full" />
         </div>
         <BudgetSliders

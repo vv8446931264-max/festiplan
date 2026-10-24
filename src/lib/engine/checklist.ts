@@ -1,4 +1,4 @@
-import { BUDGET_CATEGORIES, PHASES } from "@/lib/contracts";
+import { BUDGET_CATEGORIES, PHASES } from "@/lib/contracts/constants";
 import type { BudgetCategory, Phase, ScheduledTask, VendorGuide, VendorItem } from "@/lib/contracts";
 import { addDays, maxDate } from "./dates";
 import { compareByDue, isOverdue } from "./timeline";

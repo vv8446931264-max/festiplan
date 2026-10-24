@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { findVendors } from "@/lib/client/api";
-import { CATEGORY_LABELS, type BudgetCategory, type EventType, type VendorResult } from "@/lib/contracts";
+import { CATEGORY_LABELS } from "@/lib/contracts/constants";
+import type { BudgetCategory, EventType, VendorResult } from "@/lib/contracts";
 
 type Props = { category: BudgetCategory; city: string; eventType: EventType };
 type State = { kind: "idle" } | { kind: "busy" } | { kind: "done"; result: VendorResult } | { kind: "error"; message: string };
@@ -50,13 +51,13 @@ function Results({ result, label, city }: { result: VendorResult; label: string;
       <ul className="flex flex-col gap-1">
         {result.places.map((p) => (
           <li key={p.uri}>
-            <a href={p.uri} target="_blank" rel="noopener noreferrer" className="font-semibold">
+            <a href={p.uri} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-8 items-center font-semibold">
               {p.title}{" "}<span className="sr-only">on Google Maps (opens in a new tab)</span>
             </a>
           </li>
         ))}
       </ul>
-      <a href={result.searchUrl} target="_blank" rel="noopener noreferrer" className="text-sm">
+      <a href={result.searchUrl} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-8 items-center self-start text-sm">
         More {label} on Google Maps{" "}<span className="sr-only">(opens in a new tab)</span>
       </a>
     </div>

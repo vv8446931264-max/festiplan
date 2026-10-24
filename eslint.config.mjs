@@ -14,6 +14,25 @@ const config = [
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },
+  {
+    // Browser and engine code must not pull Zod into the client bundle: take values from
+    // the zod-free modules (constants, dates) and only types from the contracts barrel.
+    files: ["src/components/**", "src/lib/engine/**", "src/lib/client/**", "src/three/**", "src/lib/presets.ts"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@/lib/contracts",
+              message: "Import values from @/lib/contracts/constants or /dates; the barrel loads Zod.",
+              allowTypeImports: true,
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
 
 export default config;

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { EVENT_TYPE_LABELS, type PublicPlan } from "@/lib/contracts";
+import { EVENT_TYPE_LABELS } from "@/lib/contracts/constants";
+import type { PublicPlan } from "@/lib/contracts";
 import { diffDays, formatDate, formatINR } from "@/lib/engine";
 import { aiLang } from "./SectionHead";
 import type { SaveState } from "./usePlanState";

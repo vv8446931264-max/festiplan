@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { askPlan } from "@/lib/client/api";
-import { LIMITS } from "@/lib/contracts";
+import { LIMITS } from "@/lib/contracts/constants";
 import { SectionHead } from "./SectionHead";
 
 const SUGGESTIONS = [

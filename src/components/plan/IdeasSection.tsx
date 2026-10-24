@@ -37,7 +37,7 @@ function IdeaCover({ idea, index, lang, tinted, onTint }: CoverProps) {
   const band = `linear-gradient(120deg, ${idea.palette.join(", ")})`;
   return (
     <article className="panel flex h-full flex-col overflow-hidden">
-      <div aria-hidden="true" className="h-28 sm:h-36" style={{ background: band }} />
+      <div aria-hidden="true" data-print-keep="" className="h-28 sm:h-36" style={{ background: band }} />
       <div className="flex flex-1 flex-col gap-5 p-6 sm:p-7">
         <p className="eyebrow">Issue Nº 0{index + 1}</p>
         <h4 lang={lang} className="h3">{idea.name}</h4>
@@ -45,7 +45,7 @@ function IdeaCover({ idea, index, lang, tinted, onTint }: CoverProps) {
         <ul aria-label="Palette" className="flex flex-wrap gap-2">
           {idea.palette.map((hex) => (
             <li key={hex} className="flex items-center gap-2 rounded-full border border-line py-1 pl-1 pr-3 font-mono text-xs uppercase">
-              <span aria-hidden="true" className="size-6 rounded-full border border-cream/30" style={{ background: hex }} />
+              <span aria-hidden="true" data-print-keep="" className="size-6 rounded-full border border-cream/30" style={{ background: hex }} />
               {hex}
             </li>
           ))}

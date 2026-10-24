@@ -1,54 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { savePlan } from "@/lib/client/api";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { claimKeyFromHash, loadEditKey, subscribeEditKeys } from "@/lib/client/edit-keys";
 import type { BudgetCategory, PlanPatch, PublicPlan } from "@/lib/contracts";
 import {
   rebalance, refreshStatus, refreshVendorStatus, setActual, setLocked, setTaskDone, setVendorDone,
 } from "@/lib/engine";
 import { todayIST } from "@/lib/time";
-import { mergePatch } from "./patch";
+import { useAutosave } from "./useAutosave";
 
-export type SaveState = "idle" | "saving" | "saved" | "error" | "forbidden";
-const SAVE_DELAY_MS = 700;
+export type { SaveState } from "./useAutosave";
 
 /**
  * Plan state for the view. Every change is applied locally with the pure engine
- * (instant, no AI call) and, for owners, persisted with a debounced PATCH.
+ * (instant, no AI call) and, for owners, persisted by an ordered, debounced autosave.
  */
 export function usePlanState(initial: PublicPlan, initialKey: string | null) {
   const [plan, setPlan] = useState(initial);
   const storedKey = useSyncExternalStore(subscribeEditKeys, () => loadEditKey(initial.id), () => null);
   const editKey = initialKey ?? storedKey;
-  const [saveState, setSaveState] = useState<SaveState>("idle");
-  const pending = useRef<PlanPatch | null>(null);
-  const timer = useRef<number | undefined>(undefined);
+  const { saveState, queue } = useAutosave(initial.id, editKey);
 
   // An edit link (#edit=…) stores its key; the store subscription then re-renders us.
   useEffect(() => void claimKeyFromHash(initial.id), [initial.id]);
-
-  const flush = useCallback(async () => {
-    const patch = pending.current;
-    pending.current = null;
-    if (!patch || !editKey) return;
-    setSaveState("saving");
-    const res = await savePlan(initial.id, editKey, patch);
-    if (res.ok) setSaveState("saved");
-    else setSaveState(res.status === 403 ? "forbidden" : "error");
-  }, [editKey, initial.id]);
-
-  const queue = useCallback(
-    (patch: PlanPatch) => {
-      if (!editKey) return;
-      pending.current = mergePatch(pending.current, patch);
-      window.clearTimeout(timer.current);
-      timer.current = window.setTimeout(() => void flush(), SAVE_DELAY_MS);
-    },
-    [editKey, flush],
-  );
-
-  useEffect(() => () => window.clearTimeout(timer.current), []);
 
   const actions = usePlanActions(plan, setPlan, queue);
   return { plan, editable: editKey !== null, editKey, saveState, ...actions };

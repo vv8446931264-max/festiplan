@@ -1,7 +1,8 @@
 "use client";
 
 import { CATEGORY_COLORS, CATEGORY_PATTERNS } from "@/lib/category-style";
-import { CATEGORY_LABELS, type Allocation, type BudgetCategory } from "@/lib/contracts";
+import { CATEGORY_LABELS } from "@/lib/contracts/constants";
+import type { Allocation, BudgetCategory } from "@/lib/contracts";
 import { formatINR, formatPercent } from "@/lib/engine";
 
 type Shared = {
@@ -51,7 +52,7 @@ function SliderRow({ allocation: a, max, distributable, step, editable, highligh
       onPointerEnter={() => onHighlight(a.category)} onPointerLeave={() => onHighlight(null)}
       className={`rounded-2xl px-4 py-2 transition-colors ${highlight === a.category ? "bg-brown" : ""}`}>
       <div className="flex items-center gap-3">
-        <span aria-hidden="true" className="size-4 shrink-0 rounded-sm"
+        <span aria-hidden="true" data-print-keep="" className="size-4 shrink-0 rounded-sm"
           style={{ backgroundColor: CATEGORY_COLORS[a.category], backgroundImage: CATEGORY_PATTERNS[a.category] }} />
         <label htmlFor={id} className="font-semibold">{label}</label>
         <span className="tabular ml-auto font-bold">{formatINR(a.amountINR)}</span>
@@ -64,7 +65,7 @@ function SliderRow({ allocation: a, max, distributable, step, editable, highligh
             onFocus={() => onHighlight(a.category)} onBlur={() => onHighlight(null)}
             onChange={(e) => onMove(a.category, Number(e.target.value))} />
           <label className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 text-sm">
-            <input type="checkbox" checked={a.locked} onChange={(e) => onLock(a.category, e.target.checked)} />
+            <input type="checkbox" className="size-6 shrink-0" checked={a.locked} onChange={(e) => onLock(a.category, e.target.checked)} />
             Lock{" "}<span className="sr-only">{label}</span>
           </label>
         </div>

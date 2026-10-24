@@ -1,4 +1,4 @@
-import { BUDGET_CATEGORIES, CONTINGENCY_PERCENT } from "@/lib/contracts";
+import { BUDGET_CATEGORIES, CONTINGENCY_PERCENT } from "@/lib/contracts/constants";
 import type { Allocation, BudgetCategory, BudgetWeight } from "@/lib/contracts";
 
 export { budgetVariance, overspendAlerts } from "./budget-variance";

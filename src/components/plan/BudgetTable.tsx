@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CATEGORY_LABELS, type Allocation, type BudgetCategory, type PublicPlan } from "@/lib/contracts";
+import { CATEGORY_LABELS } from "@/lib/contracts/constants";
+import type { Allocation, BudgetCategory, PublicPlan } from "@/lib/contracts";
 import { budgetVariance, formatINR, formatPercent, overspendAlerts, type OverspendAlert } from "@/lib/engine";
 
 type Props = {

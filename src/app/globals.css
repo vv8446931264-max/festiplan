@@ -265,17 +265,34 @@
 }
 
 @media print {
+  /* Swatches marked data-print-keep keep their colour: the palette is content. */
+  :not([data-print-keep]),
+  ::before,
+  ::after {
+    color: #000 !important;
+    background: transparent !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+  }
   html,
   body {
-    background: #fff;
-    color: #000;
+    background: #fff !important;
   }
-  .no-print {
+  [data-scene-backdrop],
+  .no-print,
+  canvas {
     display: none !important;
   }
   .panel {
-    background: #fff;
-    border-color: #999;
-    backdrop-filter: none;
+    border-color: #999 !important;
+    break-inside: avoid;
+  }
+  [data-print-keep] {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  a {
+    text-decoration: underline;
   }
 }

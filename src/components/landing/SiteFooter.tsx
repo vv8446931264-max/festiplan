@@ -10,7 +10,7 @@ export function SiteFooter() {
           Built with Gemini on Vertex AI, Grounding with Google Maps, Cloud Firestore and Cloud Run.
         </p>
         <p className="text-muted md:text-right">
-          <a href="https://github.com/vv8446931264-max/festiplan">Source on GitHub</a>
+          <a href="https://github.com/vv8446931264-max/festiplan" className="inline-flex min-h-8 items-center">Source on GitHub</a>
         </p>
       </div>
       <p aria-hidden="true" className="masthead mt-12 select-none text-transparent [-webkit-text-stroke:1px_var(--color-line)]">

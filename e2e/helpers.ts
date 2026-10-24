@@ -1,8 +1,14 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 
-/** Runs axe against WCAG 2.0–2.2 A/AA rules and fails on any violation. */
+/**
+ * Runs axe against WCAG 2.0–2.2 A/AA rules and fails on any violation. Waits for
+ * time-based entrance animations first: mid-fade text would read as low contrast.
+ */
 export async function expectNoA11yViolations(page: Page) {
+  await page.waitForFunction(() =>
+    document.getAnimations().every((a) => a.playState !== "running" || a.timeline !== document.timeline),
+  );
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
     .analyze();
