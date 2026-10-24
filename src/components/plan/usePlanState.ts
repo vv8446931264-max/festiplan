@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { savePlan } from "@/lib/client/api";
-import { claimKeyFromHash, loadEditKey } from "@/lib/client/edit-keys";
+import { claimKeyFromHash, loadEditKey, subscribeEditKeys } from "@/lib/client/edit-keys";
 import type { BudgetCategory, PlanPatch, PublicPlan } from "@/lib/contracts";
 import {
   rebalance, refreshStatus, refreshVendorStatus, setActual, setLocked, setTaskDone, setVendorDone,
@@ -19,16 +19,14 @@ const SAVE_DELAY_MS = 700;
  */
 export function usePlanState(initial: PublicPlan, initialKey: string | null) {
   const [plan, setPlan] = useState(initial);
-  const [editKey, setEditKey] = useState(initialKey);
+  const storedKey = useSyncExternalStore(subscribeEditKeys, () => loadEditKey(initial.id), () => null);
+  const editKey = initialKey ?? storedKey;
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const pending = useRef<PlanPatch | null>(null);
   const timer = useRef<number | undefined>(undefined);
 
-  useEffect(() => {
-    if (initialKey) return;
-    const key = claimKeyFromHash(initial.id) ?? loadEditKey(initial.id);
-    if (key) setEditKey(key);
-  }, [initial.id, initialKey]);
+  // An edit link (#edit=…) stores its key; the store subscription then re-renders us.
+  useEffect(() => void claimKeyFromHash(initial.id), [initial.id]);
 
   const flush = useCallback(async () => {
     const patch = pending.current;

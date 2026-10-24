@@ -5,7 +5,7 @@ type Props = { id: string; number: string; kicker: string; title: ReactNode; chi
 /** Editorial chapter heading: mono kicker, big headline, optional lead. */
 export function SectionHead({ id, number, kicker, title, children }: Props) {
   return (
-    <div className="mb-8 grid gap-4 border-t border-line pt-6 lg:grid-cols-[1fr_2fr] lg:gap-10">
+    <div className="legible mb-8 grid gap-4 border-t border-line pt-6 lg:grid-cols-[1fr_2fr] lg:gap-10">
       <p className="eyebrow">
         Nº {number} — {kicker}
       </p>

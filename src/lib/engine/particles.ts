@@ -1,10 +1,7 @@
 import type { BudgetCategory } from "../contracts";
 
-/*
- * Budget Flow particle maths (docs/DESIGN.md §6). Pure: no three.js, no I/O, no
- * randomness — every position comes from an integer hash, so the scene is
- * deterministic and testable. Particles are rupees, columns are categories.
- */
+// Budget Flow particle maths (docs/DESIGN.md §6): rupees are particles, categories are columns.
+// Pure — no three.js, no I/O, no Math.random (positions come from an integer hash).
 
 /** One budget line as the particle layout sees it. */
 export type ParticleAllocation = { category: BudgetCategory; amountINR: number };
@@ -12,44 +9,23 @@ export type ParticleAllocation = { category: BudgetCategory; amountINR: number }
 /** Positions and velocities, xyz per particle (length 3·n each). */
 export type ParticleState = { pos: Float32Array; vel: Float32Array };
 
-/**
- * Column per particle (-1 = parked, not shown), its stack slot (0 = bottom;
- * parked particles are numbered from 0 too) and the particles placed per column.
- */
+/** Column per particle (-1 = parked, hidden), stack slot (0 = bottom) and particles per column. */
 export type ParticleAssignment = { column: Int16Array; slot: Int32Array; counts: number[] };
 
 /**
- * Stack geometry in scene units: column `spacing` along x, layer disc `radius`,
- * `layerHeight` between layers, `perLayer` particles per layer, first floor at
- * `baseY`, parked particles at `parkY`, peak-to-peak deterministic `jitter`.
+ * Stack geometry (scene units): column `spacing` on x, layer disc `radius`, `layerHeight`,
+ * `perLayer` particles per layer, floor `baseY`, parked height `parkY`, peak-to-peak `jitter`.
  */
-export type ColumnLayout = {
-  spacing: number;
-  radius: number;
-  layerHeight: number;
-  perLayer: number;
-  baseY: number;
-  parkY: number;
-  jitter: number;
-};
+export type ColumnLayout = { spacing: number; radius: number; layerHeight: number; perLayer: number; baseY: number; parkY: number; jitter: number };
 
 /**
- * Spring options: `stiffness` (unit mass, default 60), `damping` (default
- * 2·√stiffness, i.e. critical) and `lift`, an upward pull per unit of horizontal
- * distance so particles crossing between columns arc instead of cutting through.
+ * Spring options: `stiffness` (unit mass, default 60), `damping` (default 2·√stiffness = critical),
+ * `lift` (upward pull per unit of horizontal distance, so particles crossing columns arc).
  */
 export type SpringOptions = { stiffness?: number; damping?: number; lift?: number };
 
 /** Defaults sized for ~600 particles across ten columns. */
-export const DEFAULT_COLUMN_LAYOUT: ColumnLayout = {
-  spacing: 1.15,
-  radius: 0.34,
-  layerHeight: 0.13,
-  perLayer: 7,
-  baseY: 0,
-  parkY: -2,
-  jitter: 0.05,
-};
+export const DEFAULT_COLUMN_LAYOUT: ColumnLayout = { spacing: 1.15, radius: 0.34, layerHeight: 0.13, perLayer: 7, baseY: 0, parkY: -2, jitter: 0.05 };
 
 /** Largest simulation step; longer frames (tab switches, jank) are clamped to it. */
 export const MAX_DT = 1 / 30;
@@ -111,11 +87,7 @@ export function emptyAssignment(n: number): ParticleAssignment {
 export function assignParticles(prev: ParticleAssignment, nextCounts: readonly number[]): ParticleAssignment {
   const n = prev.column.length;
   const taken = nextCounts.map((c) => new Uint8Array(Math.floor(sanitize(c))));
-  const out: ParticleAssignment = {
-    column: new Int16Array(n).fill(-1),
-    slot: new Int32Array(n),
-    counts: taken.map(() => 0),
-  };
+  const out: ParticleAssignment = { column: new Int16Array(n).fill(-1), slot: new Int32Array(n), counts: taken.map(() => 0) };
   const free: number[] = [];
   for (let i = 0; i < n; i++) {
     const c = prev.column[i];
@@ -192,16 +164,13 @@ export function createParticleState(n: number, init?: Float32Array): ParticleSta
 }
 
 /**
- * Advance every particle one step towards its target with a damped spring
- * (critically damped by default), semi-implicit Euler. `dt` is clamped to
- * [0, {@link MAX_DT}] so a long frame cannot blow up the simulation. Mutates and
- * returns `state`.
+ * Advance every particle one step towards its target: damped spring (critical by default),
+ * semi-implicit Euler, `dt` clamped to [0, {@link MAX_DT}] so a long frame cannot blow up.
+ * Mutates and returns `state`.
  */
 export function stepParticles(state: ParticleState, targets: Float32Array, dt: number, opts: SpringOptions = {}): ParticleState {
-  const h = Math.min(sanitize(dt), MAX_DT);
-  const k = opts.stiffness ?? 60;
-  const c = opts.damping ?? 2 * Math.sqrt(k);
-  const lift = opts.lift ?? 0;
+  const [h, k] = [Math.min(sanitize(dt), MAX_DT), opts.stiffness ?? 60];
+  const [c, lift] = [opts.damping ?? 2 * Math.sqrt(k), opts.lift ?? 0];
   const { pos, vel } = state;
   const len = Math.min(pos.length, vel.length, targets.length) - 2;
   for (let o = 0; o < len; o += 3) {

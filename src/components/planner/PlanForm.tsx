@@ -5,8 +5,8 @@ import { BasicsFields, PreferenceFields, StoryFields, type FieldsProps } from ".
 
 type Props = FieldsProps & {
   busy: boolean;
-  minDate: string;
-  maxDate: string;
+  minDate?: string;
+  maxDate?: string;
   onSubmit: () => void;
 };
 

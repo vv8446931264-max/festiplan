@@ -44,7 +44,7 @@ function VendorCard({ item: v, plan, editable, lang, onToggle }: CardProps) {
         {editable ? (
           <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
             <input type="checkbox" className="size-5" checked={v.done} onChange={(e) => onToggle(v.category, e.target.checked)} />
-            Booked<span className="sr-only"> {label}</span>
+            Booked{" "}<span className="sr-only">{label}</span>
           </label>
         ) : (
           <span className="eyebrow">{v.done ? "Booked" : "Not booked"}</span>

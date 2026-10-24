@@ -7,3 +7,7 @@ afterEach(async () => {
     cleanup();
   }
 });
+
+if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}

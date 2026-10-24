@@ -62,17 +62,9 @@ export type GlowSprites = {
   dispose(): void;
 };
 
-/**
- * `count` camera-facing quads with a radial falloff shader and premultiplied
- * additive blending (alpha untouched, so the CSS sky shows through). Never
- * depth-tested: they are light, not matter, and draw after the glass.
- */
-export function createGlowSprites(count: number): GlowSprites {
-  const geometry = new PlaneGeometry(1, 1);
-  const sharp = new InstancedBufferAttribute(new Float32Array(count), 1);
-  sharp.setUsage(DynamicDrawUsage);
-  geometry.setAttribute("aSharp", sharp);
-  const material = new ShaderMaterial({
+/** Premultiplied additive blending that leaves destination alpha untouched. */
+function glowMaterial(): ShaderMaterial {
+  return new ShaderMaterial({
     vertexShader,
     fragmentShader,
     transparent: true,
@@ -84,6 +76,19 @@ export function createGlowSprites(count: number): GlowSprites {
     blendSrcAlpha: ZeroFactor,
     blendDstAlpha: OneFactor,
   });
+}
+
+/**
+ * `count` camera-facing quads with a radial falloff shader and premultiplied
+ * additive blending (alpha untouched, so the CSS sky shows through). Never
+ * depth-tested: they are light, not matter, and draw after the glass.
+ */
+export function createGlowSprites(count: number): GlowSprites {
+  const geometry = new PlaneGeometry(1, 1);
+  const sharp = new InstancedBufferAttribute(new Float32Array(count), 1);
+  sharp.setUsage(DynamicDrawUsage);
+  geometry.setAttribute("aSharp", sharp);
+  const material = glowMaterial();
   const mesh = new InstancedMesh(geometry, material, count);
   mesh.instanceMatrix.setUsage(DynamicDrawUsage);
   mesh.frustumCulled = false;
@@ -95,8 +100,7 @@ export function createGlowSprites(count: number): GlowSprites {
   return {
     mesh,
     set(i, centre, size, color, sharpness) {
-      m.makeScale(size, size, size).setPosition(centre);
-      mesh.setMatrixAt(i, m);
+      mesh.setMatrixAt(i, m.makeScale(size, size, size).setPosition(centre));
       mesh.setColorAt(i, color);
       sharp.setX(i, sharpness);
     },

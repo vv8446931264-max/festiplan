@@ -12,7 +12,7 @@ test.describe("landing", () => {
   test("an empty brief shows a focused error summary that links to fields", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: /plan my celebration/i }).click();
-    const summary = page.getByRole("alert");
+    const summary = page.getByRole("alert").filter({ hasText: "There's a problem" });
     await expect(summary).toBeFocused();
     await expect(summary).toContainText("Choose what you're celebrating.");
     await summary.getByRole("link", { name: /enter the city/i }).click();
@@ -38,9 +38,11 @@ test.describe("plan", () => {
     await expect(page.getByText("All changes saved")).toBeVisible({ timeout: 10_000 });
 
     const shareUrl = await page.locator("#share-link").inputValue();
-    const html = await (await request.get(shareUrl)).text();
+    const shared = await request.get(shareUrl);
+    expect(shared.headers()["x-robots-tag"]).toContain("noindex");
+    const html = await shared.text();
     expect(html).toContain("Riya&#x27;s sangeet");
-    expect(html).toContain('name="robots" content="noindex, nofollow"');
+    expect(html).toContain("Rajasthani");
 
     await page.goto(shareUrl);
     await expect(page.locator("#plan-title")).toHaveText("Riya's sangeet");
@@ -54,7 +56,7 @@ test.describe("plan", () => {
     const shareUrl = await page.locator("#share-link").inputValue();
     const stranger = await browser.newPage();
     await stranger.goto(shareUrl);
-    await expect(stranger.getByText("Read-only")).toBeVisible();
+    await expect(stranger.getByText("Read-only", { exact: true })).toBeVisible();
     await expect(stranger.getByRole("slider")).toHaveCount(0);
     await expect(stranger.locator("#timeline input[type=checkbox]")).toHaveCount(0);
     await stranger.close();

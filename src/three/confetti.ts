@@ -72,6 +72,25 @@ function foilMaterial(envMap: Texture): MeshStandardMaterial {
   return material;
 }
 
+const tmp = { m: new Matrix4(), q: new Quaternion(), p: new Vector3(), a: new Vector3(), s: new Vector3() };
+
+/** Integrate one step: flutter, gravity, exponential drag, spin; shrink out at the end. */
+function advance(sim: Sim, mesh: InstancedMesh, dt: number): void {
+  const { m, q, p, a, s } = tmp;
+  sim.age += dt;
+  const shrink = Math.min(Math.max((CONFETTI_LIFETIME - sim.age) / 0.7, 0), 1);
+  const drag = Math.exp(-DRAG * dt);
+  for (let i = 0, o = 0; i < mesh.count; i++, o += 3) {
+    sim.vel[o] = (sim.vel[o] + Math.sin(sim.age * 6 + i) * 1.4 * dt) * drag;
+    sim.vel[o + 1] = (sim.vel[o + 1] + GRAVITY * dt) * drag;
+    sim.vel[o + 2] *= drag;
+    p.fromArray(sim.pos, o).addScaledVector(a.fromArray(sim.vel, o), dt).toArray(sim.pos, o);
+    q.setFromAxisAngle(a.fromArray(sim.axis, o), sim.spin[i] * sim.age);
+    mesh.setMatrixAt(i, m.compose(p, q, s.setScalar(shrink)));
+  }
+  mesh.instanceMatrix.needsUpdate = true;
+}
+
 /**
  * Fire ~1,200 (≤ 400 on the low tier) paper quads from two cannons left and
  * right of `origin`: gravity, exponential air drag, a flutter sway and per-piece
@@ -92,11 +111,6 @@ export function createConfetti(
   mesh.frustumCulled = false;
   paint(mesh, palette, salt);
   const sim = seedSim(n, origin, salt);
-  const m = new Matrix4();
-  const q = new Quaternion();
-  const p = new Vector3();
-  const a = new Vector3();
-  const s = new Vector3();
   let alive = true;
   const dispose = () => {
     if (!alive) return;
@@ -106,26 +120,11 @@ export function createConfetti(
     material.dispose();
     mesh.dispose();
   };
-  const step = (dt: number) => {
-    sim.age += dt;
-    const shrink = Math.min(Math.max((CONFETTI_LIFETIME - sim.age) / 0.7, 0), 1);
-    const drag = Math.exp(-DRAG * dt);
-    for (let i = 0, o = 0; i < n; i++, o += 3) {
-      const flutter = Math.sin(sim.age * 6 + i) * 1.4;
-      sim.vel[o] = (sim.vel[o] + flutter * dt) * drag;
-      sim.vel[o + 1] = (sim.vel[o + 1] + GRAVITY * dt) * drag;
-      sim.vel[o + 2] *= drag;
-      p.fromArray(sim.pos, o).addScaledVector(a.fromArray(sim.vel, o), dt).toArray(sim.pos, o);
-      q.setFromAxisAngle(a.fromArray(sim.axis, o), sim.spin[i] * sim.age);
-      mesh.setMatrixAt(i, m.compose(p, q, s.setScalar(shrink)));
-    }
-    mesh.instanceMatrix.needsUpdate = true;
-  };
   return {
     mesh,
     update(dt) {
       if (!alive) return false;
-      step(Math.min(dt, 1 / 30));
+      advance(sim, mesh, Math.min(dt, 1 / 30));
       if (sim.age < CONFETTI_LIFETIME) return true;
       dispose();
       return false;

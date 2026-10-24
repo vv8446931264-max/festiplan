@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@google-cloud/firestore", "@google/genai"],
 
   headers: async () => [
+    // Shared plans are private links: never index them, never cache them publicly.
+    { source: "/plan/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
     {
       source: "/:path*",
       headers: [

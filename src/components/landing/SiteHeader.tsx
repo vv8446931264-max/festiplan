@@ -10,14 +10,14 @@ export function SiteHeader() {
       <nav aria-label="Main">
         <ul className="flex items-center gap-1 sm:gap-3">
           <li className="hidden sm:block">
-            <a href="/#manifesto" className="eyebrow inline-flex min-h-11 items-center px-3 text-cream no-underline hover:text-gold">
+            <Link href="/#manifesto" className="eyebrow inline-flex min-h-11 items-center px-3 text-cream no-underline hover:text-gold">
               How it works
-            </a>
+            </Link>
           </li>
           <li>
-            <a href="/#plan" className="btn btn-primary min-h-11 px-5 py-2 text-sm">
+            <Link href="/#plan" className="btn btn-primary min-h-11 px-5 py-2 text-sm">
               Start planning
-            </a>
+            </Link>
           </li>
         </ul>
       </nav>

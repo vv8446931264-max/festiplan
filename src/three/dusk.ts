@@ -55,3 +55,14 @@ export function skyFade(p: number): number {
   const t = Math.min(Math.max(p / 0.25, 0), 1);
   return 1 - 0.55 * t * t * (3 - 2 * t);
 }
+
+/**
+ * Lantern brightness for a scroll offset, in viewport heights: full over the hero,
+ * easing to 30 % between half a screen and one and a half screens down, so the
+ * working chapters (form, budget, timeline) read cleanly while the sky stays alive.
+ */
+export function lanternFade(scrollY: number, viewportHeight: number): number {
+  if (viewportHeight <= 0) return 1;
+  const t = Math.min(Math.max((scrollY / viewportHeight - 0.5) / 1, 0), 1);
+  return 1 - 0.7 * t * t * (3 - 2 * t);
+}

@@ -32,7 +32,7 @@ Dates are ISO `YYYY-MM-DD` strings; date maths is UTC-day arithmetic.
 | `budget.ts` | `largestRemainder(total, weights)`, `allocateBudget({ totalINR, weights, guests, contingencyPercent? })` → `{ contingencyINR, allocations }`, `rebalance(allocations, category, amountINR, { totalINR, guests })`, `setLocked(allocations, category, locked)`, `applyEdits(current, edits, ctx)` → `Allocation[] \| null`, `setActual(allocations, category, actualINR)`, `budgetVariance(allocations)`, `overspendAlerts(allocations, contingencyINR)`, `withDerived(allocations, totalINR, guests)` |
 | `timeline.ts` | `topoSort(tasks)` → `AiTask[] \| null` (null on cycle), `phaseFor(due, eventDate)`, `scheduleTimeline(tasks, eventDate, today)`, `refreshStatus(timeline, today)`, `setTaskDone(timeline, id, done)` |
 | `checklist.ts` | `scheduleVendors(vendors, eventDate, today)`, `setVendorDone(items, category, done)`, `progress(items)` → `{ done, total, percent }`, `nextActions(timeline, n = 3)`, `groupByCategory(items)`, `groupByPhase(timeline)` |
-| `particles.ts` | `layoutParticles(allocations, n)` → counts per category; `stepParticles(state, targets, dt)` spring integration |
+| `particles.ts` | `layoutParticles(allocations, n)` → counts per category (largest remainder); `assignParticles(prev, nextCounts)` moves only the delta particles; `targetsFor(assignment, layout)`; `createParticleState(n)`; `stepParticles(state, targets, dt)` critically-damped spring (dt clamped); `isSettled` |
 | `ics.ts` | `escapeIcsText(s)`, `foldLine(line)`, `buildIcs({ planId, title, eventDate, city, tasks, url, dtstamp })` |
 | `calendar-link.ts` | `googleCalendarUrl({ title, date, endDate?, details?, location? })` |
 | `format.ts` | `formatINR(n)` → `₹12,00,000`, `formatINRCompact(n)` → `₹12L` / `₹1.2Cr`, `formatDate(iso)`, `formatPercent(n)`, `mapsSearchUrl(query)` |
@@ -75,8 +75,19 @@ passed, `overdue = !done && due < today`. Phases by days before the event:
 - `/plan/[id]` — RSC share page; the plan is in the server HTML. Owners holding the edit key
   (stored in `localStorage`) get editable controls after hydration.
 - `src/three/` — lantern field, confetti and budget-flow scenes; loaded with
-  `next/dynamic({ ssr: false })`, gated by reduced motion / Save-Data / low-power devices,
-  paused when hidden. Canvases are `aria-hidden`; the DOM holds every number.
+  `next/dynamic({ ssr: false })`, gated by reduced motion / Save-Data / ≤ 4 cores / no WebGL
+  (static poster captured from the real scene instead), paused when hidden or off-screen.
+  Lanterns dim from 100 % to 30 % as you scroll into the working chapters. Glow is additive
+  sprites rather than bloom (bloom does not composite over a transparent canvas and costs
+  ~20 KB). Canvases are `aria-hidden`; the DOM holds every number.
+
+## Process-wide state
+
+Next.js bundles each route separately, so module-level singletons would be per-route.
+`src/lib/server/singleton.ts` keeps the plan store on `globalThis` so the API and the
+share page see the same in-memory store in dev/test (production uses Firestore).
+Plan edits go through `PlanStore.mutate` — a Firestore transaction in production — so
+two phones ticking different items at the same moment never overwrite each other.
 
 ## Runtime dependencies
 

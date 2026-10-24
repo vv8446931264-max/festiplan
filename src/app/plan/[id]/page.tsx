@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { cache, Suspense } from "react";
+import { cache } from "react";
 import { SiteFooter } from "@/components/landing/SiteFooter";
 import { SiteHeader } from "@/components/landing/SiteHeader";
 import { PlanView } from "@/components/plan/PlanView";
@@ -31,24 +31,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-/** Shareable, server-rendered, read-only plan (owners with the edit key can edit). */
+/**
+ * Shareable, server-rendered plan: the full plan is in the HTML. The plan is loaded
+ * before anything streams, so an unknown or expired id is a real HTTP 404.
+ * Read-only unless this browser holds the edit key.
+ */
 export default async function PlanPage({ params }: Props) {
   const { id } = await params;
+  const plan = await loadPlan(id);
+  if (!plan) notFound();
   return (
     <>
       <SiteHeader />
       <main id="main" tabIndex={-1} className="shell py-10 outline-none sm:py-16">
-        <Suspense fallback={<p className="lead text-muted">Unfolding the plan…</p>}>
-          <PlanLoader id={id} />
-        </Suspense>
+        <PlanView plan={plan} editKey={null} />
       </main>
       <SiteFooter />
     </>
   );
-}
-
-async function PlanLoader({ id }: { id: string }) {
-  const plan = await loadPlan(id);
-  if (!plan) notFound();
-  return <PlanView plan={plan} editKey={null} />;
 }

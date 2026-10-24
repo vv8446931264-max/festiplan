@@ -65,11 +65,11 @@ function SliderRow({ allocation: a, max, distributable, step, editable, highligh
             onChange={(e) => onMove(a.category, Number(e.target.value))} />
           <label className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 text-sm">
             <input type="checkbox" checked={a.locked} onChange={(e) => onLock(a.category, e.target.checked)} />
-            Lock<span className="sr-only"> {label}</span>
+            Lock{" "}<span className="sr-only">{label}</span>
           </label>
         </div>
       ) : (
-        <meter id={id} min={0} max={distributable} value={a.amountINR} className="h-2 w-full" />
+        <meter id={id} min={0} max={distributable} value={a.amountINR} className="meter mt-2" />
       )}
     </li>
   );

@@ -20,7 +20,7 @@ beforeEach(() => {
 
 describe("PlanView", () => {
   it("renders every chapter of the plan with no axe violations", async () => {
-    const { container } = render(<PlanView plan={fixturePlan()} editKey="k".repeat(43) />);
+    const { container } = render(<PlanView plan={fixturePlan()} editKey={"k".repeat(43)} />);
     expect(screen.getByRole("heading", { level: 2, name: "Riya's sangeet" })).toBeInTheDocument();
     expect(screen.getAllByText(/^Issue Nº 0/)).toHaveLength(3);
     expect(screen.getByRole("heading", { name: /12,00,000, accounted for/ })).toBeInTheDocument();
@@ -30,7 +30,7 @@ describe("PlanView", () => {
   });
 
   it("keeps the budget exact while a slider moves, and respects locks", () => {
-    const { container } = render(<PlanView plan={fixturePlan()} editKey="k".repeat(43) />);
+    const { container } = render(<PlanView plan={fixturePlan()} editKey={"k".repeat(43)} />);
     expect(sumOf(container)).toBe(1_200_000);
     const venue = screen.getByRole("slider", { name: "Venue" });
     fireEvent.change(venue, { target: { value: "50000" } });
@@ -59,7 +59,7 @@ describe("PlanView", () => {
   });
 
   it("records actual spend and shows the variance", () => {
-    render(<PlanView plan={fixturePlan()} editKey="k".repeat(43) />);
+    render(<PlanView plan={fixturePlan()} editKey={"k".repeat(43)} />);
     const input = screen.getByRole("textbox", { name: /spent so far on venue/i });
     fireEvent.change(input, { target: { value: "9,99,999" } });
     fireEvent.blur(input);

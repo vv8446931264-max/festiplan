@@ -21,7 +21,7 @@ const PRINCIPLES = [
 export function Manifesto() {
   return (
     <section id="manifesto" aria-labelledby="manifesto-title" className="shell scroll-mt-8 py-24 sm:py-36">
-      <div className="grid gap-10 lg:grid-cols-[1fr_2fr]">
+      <div className="legible grid gap-10 lg:grid-cols-[1fr_2fr]">
         <p className="eyebrow">Nº 01 — Manifesto</p>
         <div className="reveal flex flex-col gap-8">
           <h2 id="manifesto-title" className="h2">

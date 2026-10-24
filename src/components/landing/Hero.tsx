@@ -7,8 +7,8 @@ export function Hero() {
   return (
     <section aria-labelledby="hero-title" className="shell relative flex min-h-[calc(100svh-88px)] flex-col justify-between gap-10 pb-6 pt-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <p className="eyebrow rise text-cream">{BRAND.category}</p>
-        <p className="eyebrow rise hidden text-right sm:block">Weddings · Birthdays · Community events</p>
+        <p className="eyebrow rise legible text-cream">{BRAND.category}</p>
+        <p className="eyebrow rise legible hidden text-right sm:block">Weddings · Birthdays · Community events</p>
       </div>
       <div className="grid gap-8 lg:grid-cols-[1fr_minmax(0,620px)] lg:items-end">
         <div className="hidden lg:block" />
@@ -21,7 +21,7 @@ export function Hero() {
 
 function HeroPitch() {
   return (
-    <div className="rise flex flex-col gap-6" style={{ animationDelay: "350ms" }}>
+    <div className="rise legible flex flex-col gap-6" style={{ animationDelay: "350ms" }}>
       <p className="h3">
         Made for <span className="accent text-gold">moments</span>.
         <br />
@@ -47,7 +47,7 @@ function HeroPitch() {
 function Masthead() {
   return (
     <div className="flex flex-col gap-3">
-      <h1 id="hero-title" className="masthead text-cream">
+      <h1 id="hero-title" className="masthead legible text-cream">
         <span className="sr-only">{BRAND.name} — {BRAND.category}</span>
         <span aria-hidden="true" className="flex">
           {LETTERS.map((ch, i) => (
@@ -58,9 +58,9 @@ function Masthead() {
         </span>
       </h1>
       <div className="flex items-center justify-between">
-        <p className="eyebrow">Scroll</p>
+        <p className="eyebrow legible">Scroll</p>
         <span aria-hidden="true" className="mx-4 h-px flex-1 bg-line" />
-        <p className="eyebrow">For every celebration</p>
+        <p className="eyebrow legible">For every celebration</p>
       </div>
     </div>
   );

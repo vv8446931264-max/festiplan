@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useOrigin } from "@/lib/client/browser";
 import { SectionHead } from "./SectionHead";
 
 /** Share and edit URLs plus copy / native-share actions with a status message. */
 function useShare(planId: string, editKey: string | null) {
-  const [origin, setOrigin] = useState("");
+  const origin = useOrigin();
   const [status, setStatus] = useState("");
-  useEffect(() => setOrigin(window.location.origin), []);
   const shareUrl = `${origin}/plan/${planId}`;
   const editUrl = editKey ? `${shareUrl}#edit=${editKey}` : null;
 
@@ -65,7 +65,7 @@ function LinkBox({ id, label, value, onCopy }: { id: string; label: string; valu
       <div className="flex gap-2">
         <input id={id} readOnly value={value} className="field flex-1 font-mono text-sm" onFocus={(e) => e.currentTarget.select()} />
         <button type="button" className="btn btn-ghost no-print shrink-0" onClick={onCopy}>
-          Copy<span className="sr-only"> {label}</span>
+          Copy{" "}<span className="sr-only">{label}</span>
         </button>
       </div>
     </div>

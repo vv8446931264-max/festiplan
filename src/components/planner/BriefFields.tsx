@@ -13,7 +13,7 @@ export type FieldsProps = {
 };
 
 /** Date, city, guests and budget — the four numbers everything else hangs on. */
-export function BasicsFields({ values, errors, onChange, minDate, maxDate }: FieldsProps & { minDate: string; maxDate: string }) {
+export function BasicsFields({ values, errors, onChange, minDate, maxDate }: FieldsProps & { minDate?: string; maxDate?: string }) {
   const budget = parseWhole(values.budget);
   const budgetHint = Number.isFinite(budget) && budget > 0
     ? `${formatINR(budget)} · ${formatINRCompact(budget)}`

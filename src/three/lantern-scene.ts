@@ -1,12 +1,12 @@
-import { MathUtils, PerspectiveCamera, Scene, Vector3 } from "three";
+import { MathUtils, PerspectiveCamera, Scene, Vector3, type WebGLRenderer } from "three";
 import type { Mood } from "./bus";
 import { createConfetti, type ConfettiBurst } from "./confetti";
 import { skyFade } from "./dusk";
-import { createDuskEnvironment } from "./env";
-import { createLanternField } from "./lanterns";
+import { createDuskEnvironment, type Environment } from "./env";
+import { createLanternField, type LanternField } from "./lanterns";
 import { clamp01, damp } from "./math";
-import { createRefractionSky } from "./refraction-sky";
-import { createLoop, createRenderer } from "./renderer";
+import { createRefractionSky, type RefractionSky } from "./refraction-sky";
+import { compileThenStart, createGatedLoop, createRenderer, watchContextLoss } from "./renderer";
 import type { Tier } from "./tier";
 
 /** Options for {@link createLanternScene}. */
@@ -37,14 +37,27 @@ const FOV = 45;
 /** World units the camera travels from the top of the page to the bottom. */
 const TRAVEL = 34;
 
-/**
- * The persistent background: glass lanterns with warm cores and soft glow
- * drifting in front of the CSS dusk sky (docs/DESIGN.md §6). Native scroll only
- * sets targets; every motion is damped in the render loop.
- */
-export function createLanternScene(canvas: HTMLCanvasElement, options: LanternSceneOptions): LanternScene {
-  const { tier } = options;
-  const win = canvas.ownerDocument.defaultView ?? window;
+type Stage = {
+  tier: Exclude<Tier, "off">;
+  renderer: WebGLRenderer;
+  env: Environment;
+  scene: Scene;
+  camera: PerspectiveCamera;
+  field: LanternField;
+  sky: RefractionSky;
+};
+
+/** Live inputs (targets) and the damped values the frame actually uses. */
+type Motion = {
+  target: { scroll: number; px: number; py: number };
+  now: { scroll: number; px: number; py: number };
+  burst: ConfettiBurst | null;
+  palette: readonly string[] | null;
+};
+
+const TAN_HALF = Math.tan(MathUtils.degToRad(FOV / 2));
+
+function buildStage(canvas: HTMLCanvasElement, tier: Exclude<Tier, "off">): Stage {
   const renderer = createRenderer(canvas, tier);
   const env = createDuskEnvironment(renderer);
   const scene = new Scene();
@@ -52,94 +65,75 @@ export function createLanternScene(canvas: HTMLCanvasElement, options: LanternSc
   const field = createLanternField(tier, env.texture);
   const sky = createRefractionSky();
   scene.add(sky.mesh, ...field.meshes);
-  const tanHalf = Math.tan(MathUtils.degToRad(FOV / 2));
-  const target = { scroll: 0, px: 0, py: 0 };
-  const now = { scroll: 0, px: 0, py: 0 };
-  let burst: ConfettiBurst | null = null;
-  let palette: readonly string[] | null = null;
-  let started = false;
+  return { tier, renderer, env, scene, camera, field, sky };
+}
 
-  const frame = (dt: number) => {
-    now.scroll = damp(now.scroll, target.scroll, 2.2, dt);
-    now.px = damp(now.px, target.px, 2.4, dt);
-    now.py = damp(now.py, target.py, 2.4, dt);
-    camera.position.set(now.px * 0.7, now.py * 0.45, 0);
-    camera.lookAt(now.px * 0.18, now.py * 0.1, -30);
-    sky.setFade(skyFade(now.scroll));
-    field.update(dt, { travel: now.scroll * TRAVEL, tanHalf, aspect: camera.aspect });
-    if (burst && !burst.update(dt)) burst = null;
-    renderer.render(scene, camera);
-    return true;
-  };
-  const loop = createLoop(win, (dt) => {
-    const keep = frame(dt);
-    if (!started) {
-      started = true;
-      options.onFirstFrame?.();
-    }
-    return keep;
-  });
-  // Compile off the main thread (KHR_parallel_shader_compile) before the first
-  // frame; until then, and whenever the owner pauses, the loop stays parked.
-  const gate = { compiled: false, paused: false };
-  const sync = () => (gate.compiled && !gate.paused ? loop.resume() : loop.pause());
-  const ready = () => {
-    gate.compiled = true;
-    sync();
-  };
-  loop.pause();
-  field.update(0, { travel: 0, tanHalf, aspect: camera.aspect });
-  void renderer.compileAsync(scene, camera).then(ready, ready);
+/** One frame: damp inputs, place the camera, drift the field, fly confetti, draw. */
+function step(stage: Stage, m: Motion, dt: number): boolean {
+  m.now.scroll = damp(m.now.scroll, m.target.scroll, 2.2, dt);
+  m.now.px = damp(m.now.px, m.target.px, 2.4, dt);
+  m.now.py = damp(m.now.py, m.target.py, 2.4, dt);
+  stage.camera.position.set(m.now.px * 0.7, m.now.py * 0.45, 0);
+  stage.camera.lookAt(m.now.px * 0.18, m.now.py * 0.1, -30);
+  stage.sky.setFade(skyFade(m.now.scroll));
+  stage.field.update(dt, { travel: m.now.scroll * TRAVEL, tanHalf: TAN_HALF, aspect: stage.camera.aspect });
+  if (m.burst && !m.burst.update(dt)) m.burst = null;
+  stage.renderer.render(stage.scene, stage.camera);
+  return true;
+}
 
-  const onLost = (e: Event) => {
-    e.preventDefault();
-    loop.pause();
-  };
-  const onRestored = () => sync();
-  canvas.addEventListener("webglcontextlost", onLost);
-  canvas.addEventListener("webglcontextrestored", onRestored);
+function fireConfetti(stage: Stage, m: Motion): void {
+  m.burst?.dispose();
+  const origin = new Vector3(0, -4.6, -10).applyMatrix4(stage.camera.matrixWorld);
+  m.burst = createConfetti(stage.tier, origin, m.palette, stage.env.texture);
+  stage.scene.add(m.burst.mesh);
+}
 
+function disposeStage(stage: Stage, m: Motion): void {
+  m.burst?.dispose();
+  stage.field.dispose();
+  stage.sky.dispose();
+  stage.env.dispose();
+  stage.renderer.dispose();
+  stage.renderer.forceContextLoss();
+}
+
+/**
+ * The persistent background: glass lanterns with warm cores and soft glow
+ * drifting in front of the CSS dusk sky (docs/DESIGN.md §6). Native scroll only
+ * sets targets; every motion is damped in the render loop.
+ */
+export function createLanternScene(canvas: HTMLCanvasElement, options: LanternSceneOptions): LanternScene {
+  const stage = buildStage(canvas, options.tier);
+  const m: Motion = { target: { scroll: 0, px: 0, py: 0 }, now: { scroll: 0, px: 0, py: 0 }, burst: null, palette: null };
+  const loop = createGatedLoop(canvas.ownerDocument.defaultView ?? window, (dt) => step(stage, m, dt), options.onFirstFrame);
+  const unwatch = watchContextLoss(canvas, loop);
+  stage.field.update(0, { travel: 0, tanHalf: TAN_HALF, aspect: stage.camera.aspect });
+  compileThenStart(stage.renderer, stage.scene, stage.camera, loop);
   return {
-    setScroll: (p) => void (target.scroll = clamp01(p)),
+    setScroll: (p) => void (m.target.scroll = clamp01(p)),
     setPointer(x, y) {
-      target.px = MathUtils.clamp(x, -1, 1);
-      target.py = MathUtils.clamp(y, -1, 1);
+      m.target.px = MathUtils.clamp(x, -1, 1);
+      m.target.py = MathUtils.clamp(y, -1, 1);
     },
     setPalette(hexes) {
-      palette = hexes;
-      field.setPalette(hexes);
+      m.palette = hexes;
+      stage.field.setPalette(hexes);
     },
-    setMood: (mood) => field.setMood(mood),
-    celebrate() {
-      burst?.dispose();
-      const origin = new Vector3(0, -4.6, -10).applyMatrix4(camera.matrixWorld);
-      burst = createConfetti(tier, origin, palette, env.texture);
-      scene.add(burst.mesh);
-    },
+    setMood: (mood) => stage.field.setMood(mood),
+    celebrate: () => fireConfetti(stage, m),
     resize(width, height) {
       if (width <= 0 || height <= 0) return;
-      renderer.setSize(width, height, false);
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
+      stage.renderer.setSize(width, height, false);
+      stage.camera.aspect = width / height;
+      stage.camera.updateProjectionMatrix();
     },
-    pause() {
-      gate.paused = true;
-      sync();
-    },
-    resume() {
-      gate.paused = false;
-      sync();
-    },
+    pause: () => loop.pause(),
+    resume: () => loop.resume(),
     dispose() {
       loop.dispose();
-      canvas.removeEventListener("webglcontextlost", onLost);
-      canvas.removeEventListener("webglcontextrestored", onRestored);
-      burst?.dispose();
-      field.dispose();
-      sky.dispose();
-      env.dispose();
-      renderer.dispose();
-      renderer.forceContextLoss();
+      unwatch();
+      disposeStage(stage, m);
     },
   };
 }

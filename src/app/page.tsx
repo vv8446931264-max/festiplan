@@ -13,7 +13,7 @@ export default function Home() {
         <Hero />
         <Manifesto />
         <section id="plan" aria-labelledby="brief-title" className="shell scroll-mt-4 py-16 sm:py-24">
-          <div className="mb-10 grid gap-6 lg:grid-cols-[1fr_2fr]">
+          <div className="legible mb-10 grid gap-6 lg:grid-cols-[1fr_2fr]">
             <p className="eyebrow">Nº 02 — The brief</p>
             <div className="flex flex-col gap-4">
               <h2 id="brief-title" className="h2">

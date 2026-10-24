@@ -34,37 +34,39 @@
   color-scheme: dark;
 }
 
-html {
-  background: var(--color-espresso);
-  color: var(--color-cream);
-  -webkit-text-size-adjust: 100%;
-  scroll-behavior: smooth;
-}
+@layer base {
+  html {
+    background: var(--color-espresso);
+    color: var(--color-cream);
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
 
-body {
-  background: var(--color-espresso);
-  font-family: var(--font-display);
-  font-size: var(--fs-body);
-  line-height: 1.55;
-  min-height: 100svh;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-}
+  body {
+    background: var(--color-espresso);
+    font-family: var(--font-display);
+    font-size: var(--fs-body);
+    line-height: 1.55;
+    min-height: 100svh;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
 
-::selection {
-  background: var(--color-gold);
-  color: var(--color-espresso);
-}
+  ::selection {
+    background: var(--color-gold);
+    color: var(--color-espresso);
+  }
 
-:focus-visible {
-  outline: 3px solid var(--color-ember-bright);
-  outline-offset: 3px;
-  border-radius: 6px;
-}
+  :focus-visible {
+    outline: 3px solid var(--color-ember-bright);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
 
-a {
-  color: var(--color-ember-bright);
-  text-underline-offset: 0.2em;
+  a {
+    color: var(--color-ember-bright);
+    text-underline-offset: 0.2em;
+  }
 }
 
 @layer components {
@@ -80,7 +82,7 @@ a {
     font-weight: 800;
     letter-spacing: -0.045em;
     line-height: 0.82;
-    font-size: min(calc((100vw - 2 * var(--pad)) / 4.9), 34svh);
+    font-size: min(calc((100vw - 2 * var(--pad)) / 3.72), 40svh);
   }
   .h2 {
     font-size: var(--fs-h2);
@@ -171,6 +173,36 @@ a {
   .tabular {
     font-variant-numeric: tabular-nums;
   }
+  /* Copy that floats over the live sky keeps a soft espresso halo for contrast. */
+  .legible {
+    text-shadow: 0 1px 2px rgb(16 9 4 / 0.6), 0 0 24px rgb(16 9 4 / 0.85);
+  }
+  .legible .btn {
+    text-shadow: none;
+  }
+  .meter {
+    appearance: none;
+    height: 8px;
+    width: 100%;
+    border: 0;
+    border-radius: 999px;
+    overflow: hidden;
+    background: var(--color-line);
+  }
+  .meter::-webkit-progress-bar,
+  .meter::-webkit-meter-bar {
+    background: var(--color-line);
+    border-radius: 999px;
+  }
+  .meter::-webkit-progress-value,
+  .meter::-webkit-meter-optimum-value {
+    background: var(--color-gold);
+    border-radius: 999px;
+  }
+  .meter::-moz-progress-bar,
+  .meter::-moz-meter-bar {
+    background: var(--color-gold);
+  }
 }
 
 /* Scroll-driven reveals; content is fully visible where unsupported. */
@@ -221,14 +253,15 @@ a {
   }
 }
 
-input[type="range"] {
-  accent-color: var(--color-ember);
-  min-height: 44px;
-  width: 100%;
-}
-
-input[type="checkbox"] {
-  accent-color: var(--color-ember);
+@layer base {
+  input[type="range"] {
+    accent-color: var(--color-ember);
+    min-height: 44px;
+    width: 100%;
+  }
+  input[type="checkbox"] {
+    accent-color: var(--color-ember);
+  }
 }
 
 @media print {

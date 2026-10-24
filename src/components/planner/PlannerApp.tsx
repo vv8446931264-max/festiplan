@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { PlanView } from "@/components/plan/PlanView";
 import { addDays } from "@/lib/engine";
 import { ErrorSummary } from "./ErrorSummary";
@@ -10,7 +11,8 @@ import { usePlanner } from "./usePlanner";
 
 /** The single entry point: brief → staged progress → the plan unfolds in place. */
 export function PlannerApp() {
-  const p = usePlanner();
+  const summaryRef = useRef<HTMLDivElement>(null);
+  const p = usePlanner(summaryRef);
 
   if (p.result) {
     return (
@@ -26,7 +28,7 @@ export function PlannerApp() {
   return (
     <div className="panel flex flex-col gap-8 p-5 sm:p-8 lg:p-10">
       <PresetChips disabled={p.busy} onPick={p.pickPreset} />
-      <ErrorSummary ref={p.summaryRef} errors={p.errors} serverError={p.serverError} />
+      <ErrorSummary ref={summaryRef} errors={p.errors} serverError={p.serverError} />
       {p.busy ? (
         <StagedProgress city={p.values.city.trim()} />
       ) : (
@@ -34,8 +36,8 @@ export function PlannerApp() {
           values={p.values}
           errors={p.errors}
           busy={p.busy}
-          minDate={addDays(p.today, 1)}
-          maxDate={addDays(p.today, 365 * 3)}
+          minDate={p.today ? addDays(p.today, 1) : undefined}
+          maxDate={p.today ? addDays(p.today, 365 * 3) : undefined}
           onChange={p.update}
           onSubmit={() => void p.submit(p.values)}
         />

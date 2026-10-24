@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState, type RefObject } from "react";
+import { useToday } from "@/lib/client/browser";
 import { createPlan } from "@/lib/client/api";
 import { saveEditKey } from "@/lib/client/edit-keys";
 import type { PublicPlan } from "@/lib/contracts";
@@ -15,14 +16,12 @@ import {
 export type PresetId = (typeof PRESETS)[number]["id"];
 type Result = { plan: PublicPlan; editKey: string };
 
-/** Form values, field errors and the focusable error summary. */
-function useBrief() {
-  const [today, setToday] = useState("");
+/** Form values, field errors and focus on the error summary. */
+function useBrief(summaryRef: RefObject<HTMLDivElement | null>) {
+  const today = useToday();
   const [values, setValues] = useState<FormValues>(EMPTY_FORM);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
-  const summaryRef = useRef<HTMLDivElement>(null);
-  useEffect(() => setToday(todayIST()), []);
 
   const report = (fieldErrors: FieldErrors, message: string | null) => {
     setErrors(fieldErrors);
@@ -30,17 +29,24 @@ function useBrief() {
     if (Object.keys(fieldErrors).length || message) requestAnimationFrame(() => summaryRef.current?.focus());
   };
   const update = (patch: Partial<FormValues>) => setValues((v) => ({ ...v, ...patch }));
-  return { today: today || todayIST(), values, setValues, errors, serverError, summaryRef, report, update };
+  return { today, values, setValues, errors, serverError, report, update };
+}
+
+/** Returns the backdrop to its resting state. */
+function resetScene() {
+  setMood("hero");
+  setPalette(null);
 }
 
 /** State machine for the planner: idle → busy → result, with validation and errors. */
-export function usePlanner() {
-  const brief = useBrief();
+export function usePlanner(summaryRef: RefObject<HTMLDivElement | null>) {
+  const brief = useBrief(summaryRef);
+  const now = () => brief.today || todayIST();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
 
   async function submit(v: FormValues) {
-    const found = validateForm(v, brief.today);
+    const found = validateForm(v, now());
     brief.report(found, null);
     if (Object.keys(found).length > 0) return;
     setBusy(true);
@@ -48,7 +54,7 @@ export function usePlanner() {
     const res = await createPlan(toPlanInput(v));
     setBusy(false);
     if (!res.ok) {
-      setMood("hero");
+      resetScene();
       return brief.report(res.issues ? issuesToErrors(res.issues) : {}, res.error);
     }
     saveEditKey(res.plan.id, res.editKey);
@@ -61,16 +67,15 @@ export function usePlanner() {
   function pickPreset(id: PresetId) {
     const preset = PRESETS.find((p) => p.id === id);
     if (!preset) return;
-    const v = fromPlanInput(presetInput(preset, brief.today));
+    const v = fromPlanInput(presetInput(preset, now()));
     brief.setValues(v);
     void submit(v);
   }
 
-  function reset() {
+  const reset = () => {
     setResult(null);
-    setMood("hero");
-    setPalette(null);
-  }
+    resetScene();
+  };
 
   return { ...brief, busy, result, submit, pickPreset, reset };
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 /** Route error boundary with a plain-language message and a retry. */
 export default function RouteError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
@@ -15,9 +17,9 @@ export default function RouteError({ reset }: { error: Error & { digest?: string
         <button type="button" className="btn btn-primary" onClick={reset}>
           Try again
         </button>
-        <a href="/" className="btn btn-ghost">
+        <Link href="/" className="btn btn-ghost">
           Back to the start
-        </a>
+        </Link>
       </div>
     </main>
   );

@@ -39,7 +39,7 @@ function Results({ result, label, city }: { result: VendorResult; label: string;
       <p className="text-sm">
         No grounded matches this time.{" "}
         <a href={result.searchUrl} target="_blank" rel="noopener noreferrer">
-          Search {label} in {city} on Google Maps<span className="sr-only"> (opens in a new tab)</span>
+          Search {label} in {city} on Google Maps{" "}<span className="sr-only">(opens in a new tab)</span>
         </a>
       </p>
     );
@@ -51,13 +51,13 @@ function Results({ result, label, city }: { result: VendorResult; label: string;
         {result.places.map((p) => (
           <li key={p.uri}>
             <a href={p.uri} target="_blank" rel="noopener noreferrer" className="font-semibold">
-              {p.title}<span className="sr-only"> on Google Maps (opens in a new tab)</span>
+              {p.title}{" "}<span className="sr-only">on Google Maps (opens in a new tab)</span>
             </a>
           </li>
         ))}
       </ul>
       <a href={result.searchUrl} target="_blank" rel="noopener noreferrer" className="text-sm">
-        More {label} on Google Maps<span className="sr-only"> (opens in a new tab)</span>
+        More {label} on Google Maps{" "}<span className="sr-only">(opens in a new tab)</span>
       </a>
     </div>
   );

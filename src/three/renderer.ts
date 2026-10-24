@@ -1,4 +1,4 @@
-import { ACESFilmicToneMapping, WebGLRenderer } from "three";
+import { ACESFilmicToneMapping, WebGLRenderer, type Camera, type Scene } from "three";
 import type { Tier } from "./tier";
 
 /** Device-pixel-ratio ceiling per tier (docs/DESIGN.md §8). */
@@ -17,7 +17,8 @@ export function createRenderer(canvas: HTMLCanvasElement, tier: Exclude<Tier, "o
     premultipliedAlpha: true,
     antialias: tier === "high",
     stencil: false,
-    powerPreference: "high-performance",
+    // A background decoration should not wake a laptop's discrete GPU.
+    powerPreference: "default",
   });
   const dpr = canvas.ownerDocument.defaultView?.devicePixelRatio ?? 1;
   renderer.setPixelRatio(Math.min(dpr, DPR_CAP[tier]));
@@ -79,5 +80,66 @@ export function createLoop(win: Window, frame: (dt: number, time: number) => boo
       disposed = true;
       cancel();
     },
+  };
+}
+
+/** A {@link Loop} parked until shaders compile and whenever its owner pauses it. */
+export type GatedLoop = { ready(): void; pause(): void; resume(): void; wake(): void; dispose(): void };
+
+/**
+ * Wrap `frame` in a loop that only runs once `ready()` has been called (shaders
+ * compiled) and the owner has not paused it; `onFirstFrame` fires once.
+ */
+export function createGatedLoop(win: Window, frame: (dt: number) => boolean, onFirstFrame?: () => void): GatedLoop {
+  let first = true;
+  const loop = createLoop(win, (dt) => {
+    const keep = frame(dt);
+    if (first) {
+      first = false;
+      onFirstFrame?.();
+    }
+    return keep;
+  });
+  const gate = { compiled: false, paused: false };
+  const sync = () => (gate.compiled && !gate.paused ? loop.resume() : loop.pause());
+  loop.pause();
+  return {
+    ready() {
+      gate.compiled = true;
+      sync();
+    },
+    pause() {
+      gate.paused = true;
+      sync();
+    },
+    resume() {
+      gate.paused = false;
+      sync();
+    },
+    wake: () => loop.wake(),
+    dispose: () => loop.dispose(),
+  };
+}
+
+/**
+ * Compile every program off the main thread where KHR_parallel_shader_compile
+ * exists, then open the gate (also on failure — the first frame compiles then).
+ */
+export function compileThenStart(renderer: WebGLRenderer, scene: Scene, camera: Camera, loop: GatedLoop): void {
+  void renderer.compileAsync(scene, camera).then(loop.ready, loop.ready);
+}
+
+/** Pause on WebGL context loss, carry on after restore; returns a cleanup. */
+export function watchContextLoss(canvas: HTMLCanvasElement, loop: GatedLoop): () => void {
+  const onLost = (e: Event) => {
+    e.preventDefault();
+    loop.pause();
+  };
+  const onRestored = () => loop.resume();
+  canvas.addEventListener("webglcontextlost", onLost);
+  canvas.addEventListener("webglcontextrestored", onRestored);
+  return () => {
+    canvas.removeEventListener("webglcontextlost", onLost);
+    canvas.removeEventListener("webglcontextrestored", onRestored);
   };
 }

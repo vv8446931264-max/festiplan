@@ -16,7 +16,7 @@ export function TimelineSection({ plan, editable, lang, onToggle }: Props) {
       </SectionHead>
       <TimelineSummary plan={plan} lang={lang} />
       <div role="region" aria-label="Timeline by phase" tabIndex={0}
-        className="-mx-[var(--pad)] mt-6 flex snap-x snap-mandatory gap-4 overflow-x-auto px-[var(--pad)] pb-4">
+        className="-mx-[var(--pad)] mt-6 flex snap-x snap-mandatory scroll-px-[var(--pad)] gap-4 overflow-x-auto px-[var(--pad)] pb-4">
         {groupByPhase(plan.timeline).map(({ phase, tasks }) => (
           <section key={phase} aria-labelledby={`phase-${phase}`} className="panel w-[min(85vw,380px)] shrink-0 snap-start p-5">
             <h4 id={`phase-${phase}`} className="eyebrow mb-4 text-cream">{PHASE_LABELS[phase]}</h4>
@@ -40,7 +40,7 @@ function TimelineSummary({ plan, lang }: { plan: PublicPlan; lang?: string }) {
       <div className="panel flex flex-col gap-3 p-6">
         <p className="eyebrow">Progress</p>
         <p className="h3 tabular">{stats.done} of {stats.total} done</p>
-        <progress max={stats.total} value={stats.done} aria-label="Tasks done" className="h-2 w-full accent-gold" />
+        <progress max={stats.total} value={stats.done} aria-label="Tasks done" className="meter" />
         <a href={`/plan/${plan.id}/calendar.ics`} className="btn btn-ghost no-print mt-2 self-start text-sm" download>
           Download all dates (.ics)
         </a>
@@ -73,7 +73,7 @@ function TaskItem({ task: t, plan, editable, lang, onToggle }: ItemProps) {
   });
   const id = `task-${t.id}`;
   return (
-    <li className={`rounded-2xl border border-line/60 p-3 ${t.done ? "opacity-60" : ""}`}>
+    <li className={`rounded-2xl border p-3 ${t.done ? "border-gold/50 bg-espresso/60" : "border-line/60"}`}>
       <div className="flex items-start gap-3">
         {editable ? (
           <input id={id} type="checkbox" checked={t.done} onChange={(e) => onToggle(t.id, e.target.checked)} className="mt-1 size-5 shrink-0" />
@@ -81,9 +81,9 @@ function TaskItem({ task: t, plan, editable, lang, onToggle }: ItemProps) {
           <span aria-hidden="true" className="mt-0.5 text-gold">{t.done ? "✓" : "○"}</span>
         )}
         <div className="flex min-w-0 flex-col gap-1">
-          <label htmlFor={editable ? id : undefined} lang={lang} className={`font-semibold ${t.done ? "line-through" : ""}`}>
+          <label htmlFor={editable ? id : undefined} lang={lang} className={`font-semibold ${t.done ? "text-muted line-through decoration-gold" : ""}`}>
             {t.title}
-            {!editable && <span className="sr-only">{t.done ? " (done)" : " (not done)"}</span>}
+            {!editable && <>{" "}<span className="sr-only">{t.done ? "(done)" : "(not done)"}</span></>}
           </label>
           <span className="tabular text-sm text-muted">
             {CATEGORY_LABELS[t.category]} · {formatDate(t.start)} → {formatDate(t.due)}
@@ -93,7 +93,7 @@ function TaskItem({ task: t, plan, editable, lang, onToggle }: ItemProps) {
             {t.crunch && !t.overdue && <Badge tone="gold">Crunch — start now</Badge>}
           </span>
           <a href={calendar} target="_blank" rel="noopener noreferrer" className="no-print text-sm">
-            Add to Google Calendar<span className="sr-only">: {t.title} (opens in a new tab)</span>
+            Add to Google Calendar<span className="sr-only">{`: ${t.title} (opens in a new tab)`}</span>
           </a>
         </div>
       </div>

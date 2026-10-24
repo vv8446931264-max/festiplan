@@ -31,7 +31,7 @@ export function PlanHeader({ plan, saveState, editable, autoFocus }: Props) {
   }, [autoFocus]);
 
   return (
-    <header className="flex flex-col gap-6">
+    <header className="legible flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-3">
         <span className="eyebrow">Plan Nº {plan.id.slice(0, 6).toUpperCase()}</span>
         <SourceBadge source={plan.source} model={plan.model} />
