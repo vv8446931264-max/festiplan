@@ -119,10 +119,9 @@
     padding-inline: var(--pad);
   }
   .panel {
-    background: color-mix(in oklab, var(--color-night) 88%, transparent);
+    background: var(--color-night);
     border: 1px solid color-mix(in oklab, var(--color-line) 70%, transparent);
     border-radius: 28px;
-    backdrop-filter: blur(14px);
   }
   .btn {
     display: inline-flex;
@@ -212,7 +211,7 @@
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
     .reveal {
-      animation: reveal linear both;
+      animation: reveal linear forwards;
       animation-timeline: view();
       animation-range: entry 0% cover 28%;
     }
@@ -224,11 +223,9 @@
 
 @keyframes reveal {
   from {
-    opacity: 0;
     transform: translateY(48px);
   }
   to {
-    opacity: 1;
     transform: none;
   }
 }

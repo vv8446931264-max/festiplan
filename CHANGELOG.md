@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.2.0] — 2026-10-24
+### Added
+- Tabbed plan workspace: Overview, Ideas, Budget, Timeline, Vendors, Ask and Share are
+  separate chapters behind a sticky WAI-ARIA tab bar with roving tabindex, arrow keys,
+  Home/End, and URL hash deep links (`#budget` survives a refresh).
+- Overview tab shows four summary cards: three concepts, the money, what's next, who to
+  book first — each with a button that switches to its chapter.
+- Collapsible timeline phases (only the current phase is open) with compact task rows.
+- Proportional schedule compression: when time is short, every lead time scales by the
+  same factor so dependencies stay ordered; one banner explains the compression.
+- SEO: dynamic OpenGraph/Twitter images, JSON-LD (WebApplication + FAQPage),
+  robots.txt, sitemap.xml, web manifest, canonical URLs, x-robots-tag noindex on
+  share pages. Structured FAQ on the landing page.
+- 468 unit tests (engine 100 % coverage), 26 Playwright e2e tests (desktop + mobile)
+  with axe-core on every tab.
+### Fixed
+- Scroll-driven reveal animation left Ideas cards at opacity 0 in headless Chromium,
+  failing axe colour-contrast checks. Removed opacity from the animation.
+- Panel background was semi-transparent, making axe unable to determine contrast.
+  Changed to opaque.
+### Changed
+- Plan pages show one chapter at a time instead of infinite scroll.
+- Vendor questions folded into a disclosure ("What to ask — N questions · M red flags").
+- Print styles unfold every tab panel and details group.
+
 ## [1.1.0] — 2026-10-24
 ### Security
 - Nonce-based Content-Security-Policy from `src/proxy.ts` (no inline scripts); API responses
