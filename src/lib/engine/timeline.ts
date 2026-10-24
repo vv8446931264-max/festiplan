@@ -1,4 +1,5 @@
 import type { AiTask, Phase, ScheduledTask } from "@/lib/contracts";
+import { compressedLeadDays, scheduleCompression } from "./compression";
 import { addDays, diffDays, maxDate, minDate } from "./dates";
 
 const PHASE_LIMITS: ReadonlyArray<readonly [number, Phase]> = [
@@ -88,11 +89,15 @@ export function topoSort(tasks: AiTask[]): AiTask[] | null {
 }
 
 type Slot = { index: number; task: ScheduledTask };
+type Frame = { eventDate: string; today: string; factor: number };
 
-function placeTask(task: AiTask, deps: number[], dues: string[], eventDate: string, today: string): ScheduledTask {
-  const ideal = addDays(eventDate, -task.leadWeeks * 7);
-  const start = deps.reduce((s, d) => maxDate(s, dues[d]), maxDate(ideal, today));
-  const due = maxDate(start, minDate(addDays(start, task.durationDays), eventDate));
+function placeTask(task: AiTask, deps: number[], dues: string[], frame: Frame): ScheduledTask {
+  const { eventDate, today, factor } = frame;
+  const idealStart = addDays(eventDate, -compressedLeadDays(task.leadWeeks, factor));
+  const start = deps.reduce((s, d) => maxDate(s, dues[d]), maxDate(idealStart, today));
+  const duration = Math.max(1, Math.round(task.durationDays * factor));
+  const latest = task.leadWeeks > 0 ? addDays(eventDate, -1) : eventDate;
+  const due = maxDate(start, minDate(addDays(start, duration), latest));
   return {
     id: task.id,
     title: task.title,
@@ -102,14 +107,20 @@ function placeTask(task: AiTask, deps: number[], dues: string[], eventDate: stri
     phase: phaseFor(due, eventDate),
     done: false,
     overdue: isOverdue(false, due, today),
-    crunch: ideal < today,
+    crunch: addDays(eventDate, -task.leadWeeks * 7) < today,
   };
 }
 
 /**
- * Schedules tasks backwards from the event. `start = max(event − leadWeeks·7, today, latest
- * prerequisite due)`; `due = min(start + durationDays, event)` but never before `start`.
- * If the dependencies contain a cycle they are all ignored. Sorted by due, start, then input order.
+ * Schedules tasks backwards from the event. When the longest ideal lead time does not fit in the
+ * days left, lead times and durations shrink by the same factor (`scheduleCompression`), so the
+ * steps spread over the time available and keep their relative order.
+ * `start = max(event − compressed lead, today, latest prerequisite due)`;
+ * `due = start + duration`, capped at the day before the event for tasks with `leadWeeks ≥ 1`
+ * (only `leadWeeks = 0` tasks may fall on the event day) but never before `start`.
+ * `crunch` marks a task whose uncompressed ideal start had already passed. A prerequisite due on
+ * the event day pushes its dependents there too. If the dependencies contain a cycle they are all
+ * ignored. Sorted by due, start, then input order.
  * @param tasks AI task list.
  * @param eventDate ISO event date.
  * @param today ISO "today" (injected).
@@ -117,11 +128,12 @@ function placeTask(task: AiTask, deps: number[], dues: string[], eventDate: stri
 export function scheduleTimeline(tasks: AiTask[], eventDate: string, today: string): ScheduledTask[] {
   const order = topoOrder(tasks);
   const index = firstIndexById(tasks);
+  const frame: Frame = { eventDate, today, factor: scheduleCompression(tasks, eventDate, today).factor };
   const dues: string[] = [];
   const slots: Slot[] = [];
   for (const i of order ?? tasks.map((_, k) => k)) {
     const deps = order === null ? [] : tasks[i].dependsOn.flatMap((id) => index.get(id) ?? []);
-    const task = placeTask(tasks[i], deps, dues, eventDate, today);
+    const task = placeTask(tasks[i], deps, dues, frame);
     dues[i] = task.due;
     slots.push({ index: i, task });
   }

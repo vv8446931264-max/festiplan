@@ -1,5 +1,6 @@
 export * from "./dates";
 export * from "./budget";
+export * from "./compression";
 export * from "./timeline";
 export * from "./checklist";
 export * from "./particles";

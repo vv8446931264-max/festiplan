@@ -1,10 +1,14 @@
 import { BUDGET_CATEGORIES, PHASES } from "@/lib/contracts/constants";
 import type { BudgetCategory, Phase, ScheduledTask, VendorGuide, VendorItem } from "@/lib/contracts";
+import { compressedLeadDays, scheduleCompression } from "./compression";
 import { addDays, maxDate } from "./dates";
 import { compareByDue, isOverdue } from "./timeline";
 
 /**
- * Turns AI vendor guidance into a dated checklist. `bookBy = max(event − bookByWeeks·7, today)`.
+ * Turns AI vendor guidance into a dated checklist. `bookBy = max(event − bookByWeeks·7·f, today)`
+ * where `f` is the proportional compression factor for the vendor lead times (1 when the longest
+ * one fits before the event, so a far-off event is unchanged). A vendor with `bookByWeeks ≥ 1` is
+ * booked by the day before the event at the latest, whenever that is not already past.
  * Sorted by `bookBy`, then budget-category order. Nothing is done at creation.
  * @param vendors Vendor guidance from the AI plan.
  * @param eventDate ISO event date.
@@ -12,9 +16,14 @@ import { compareByDue, isOverdue } from "./timeline";
  */
 export function scheduleVendors(vendors: VendorGuide[], eventDate: string, today: string): VendorItem[] {
   const rank = (c: BudgetCategory): number => BUDGET_CATEGORIES.indexOf(c);
+  const { factor } = scheduleCompression(
+    vendors.map((v) => ({ leadWeeks: v.bookByWeeks })),
+    eventDate,
+    today,
+  );
   return vendors
     .map((v) => {
-      const bookBy = maxDate(addDays(eventDate, -v.bookByWeeks * 7), today);
+      const bookBy = maxDate(addDays(eventDate, -compressedLeadDays(v.bookByWeeks, factor)), today);
       return {
         category: v.category,
         bookBy,

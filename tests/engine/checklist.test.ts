@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import type { BudgetCategory, Phase, ScheduledTask, VendorGuide, VendorItem } from "@/lib/contracts";
+import { addDays } from "@/lib/engine/dates";
 import {
   groupByPhase,
   nextActions,
@@ -62,12 +63,64 @@ describe("scheduleVendors", () => {
 
   it("sorts by book-by date, then budget-category order", () => {
     const out = scheduleVendors(
-      [guide("misc", 8), guide("catering", 20), guide("decor", 8), guide("venue", 8), guide("photography", 20)],
+      [guide("misc", 8), guide("catering", 12), guide("decor", 8), guide("venue", 8), guide("photography", 12)],
       EVENT,
       TODAY,
     );
     expect(out.map((v) => v.category)).toEqual(["catering", "photography", "venue", "decor", "misc"]);
     expect(scheduleVendors([], EVENT, TODAY)).toEqual([]);
+  });
+
+  it("books a lead-0 vendor on the event day and any other vendor at the latest the day before", () => {
+    const out = scheduleVendors([guide("misc", 0), guide("gifts", 1)], EVENT, TODAY);
+    expect(out.map((v) => [v.category, v.bookBy])).toEqual([
+      ["gifts", "2027-02-07"],
+      ["misc", EVENT],
+    ]);
+    const tomorrow = scheduleVendors([guide("misc", 0), guide("gifts", 30)], addDays(TODAY, 1), TODAY);
+    expect(tomorrow.map((v) => [v.category, v.bookBy])).toEqual([
+      ["gifts", TODAY],
+      ["misc", addDays(TODAY, 1)],
+    ]);
+  });
+});
+
+describe("scheduleVendors when the event is closer than the ideal lead times", () => {
+  // A wedding 12 days away: the longest lead (40 weeks, 280 days) compresses to the 12 days left.
+  const WEDDING = [
+    guide("venue", 40),
+    guide("catering", 32),
+    guide("photography", 32),
+    guide("decor", 28),
+    guide("attire", 24),
+    guide("entertainment", 16),
+    guide("transport", 8),
+  ];
+  const near = addDays(TODAY, 12);
+
+  it("spreads book-by dates proportionally over the days left, in the same order", () => {
+    const out = scheduleVendors(WEDDING, near, TODAY);
+    expect(out.map((v) => [v.category, v.bookBy])).toEqual([
+      ["venue", TODAY],
+      ["catering", addDays(TODAY, 2)],
+      ["photography", addDays(TODAY, 2)],
+      ["decor", addDays(TODAY, 4)],
+      ["attire", addDays(TODAY, 5)],
+      ["entertainment", addDays(TODAY, 7)],
+      ["transport", addDays(TODAY, 10)],
+    ]);
+    expect(out.every((v) => v.bookBy < near && !v.overdue && !v.done)).toBe(true);
+  });
+
+  it("leaves a plan that fits exactly as before", () => {
+    const out = scheduleVendors(WEDDING, addDays(TODAY, 280), TODAY);
+    expect(out.map((v) => v.bookBy)).toEqual(WEDDING.map((v) => addDays(TODAY, 280 - v.bookByWeeks * 7)).sort());
+  });
+
+  it("books everything today when the event is today or already past", () => {
+    for (const day of [TODAY, addDays(TODAY, -4)]) {
+      expect(scheduleVendors(WEDDING, day, TODAY).every((v) => v.bookBy === TODAY && !v.overdue)).toBe(true);
+    }
   });
 });
 

@@ -36,8 +36,9 @@ that plan (404 when it does not exist), so the endpoint is never an open Maps se
 |---|---|
 | `dates.ts` | `addDays(iso, n)`, `diffDays(from, to)`, `maxDate(a, b)`, `minDate(a, b)` |
 | `budget.ts` | `largestRemainder(total, weights)`, `allocateBudget({ totalINR, weights, guests, contingencyPercent? })` → `{ contingencyINR, allocations }`, `rebalance(allocations, category, amountINR, { totalINR, guests })`, `setLocked(allocations, category, locked)`, `applyEdits(current, edits, ctx)` → `Allocation[] \| null`, `setActual(allocations, category, actualINR)`, `budgetVariance(allocations)`, `overspendAlerts(allocations, contingencyINR)`, `withDerived(allocations, totalINR, guests)` |
-| `timeline.ts` | `topoSort(tasks)` → `AiTask[] \| null` (null on cycle), `phaseFor(due, eventDate)`, `scheduleTimeline(tasks, eventDate, today)`, `refreshStatus(timeline, today)`, `setTaskDone(timeline, id, done)` |
-| `checklist.ts` | `scheduleVendors(vendors, eventDate, today)`, `setVendorDone(items, category, done)`, `progress(items)` → `{ done, total, percent }`, `nextActions(timeline, n = 3)`, `groupByPhase(timeline)` |
+| `compression.ts` | `compressionFactor(idealSpanDays, availableDays)` → `1` when the span fits, else `available / ideal`; `scheduleCompression(tasks, eventDate, today)` → `{ compressed, factor, availableDays, idealDays }` (for one honest "compressed" banner); `compressedLeadDays(leadWeeks, factor)` |
+| `timeline.ts` | `topoSort(tasks)` → `AiTask[] \| null` (null on cycle), `phaseFor(due, eventDate)`, `scheduleTimeline(tasks, eventDate, today)` (proportional compression), `refreshStatus(timeline, today)`, `setTaskDone(timeline, id, done)` |
+| `checklist.ts` | `scheduleVendors(vendors, eventDate, today)` (same compression for `bookBy`), `setVendorDone(items, category, done)`, `progress(items)` → `{ done, total, percent }`, `nextActions(timeline, n = 3)`, `groupByPhase(timeline)` |
 | `particles.ts` | `layoutParticles(allocations, n)` → counts per category (largest remainder); `assignParticles(prev, nextCounts)` moves only the delta particles; `targetsFor(assignment, layout)`; `createParticleState(n)`; `stepParticles(state, targets, dt)` critically-damped spring (dt clamped); `isSettled` |
 | `ics.ts` | `escapeIcsText(s)`, `foldLine(line)`, `buildIcs({ planId, title, eventDate, city, tasks, url, dtstamp })` |
 | `calendar-link.ts` | `googleCalendarUrl({ title, date, endDate?, details?, location? })` |
@@ -49,9 +50,18 @@ largest remainder so the parts plus contingency equal the total **exactly**.
 proportion, again with largest remainder, so the sum never drifts by a rupee.
 
 Timeline rules: Kahn topological sort (stable; unknown deps ignored; a cycle drops
-all dependencies). `start = max(event − leadWeeks·7, today, max(dep.due))`,
-`due = min(start + durationDays, event)`, `crunch` when the ideal start had
-passed, `overdue = !done && due < today`. Phases by days before the event:
+all dependencies). **Proportional compression:** `idealSpan = max(leadWeeks)·7` and
+`available = days from today to the event`; `f = compressionFactor(idealSpan, available)`
+is 1 when the span fits, else `available / idealSpan`, so a plan that needs 26 weeks and
+has 12 days has every lead time and duration scaled by the same `f` and spreads over
+those 12 days in its original order. `leadDays = round(leadWeeks·7·f)` (at least 1 for
+`leadWeeks ≥ 1`), `start = max(event − leadDays, today, max(dep.due))`,
+`due = start + max(1, round(durationDays·f))`, capped at the day before the event for
+`leadWeeks ≥ 1` (only `leadWeeks = 0` tasks fall on the event day) and never before
+`start`. `crunch` when the uncompressed ideal start (`event − leadWeeks·7`) had already
+passed; `overdue = !done && due < today`. Vendor `bookBy` uses the same factor over
+`bookByWeeks` and is `max(today, event − round(bookByWeeks·7·f))`, at the latest the day
+before the event. Phases by days before the event:
 0 day-of · ≤7 final-week · ≤28 2-4w · ≤91 1-3m · ≤182 3-6m · else 6m+.
 
 ## AI — `src/lib/ai`

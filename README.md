@@ -13,8 +13,9 @@
 
 1. Open the live link and tap **Priya's sangeet · Jaipur · 180 guests · ₹12L**.
 2. Watch the staged progress (*Reading the vibe → Drafting concepts → Balancing ₹ → Counting back from the date → Listing who to book*), then the confetti.
-3. Drag the **Décor** slider: rupee particles re-flow between the glass columns, every other line re-balances, and the total stays **exactly ₹12,00,000** — no AI call.
-4. Tick two timeline tasks, press **Share**, open the read-only link on a phone: the same plan, server-rendered.
+3. The plan opens as a workspace on **Overview**: the three concepts, the money, what's next and who to book first — on one screen.
+4. Open **Budget** and drag the **Décor** slider: rupee particles re-flow between the glass columns, every other line re-balances, and the total stays **exactly ₹12,00,000** — no AI call.
+5. Open **Timeline**, tick two tasks, then **Share** → open the read-only link on a phone: the same plan, server-rendered.
 
 ## The idea: AI ideates, code calculates
 

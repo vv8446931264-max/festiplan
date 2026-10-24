@@ -71,11 +71,13 @@ label so colour is never the only signal.
 | 1 | Manifesto | "It isn't just a checklist." editorial block, serif accents | lanterns drift toward camera |
 | 2 | The brief | three oversized event cards (Wedding / Birthday / Community), demo-preset chips, the form | scene dims and slows (focus) |
 | 3 | The moment | staged progress line while Gemini works | on success: confetti burst (instanced) |
-| 4 | Ideas | three concepts as magazine covers ("ISSUE Nº 01 — The Marigold Courtyard"), palette swatches | lanterns tint to the chosen palette |
-| 5 | Budget | sliders + exact table + per-guest; contingency chip | **Budget Flow simulation**: particles = rupees, glass columns = categories, re-flow on slider drag |
-| 6 | Timeline | phases as a native horizontal scroll-snap rail, dated tasks, Add to Google Calendar, .ics | quiet |
-| 7 | Vendors | checklist per category, questions, red flags, "Find real vendors in {city}" | quiet |
-| 8 | Share | share link, print, export | lanterns rise and fade |
+| 4 | The plan workspace | header (title, facts, summary) + a sticky WAI-ARIA tab bar: **Overview · Ideas · Budget · Timeline · Vendors · Ask · Share** — one chapter on screen at a time (the stacked chapters read as an endless scroll in testing) | lanterns rise, then dim to 30 % |
+| 4a | Overview | four glance cards — concepts, money, what's next, who to book — plus tips | quiet |
+| 4b | Ideas | three concepts as magazine covers ("ISSUE Nº 01 — The Marigold Courtyard"), palette swatches | lanterns tint to the chosen palette |
+| 4c | Budget | sliders + exact table + per-guest; contingency chip | **Budget Flow simulation**: particles = rupees, glass columns = categories, re-flow on slider drag |
+| 4d | Timeline | one collapsible group per phase (the current one open), compact task rows with a calendar icon button, one banner when the schedule is compressed, .ics | quiet |
+| 4e | Vendors | compact cards: book-by date, booked tick, "What to ask" disclosure, "Find real vendors in {city}" | quiet |
+| 4f | Ask · Share | streamed Q&A; share link, private edit link, print, export | quiet |
 | 9 | Footer | oversized wordmark, disclaimer | — |
 
 ## 6. 3D scenes (`src/three`, procedural geometry only, no model files)

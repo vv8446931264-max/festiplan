@@ -287,6 +287,10 @@
   canvas {
     display: none !important;
   }
+  /* The printed plan is the whole plan: every tab panel, one after another. */
+  [role="tabpanel"][hidden] {
+    display: block !important;
+  }
   .panel {
     border-color: #999 !important;
     break-inside: avoid;

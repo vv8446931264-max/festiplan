@@ -42,7 +42,7 @@ function VendorCard({ item: v, planId, city, editable, lang, onToggle }: CardPro
   const label = CATEGORY_LABELS[v.category];
   const id = `vendor-${v.category}`;
   return (
-    <article aria-labelledby={`${id}-title`} className={`panel flex h-full flex-col gap-4 p-6 ${v.done ? "border-gold" : ""}`}>
+    <article aria-labelledby={`${id}-title`} className={`panel flex h-full flex-col gap-4 p-5 sm:p-6 ${v.done ? "border-gold" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h4 id={`${id}-title`} className="text-2xl font-bold tracking-tight">{label}</h4>
@@ -59,19 +59,34 @@ function VendorCard({ item: v, planId, city, editable, lang, onToggle }: CardPro
           <span className="eyebrow">{v.done ? "Booked" : "Not booked"}</span>
         )}
       </div>
-      <div>
-        <p className="eyebrow mb-2">Ask them</p>
+      <VendorBrief item={v} lang={lang} />
+      <VendorFinder planId={planId} category={v.category} city={city} />
+    </article>
+  );
+}
+
+/** Questions and red flags, folded away until wanted so the checklist stays scannable. */
+function VendorBrief({ item: v, lang }: { item: VendorItem; lang?: string }) {
+  return (
+    <details className="group rounded-2xl border border-line/70">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-2 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+        <span>What to ask</span>
+        <span className="text-muted">
+          {v.questions.length} questions · {v.redFlags.length} red {v.redFlags.length === 1 ? "flag" : "flags"}
+          <span aria-hidden="true" className="ml-2 inline-block text-gold transition-transform group-open:rotate-90">▸</span>
+        </span>
+      </summary>
+      <div className="flex flex-col gap-4 border-t border-line/60 px-4 py-4">
         <ul lang={lang} className="flex list-disc flex-col gap-1 pl-5">
           {v.questions.map((q, i) => <li key={i}>{q}</li>)}
         </ul>
+        <div>
+          <p className="eyebrow mb-2 text-ember-bright">Red flags</p>
+          <ul lang={lang} className="flex list-disc flex-col gap-1 pl-5 text-muted">
+            {v.redFlags.map((r, i) => <li key={i}>{r}</li>)}
+          </ul>
+        </div>
       </div>
-      <div>
-        <p className="eyebrow mb-2 text-ember-bright">Red flags</p>
-        <ul lang={lang} className="flex list-disc flex-col gap-1 pl-5 text-muted">
-          {v.redFlags.map((r, i) => <li key={i}>{r}</li>)}
-        </ul>
-      </div>
-      <VendorFinder planId={planId} category={v.category} city={city} />
-    </article>
+    </details>
   );
 }

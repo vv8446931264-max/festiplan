@@ -102,9 +102,15 @@ type ScheduledTask = { id: string; title: string; category: string; start: strin
   per-guest cost; re-balance when one category is changed or locked (others scale
   proportionally, locked ones fixed); planned-vs-actual variance; overspend alerts.
 - **timeline** — topological sort of tasks (cycle → reject & fall back), schedule
-  backwards from `eventDate` using `leadWeeks`/`durationDays`, clamp to `today`,
-  mark `overdue`/crunch, bucket into phases, sort stable.
-- **checklist** — progress %, next three actionable items, by-category grouping.
+  backwards from `eventDate` using `leadWeeks`/`durationDays`, never before `today`,
+  mark `overdue`/crunch, bucket into phases, sort stable. When the event is closer than
+  the longest ideal lead time, all lead times and durations are compressed by the same
+  factor (`available days / ideal days`), so steps spread over the time left in their
+  original order; only `leadWeeks = 0` tasks fall on the event day. `scheduleCompression`
+  reports `{ compressed, factor, availableDays, idealDays }` so the UI can state it once.
+- **checklist** — vendor book-by dates (compressed by the same proportional factor,
+  never later than the day before the event), progress %, next three actionable items,
+  by-category grouping.
 - **particles** — `layoutParticles(allocations, n)` (largest remainder of n particles
   across categories) and `stepParticles(state, targets, dt)` spring integration
   for the budget simulation — pure so it is unit-testable.

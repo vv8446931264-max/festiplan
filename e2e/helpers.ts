@@ -33,3 +33,12 @@ export async function planFromPreset(page: Page, label: RegExp) {
     timeout: 60_000,
   });
 }
+
+/** Switches the plan workspace to a tab and waits for its panel. */
+export async function openTab(page: Page, name: string) {
+  await page.getByRole("tab", { name, exact: true }).click();
+  await expect(page.getByRole("tabpanel", { name, exact: true })).toBeVisible();
+}
+
+/** Every tab of the plan workspace, in order. */
+export const PLAN_TABS = ["Overview", "Ideas", "Budget", "Timeline", "Vendors", "Ask", "Share"] as const;
