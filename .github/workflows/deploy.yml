@@ -1,0 +1,48 @@
+# Deploys main to Cloud Run after the `ci` workflow passes.
+# Inactive until scripts/gcp-bootstrap.sh has set the GCP_* repository variables.
+name: deploy
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: vars.GCP_WIF_PROVIDER != '' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run (source build, Vertex AI via ADC — no API key)
+        run: |
+          gcloud run deploy mehfil --source . \
+            --project "${{ vars.GCP_PROJECT_ID }}" --region us-central1 \
+            --allow-unauthenticated --quiet \
+            --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLOUD_LOCATION=global,GEMINI_MODEL=${{ vars.GEMINI_MODEL || 'gemini-2.5-flash' }}"
+
+      - name: Smoke test the live service
+        run: |
+          URL=$(gcloud run services describe mehfil --project "${{ vars.GCP_PROJECT_ID }}" --region us-central1 --format='value(status.url)')
+          HEALTH=$(curl -fsS --retry 5 --retry-delay 3 "$URL/api/health")
+          echo "$HEALTH"
+          { echo "### Live: $URL"; echo '```json'; echo "$HEALTH"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
