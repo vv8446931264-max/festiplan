@@ -38,7 +38,7 @@ jobs:
           gcloud run deploy festiplan --source . \
             --project "${{ vars.GCP_PROJECT_ID }}" --region us-central1 \
             --allow-unauthenticated --quiet \
-            --memory 1Gi --cpu 1 --concurrency 40 --timeout 60 --min-instances 0 --max-instances 5 \
+            --memory 1Gi --cpu 1 --concurrency 40 --timeout 90 --min-instances 0 --max-instances 5 \
             --set-env-vars "GOOGLE_GENAI_USE_VERTEXAI=true,GOOGLE_CLOUD_PROJECT=${{ vars.GCP_PROJECT_ID }},GOOGLE_CLOUD_LOCATION=global,FIRESTORE_DATABASE=festiplan,GEMINI_MODEL=${{ vars.GEMINI_MODEL || 'gemini-3.5-flash' }}"
 
       - name: Smoke test the live service

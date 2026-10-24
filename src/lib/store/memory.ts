@@ -1,5 +1,5 @@
 import type { Plan } from "@/lib/contracts";
-import type { PlanStore } from "./types";
+import type { Mutator, PlanStore } from "./types";
 
 /**
  * In-process plan store for development and tests. Plans are deep-cloned in and out,
@@ -30,6 +30,10 @@ export class MemoryStore implements PlanStore {
 
   /** Returns a copy of the plan, or null when missing or past `expireAt`. */
   async get(id: string): Promise<Plan | null> {
+    return this.read(id);
+  }
+
+  private read(id: string): Plan | null {
     const plan = this.plans.get(id);
     if (!plan) return null;
     if (plan.expireAt.getTime() <= this.now()) {
@@ -37,6 +41,13 @@ export class MemoryStore implements PlanStore {
       return null;
     }
     return structuredClone(plan);
+  }
+
+  /** Read-modify-write with no await in between, so it is atomic within the process. */
+  async mutate<T>(id: string, fn: Mutator<T>): Promise<T> {
+    const { next, result } = fn(this.read(id));
+    if (next) this.plans.set(id, structuredClone(next));
+    return result;
   }
 
   /** Replaces an existing plan; rejects when it does not exist. */

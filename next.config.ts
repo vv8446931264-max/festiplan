@@ -4,6 +4,8 @@ const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   reactStrictMode: true,
+  // Server SDKs with native/optional deps stay as runtime requires instead of being bundled.
+  serverExternalPackages: ["@google-cloud/firestore", "@google/genai"],
 
   headers: async () => [
     {
@@ -12,6 +14,8 @@ const nextConfig: NextConfig = {
         { key: "X-Content-Type-Options", value: "nosniff" },
         { key: "X-Frame-Options", value: "DENY" },
         { key: "X-XSS-Protection", value: "0" },
+        { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+        { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
         { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         {
           key: "Content-Security-Policy",
@@ -19,9 +23,12 @@ const nextConfig: NextConfig = {
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline'",
             "style-src 'self' 'unsafe-inline'",
-            "img-src 'self' data: blob: https://maps.googleapis.com https://maps.gstatic.com",
+            "img-src 'self' data: blob:",
             "font-src 'self'",
             "connect-src 'self'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "object-src 'none'",
             "frame-ancestors 'none'",
           ].join("; "),
         },

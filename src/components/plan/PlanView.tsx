@@ -5,6 +5,7 @@ import { AskSection } from "./AskSection";
 import { BudgetSection } from "./BudgetSection";
 import { IdeasSection } from "./IdeasSection";
 import { PlanHeader } from "./PlanHeader";
+import { aiLang } from "./SectionHead";
 import { ShareSection } from "./ShareSection";
 import { TimelineSection } from "./TimelineSection";
 import { TipsSection } from "./TipsSection";
@@ -28,7 +29,7 @@ type Props = { plan: PublicPlan; editKey: string | null; autoFocus?: boolean };
  */
 export function PlanView({ plan: initial, editKey, autoFocus }: Props) {
   const s = usePlanState(initial, editKey);
-  const lang = s.plan.input.language === "en" ? undefined : s.plan.input.language;
+  const lang = aiLang(s.plan);
 
   return (
     <article aria-labelledby="plan-title" className="flex flex-col gap-20 sm:gap-28">

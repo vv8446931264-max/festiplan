@@ -136,9 +136,29 @@ function patchVendors(plan: Plan, patch: PlanPatch): Step<VendorItem[]> {
   return { ok: true, value: vendors };
 }
 
+type Decision = { next: Plan | null; result: PatchResult };
+
+function decidePatch(plan: Plan | null, editKey: string | null, patch: PlanPatch, today: string, now: Date): Decision {
+  if (!plan) return { next: null, result: NOT_FOUND };
+  if (!verifyEditKey(editKey, plan.editKeyHash)) return { next: null, result: FORBIDDEN };
+  const budget = patchBudget(plan, patch);
+  if (!budget.ok) return { next: null, result: budget };
+  const timeline = patchTimeline(plan, patch);
+  if (!timeline.ok) return { next: null, result: timeline };
+  const vendors = patchVendors(plan, patch);
+  if (!vendors.ok) return { next: null, result: vendors };
+  const next = withStatus(
+    { ...plan, budget: budget.value, timeline: timeline.value, vendors: vendors.value, updatedAt: now.toISOString() },
+    today,
+  );
+  return { next, result: { ok: true, plan: toPublic(next) } };
+}
+
 /**
  * Applies an owner's edits (checklist ticks, actual spend, budget lines) after a
- * timing-safe edit-key check. 404 unknown plan · 403 wrong key · 422 edits that don't fit.
+ * timing-safe edit-key check, as one atomic read-modify-write so concurrent edits
+ * from two phones never overwrite each other.
+ * 404 unknown plan · 403 wrong key · 422 edits that don't fit.
  */
 export async function patchPlan(
   id: string,
@@ -148,20 +168,6 @@ export async function patchPlan(
   deps: ServiceDeps = {},
 ): Promise<PatchResult> {
   if (!isPlanId(id)) return NOT_FOUND;
-  const store = deps.store ?? getStore();
-  const plan = await store.get(id);
-  if (!plan) return NOT_FOUND;
-  if (!verifyEditKey(editKey, plan.editKeyHash)) return FORBIDDEN;
-  const budget = patchBudget(plan, patch);
-  if (!budget.ok) return budget;
-  const timeline = patchTimeline(plan, patch);
-  if (!timeline.ok) return timeline;
-  const vendors = patchVendors(plan, patch);
-  if (!vendors.ok) return vendors;
-  const next = withStatus(
-    { ...plan, budget: budget.value, timeline: timeline.value, vendors: vendors.value, updatedAt: (deps.now ?? new Date()).toISOString() },
-    today,
-  );
-  await store.update(next);
-  return { ok: true, plan: toPublic(next) };
+  const now = deps.now ?? new Date();
+  return (deps.store ?? getStore()).mutate(id, (plan) => decidePatch(plan, editKey, patch, today, now));
 }

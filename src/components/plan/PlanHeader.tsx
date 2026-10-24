@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { EVENT_TYPE_LABELS, type PublicPlan } from "@/lib/contracts";
 import { diffDays, formatDate, formatINR } from "@/lib/engine";
+import { aiLang } from "./SectionHead";
 import type { SaveState } from "./usePlanState";
 
 const SAVE_TEXT: Record<SaveState, string> = {
@@ -21,7 +22,7 @@ export function PlanHeader({ plan, saveState, editable, autoFocus }: Props) {
   const { input } = plan;
   const title = input.title || `${EVENT_TYPE_LABELS[input.eventType]} in ${input.city}`;
   const daysToGo = diffDays(plan.today, input.eventDate);
-  const lang = input.language === "en" ? undefined : input.language;
+  const lang = aiLang(plan);
 
   useEffect(() => {
     if (!autoFocus) return;

@@ -25,7 +25,8 @@ export type PlanDeps = {
   cache?: TtlCache<AiPlan> | null;
 };
 
-export const PLAN_TIMEOUT_MS = 25_000;
+/** Deadline for both attempts together; Cloud Run allows 90 s per request. */
+export const PLAN_TIMEOUT_MS = 50_000;
 const sharedCache = new TtlCache<AiPlan>(50, 60 * 60 * 1000);
 
 /** Empties the shared plan cache (tests and admin use). */

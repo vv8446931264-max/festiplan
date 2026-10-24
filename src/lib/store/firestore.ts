@@ -1,5 +1,5 @@
 import type { Plan } from "@/lib/contracts";
-import type { PlanStore } from "./types";
+import type { Mutator, PlanStore } from "./types";
 
 /** The slice of a Firestore document reference this adapter uses (fakeable in tests). */
 export type DocRefLike = {
@@ -8,9 +8,16 @@ export type DocRefLike = {
   get(): Promise<{ exists: boolean; data(): Record<string, unknown> | undefined }>;
 };
 
-/** What the adapter needs from the Firestore SDK: the `plans` collection and a Date → Timestamp. */
+/** One transactional read-modify-write of a raw document (`write` null = no write). */
+export type Transact = <T>(
+  id: string,
+  fn: (data: Record<string, unknown> | undefined) => { write: Record<string, unknown> | null; result: T },
+) => Promise<T>;
+
+/** What the adapter needs from the Firestore SDK: the `plans` collection, transactions and Date → Timestamp. */
 export type FirestoreBinding = {
   doc(id: string): DocRefLike;
+  transact: Transact;
   toTimestamp(date: Date): unknown;
 };
 
@@ -29,6 +36,14 @@ export async function loadFirestore(env: Record<string, string | undefined> = pr
   const plans = db.collection(PLANS_COLLECTION);
   return {
     doc: (id) => plans.doc(id),
+    transact: (id, fn) =>
+      db.runTransaction(async (tx) => {
+        const ref = plans.doc(id);
+        const snap = await tx.get(ref);
+        const { write, result } = fn(snap.exists ? snap.data() : undefined);
+        if (write) tx.set(ref, write);
+        return result;
+      }),
     toTimestamp: (date) => Timestamp.fromDate(date),
   };
 }
@@ -48,6 +63,9 @@ export function fromDoc(data: Record<string, unknown> | undefined): Plan | null 
   if (!data || typeof data.id !== "string" || typeof data.editKeyHash !== "string") return null;
   return { ...data, expireAt: toDate(data.expireAt) } as Plan;
 }
+
+const live = (plan: Plan | null): Plan | null =>
+  plan && plan.expireAt.getTime() > Date.now() ? plan : null;
 
 /**
  * Plans in Cloud Firestore (`plans/{id}`), accessed only from the server with ADC.
@@ -81,9 +99,16 @@ export class FirestoreStore implements PlanStore {
   async get(id: string): Promise<Plan | null> {
     const b = await this.bind();
     const snap = await b.doc(id).get();
-    if (!snap.exists) return null;
-    const plan = fromDoc(snap.data());
-    return plan && plan.expireAt.getTime() > Date.now() ? plan : null;
+    return snap.exists ? live(fromDoc(snap.data())) : null;
+  }
+
+  /** Read-modify-write inside a Firestore transaction (retried by the SDK on contention). */
+  async mutate<T>(id: string, fn: Mutator<T>): Promise<T> {
+    const b = await this.bind();
+    return b.transact(id, (data) => {
+      const { next, result } = fn(live(fromDoc(data)));
+      return { write: next ? this.toDoc(b, next) : null, result };
+    });
   }
 
   /** Replaces `plans/{id}`. */
