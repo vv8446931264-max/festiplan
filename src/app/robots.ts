@@ -1,10 +1,10 @@
 import type { MetadataRoute } from "next";
-import { SITE_URL } from "@/lib/site";
+import { absoluteUrl } from "@/lib/site";
 
-/** Index the landing page only; plans and APIs stay out of search engines. */
+/** Index the landing page only; private plan links and the JSON API stay out of search engines. */
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: { userAgent: "*", allow: "/", disallow: ["/api/", "/plan/"] },
-    sitemap: `${SITE_URL}/sitemap.xml`,
+    sitemap: absoluteUrl("/sitemap.xml"),
   };
 }

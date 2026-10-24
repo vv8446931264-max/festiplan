@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-/** Top bar: wordmark home link, section links and the primary call to action. */
+/** Top bar: wordmark home link, section links (how it works, FAQ) and the primary call to action. */
 export function SiteHeader() {
   return (
     <header className="shell relative z-10 flex items-center justify-between gap-4 py-5">
@@ -12,6 +12,11 @@ export function SiteHeader() {
           <li className="hidden sm:block">
             <Link href="/#manifesto" className="eyebrow inline-flex min-h-11 items-center px-3 text-cream no-underline hover:text-gold">
               How it works
+            </Link>
+          </li>
+          <li className="hidden sm:block">
+            <Link href="/#faq" className="eyebrow inline-flex min-h-11 items-center px-3 text-cream no-underline hover:text-gold">
+              FAQ
             </Link>
           </li>
           <li>

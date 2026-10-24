@@ -48,7 +48,7 @@ function Masthead() {
   return (
     <div className="flex flex-col gap-3">
       <h1 id="hero-title" className="masthead legible text-cream">
-        <span className="sr-only">{BRAND.name} — {BRAND.category}</span>
+        <span className="sr-only">{BRAND.name} — {BRAND.subtitle}</span>{" "}
         <span aria-hidden="true" className="flex">
           {LETTERS.map((ch, i) => (
             <span key={i} className="rise inline-block" style={{ animationDelay: `${120 + i * 55}ms` }}>

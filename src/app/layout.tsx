@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Hanken_Grotesk, JetBrains_Mono, Literata } from "next/font/google";
 import { connection } from "next/server";
 import { LazySceneBackdrop } from "@/components/three/lazy";
-import { SITE_URL } from "@/lib/site";
+import { rootMetadata } from "@/lib/seo/metadata";
 import "./globals.css";
 
 const hanken = Hanken_Grotesk({
@@ -25,22 +25,8 @@ const jetbrains = JetBrains_Mono({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
-  title: {
-    default: "FestiPlan — AI Celebration & Event Planner",
-    template: "%s · FestiPlan",
-  },
-  description:
-    "Plan weddings, birthdays and community events with Gemini: three personalised concepts, a budget split to the last rupee, a dated timeline and real vendors from Google Maps.",
-  applicationName: "FestiPlan",
-  openGraph: {
-    type: "website",
-    title: "FestiPlan — AI Celebration & Event Planner",
-    description: "Made for moments. Built for budgets.",
-    siteName: "FestiPlan",
-  },
-};
+/** Site-wide defaults; the landing page adds its canonical URL (see `src/lib/seo/metadata.ts`). */
+export const metadata: Metadata = rootMetadata();
 
 export const viewport: Viewport = {
   themeColor: "#100904",
