@@ -1,6 +1,9 @@
+/** 128 random bits: unguessable, and the length the CSP spec recommends as a minimum. */
+const NONCE_BYTES = 16;
+
 /** A fresh, unguessable CSP nonce: 128 random bits, base64. Minted once per request. */
 export function newNonce(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  const bytes = crypto.getRandomValues(new Uint8Array(NONCE_BYTES));
   return btoa(String.fromCharCode(...bytes));
 }
 
@@ -17,9 +20,12 @@ export function contentSecurityPolicy(
   nonce: string,
   mode: string | undefined = process.env.NODE_ENV,
 ): string {
+  const devEval = mode === "development" ? " 'unsafe-eval'" : "";
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${mode === "development" ? " 'unsafe-eval'" : ""}`,
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${devEval}`,
+    // React style attributes (palette swatches, slider fills, animation delays) need inline
+    // styles; the only model-derived values are Zod-validated #RRGGBB colours.
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob:",
     "font-src 'self'",

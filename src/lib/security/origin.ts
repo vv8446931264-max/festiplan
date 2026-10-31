@@ -1,19 +1,33 @@
-const firstValue = (header: string | null): string | null => {
-  const v = header?.split(",")[0]?.trim().toLowerCase();
-  return v ? v : null;
-};
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
+/** The first comma-separated value of a header, trimmed and lower-cased; null when blank. */
+function firstHeaderValue(header: string | null): string | null {
+  const value = header?.split(",")[0]?.trim().toLowerCase() ?? "";
+  return value === "" ? null : value;
+}
+
+/** Every host this request may legitimately be addressed as: forwarded host, Host, URL host. */
 function requestHosts(req: Request): string[] {
   const hosts = [
-    firstValue(req.headers.get("x-forwarded-host")),
-    firstValue(req.headers.get("host")),
+    firstHeaderValue(req.headers.get("x-forwarded-host")),
+    firstHeaderValue(req.headers.get("host")),
   ];
   try {
     hosts.push(new URL(req.url).host.toLowerCase());
   } catch {
     // A relative or malformed URL simply contributes no host.
   }
-  return hosts.filter((h): h is string => h !== null);
+  return hosts.filter((host): host is string => host !== null);
+}
+
+/** The lower-cased host of an http(s) Origin header value; null for anything else. */
+function originHost(origin: string): string | null {
+  try {
+    const url = new URL(origin);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.host.toLowerCase() : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -23,18 +37,9 @@ function requestHosts(req: Request): string[] {
  * form posts and header-less clients are refused. GET/HEAD/OPTIONS always pass.
  */
 export function isSameOrigin(req: Request): boolean {
-  const method = req.method.toUpperCase();
-  if (method === "GET" || method === "HEAD" || method === "OPTIONS") return true;
+  if (SAFE_METHODS.has(req.method.toUpperCase())) return true;
   const origin = req.headers.get("origin");
   if (origin === null) return req.headers.get("sec-fetch-site") === "same-origin";
-  if (origin === "null") return false;
-  let originHost: string;
-  try {
-    const url = new URL(origin);
-    if (url.protocol !== "https:" && url.protocol !== "http:") return false;
-    originHost = url.host.toLowerCase();
-  } catch {
-    return false;
-  }
-  return requestHosts(req).includes(originHost);
+  const host = origin === "null" ? null : originHost(origin);
+  return host !== null && requestHosts(req).includes(host);
 }

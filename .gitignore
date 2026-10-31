@@ -8,6 +8,15 @@ playwright-report/
 next-env.d.ts
 .env*
 !.env.example
+# Credentials never belong in git (production is keyless; this guards local downloads).
+*.pem
+*.key
+*.p12
+service-account*.json
+*-credentials.json
+application_default_credentials.json
+# Written by google-github-actions/auth in CI; `gcloud run deploy --source` honours this file.
+gha-creds-*.json
 *.log
 .DS_Store
 .vercel

@@ -4,15 +4,15 @@ import { isJsonContentType, readJson } from "@/lib/security/body";
 
 const JSON_HEADERS = { "content-type": "application/json" };
 
+/** A body stream that yields `chunks` one pull at a time, calling `onPull` on each pull. */
 function streamOf(chunks: string[], onPull?: () => void): ReadableStream<Uint8Array> {
-  const enc = new TextEncoder();
-  let i = 0;
+  const encoder = new TextEncoder();
+  let next = 0;
   return new ReadableStream<Uint8Array>({
     pull(controller) {
       onPull?.();
-      const chunk = chunks[i++];
-      if (chunk === undefined) controller.close();
-      else controller.enqueue(enc.encode(chunk));
+      if (next >= chunks.length) controller.close();
+      else controller.enqueue(encoder.encode(chunks[next++]));
     },
   });
 }

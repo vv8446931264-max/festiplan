@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { hashEditKey, newEditKey, verifyEditKey } from "@/lib/security/edit-key";
 
 vi.mock("node:crypto", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:crypto")>();
+  const actual = await importOriginal<typeof crypto>();
   return { ...actual, timingSafeEqual: vi.fn(actual.timingSafeEqual) };
 });
 
@@ -12,7 +12,7 @@ describe("edit keys", () => {
   it("issues 32-byte base64url keys that are unique", () => {
     const keys = new Set(Array.from({ length: 50 }, newEditKey));
     expect(keys.size).toBe(50);
-    for (const k of keys) expect(k).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    for (const key of keys) expect(key).toMatch(/^[A-Za-z0-9_-]{43}$/);
   });
 
   it("hashes with SHA-256 hex", () => {

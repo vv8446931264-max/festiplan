@@ -10,13 +10,16 @@ const headersFor = async (url: string) =>
 describe("next.config.ts hardening headers", () => {
   it("sends the browser hardening headers on every path", async () => {
     for (const path of ["/", "/plan/abcdef123456", "/api/health"]) {
-      const h = await headersFor(path);
-      expect(h.get("x-content-type-options")).toBe("nosniff");
-      expect(h.get("x-frame-options")).toBe("DENY");
-      expect(h.get("strict-transport-security")).toBe("max-age=63072000; includeSubDomains");
-      expect(h.get("cross-origin-opener-policy")).toBe("same-origin");
-      expect(h.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
-      expect(h.get("permissions-policy")).toBe("camera=(), microphone=(), geolocation=()");
+      const headers = await headersFor(path);
+      expect(headers.get("x-content-type-options")).toBe("nosniff");
+      expect(headers.get("x-frame-options")).toBe("DENY");
+      expect(headers.get("strict-transport-security")).toBe("max-age=63072000; includeSubDomains");
+      expect(headers.get("cross-origin-opener-policy")).toBe("same-origin");
+      expect(headers.get("cross-origin-resource-policy")).toBe("same-origin");
+      expect(headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
+      expect(headers.get("permissions-policy")).toBe(
+        "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+      );
     }
   });
 
