@@ -258,6 +258,41 @@
   }
 }
 
+/* Windows High Contrast and other forced-colour modes replace this palette with the user's
+   system colours. States that were shown only by colour get a system-colour equivalent. */
+@media (forced-colors: active) {
+  .btn-primary {
+    border: 1px solid ButtonText;
+  }
+  [role="tab"][aria-selected="true"] {
+    forced-color-adjust: none;
+    background: Highlight;
+    border-color: Highlight;
+    color: HighlightText;
+  }
+  .meter {
+    forced-color-adjust: none;
+    background: Canvas;
+    border: 1px solid CanvasText;
+  }
+  .meter::-webkit-progress-bar,
+  .meter::-webkit-meter-bar {
+    background: Canvas;
+  }
+  .meter::-webkit-progress-value,
+  .meter::-webkit-meter-optimum-value {
+    background: Highlight;
+  }
+  .meter::-moz-progress-bar,
+  .meter::-moz-meter-bar {
+    background: Highlight;
+  }
+  /* Palette swatches are content, not decoration: they keep their real colours. */
+  [data-print-keep] {
+    forced-color-adjust: none;
+  }
+}
+
 @layer base {
   input[type="range"] {
     accent-color: var(--color-ember);
