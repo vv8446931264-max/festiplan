@@ -1,6 +1,12 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page } from "@playwright/test";
 
+/** WCAG 2.0–2.2, levels A and AA. */
+const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
+
+/** Generous ceiling for a full plan generation (model call plus scheduling). */
+const PLAN_READY_TIMEOUT_MS = 60_000;
+
 /**
  * Runs axe against WCAG 2.0–2.2 A/AA rules and fails on any violation. Waits for
  * time-based entrance animations first: mid-fade text would read as low contrast.
@@ -9,14 +15,16 @@ export async function expectNoA11yViolations(page: Page) {
   await page.waitForFunction(() =>
     document
       .getAnimations()
-      .every((a) => a.playState !== "running" || a.timeline !== document.timeline),
+      .every(
+        (animation) =>
+          animation.playState !== "running" || animation.timeline !== document.timeline,
+      ),
   );
-  const results = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
-    .analyze();
-  const summary = results.violations.map(
-    (v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`,
-  );
+  const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
+  const summary = results.violations.map((violation) => {
+    const targets = violation.nodes.map((node) => node.target.join(" "));
+    return `${violation.id}: ${targets.join(", ")}`;
+  });
   expect(summary).toEqual([]);
 }
 
@@ -24,22 +32,21 @@ export async function expectNoA11yViolations(page: Page) {
 export async function budgetSum(page: Page): Promise<number> {
   const amounts = await page
     .locator("[data-category][data-amount]")
-    .evaluateAll((els) => els.map((el) => Number(el.getAttribute("data-amount"))));
+    .evaluateAll((lines) => lines.map((line) => Number(line.getAttribute("data-amount"))));
   const contingency = Number(
     await page.locator("[data-contingency]").getAttribute("data-contingency"),
   );
-  return amounts.reduce((a, b) => a + b, 0) + contingency;
+  return amounts.reduce((total, amount) => total + amount, contingency);
 }
 
 /** Taps a demo preset and waits for the plan to unfold. */
 export async function planFromPreset(page: Page, label: RegExp) {
   await page.goto("/");
   await page.getByRole("button", { name: label }).click();
-  await expect(
-    page.getByRole("heading", { level: 2, name: /./ }).and(page.locator("#plan-title")),
-  ).toBeVisible({
-    timeout: 60_000,
-  });
+  const planTitle = page
+    .getByRole("heading", { level: 2, name: /./ })
+    .and(page.locator("#plan-title"));
+  await expect(planTitle).toBeVisible({ timeout: PLAN_READY_TIMEOUT_MS });
 }
 
 /** Switches the plan workspace to a tab and waits for its panel. */

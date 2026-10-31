@@ -3,6 +3,12 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 type LdNode = { "@type": string; [key: string]: unknown };
 type Question = { name: string; acceptedAnswer: { text: string } };
 
+/** Lengths that search results show without truncation. */
+const TITLE_LENGTH = { min: 50, max: 60 };
+const DESCRIPTION_LENGTH = { min: 140, max: 160 };
+const DAY_MS = 86_400_000;
+const EVENT_DAYS_AHEAD = 90;
+
 const meta = (page: Page, selector: string) => page.locator(selector).getAttribute("content");
 
 /** Fetches a same-origin path taken from an absolute production URL and checks it is a PNG. */
@@ -28,11 +34,12 @@ test.describe("landing page SEO", () => {
   }) => {
     await page.goto("/");
     await expect(page.locator("h1")).toHaveCount(1);
-    expect((await page.title()).length).toBeGreaterThanOrEqual(50);
-    expect((await page.title()).length).toBeLessThanOrEqual(60);
+    const title = await page.title();
+    expect(title.length).toBeGreaterThanOrEqual(TITLE_LENGTH.min);
+    expect(title.length).toBeLessThanOrEqual(TITLE_LENGTH.max);
     const description = (await meta(page, 'meta[name="description"]')) ?? "";
-    expect(description.length).toBeGreaterThanOrEqual(140);
-    expect(description.length).toBeLessThanOrEqual(160);
+    expect(description.length).toBeGreaterThanOrEqual(DESCRIPTION_LENGTH.min);
+    expect(description.length).toBeLessThanOrEqual(DESCRIPTION_LENGTH.max);
 
     const canonical = await page.locator('link[rel="canonical"]').getAttribute("href");
     expect(canonical).toMatch(/^https:\/\/[^/]+$/);
@@ -54,24 +61,24 @@ test.describe("landing page SEO", () => {
   test("JSON-LD parses, describes the app and mirrors the visible FAQ", async ({ page }) => {
     await page.goto("/");
     const graph = await landingGraph(page);
-    const types = graph.map((n) => n["@type"]);
+    const types = graph.map((node) => node["@type"]);
     expect(types).toEqual(
       expect.arrayContaining(["WebApplication", "FAQPage", "WebSite", "Organization"]),
     );
-    const app = graph.find((n) => n["@type"] === "WebApplication");
+    const app = graph.find((node) => node["@type"] === "WebApplication");
     expect(app).toMatchObject({
       applicationCategory: "LifestyleApplication",
       offers: { price: "0", priceCurrency: "INR" },
     });
     expect(app?.url).toBe(await page.locator('link[rel="canonical"]').getAttribute("href"));
 
-    const faq = graph.find((n) => n["@type"] === "FAQPage")?.mainEntity as Question[];
+    const faq = graph.find((node) => node["@type"] === "FAQPage")?.mainEntity as Question[];
     const questions = await page
       .locator("#faq summary > span:not([aria-hidden])")
       .allTextContents();
     const answers = await page.locator("#faq details > p").allTextContents();
-    expect(questions).toEqual(faq.map((q) => q.name));
-    expect(answers).toEqual(faq.map((q) => q.acceptedAnswer.text));
+    expect(questions).toEqual(faq.map((question) => question.name));
+    expect(answers).toEqual(faq.map((question) => question.acceptedAnswer.text));
 
     const first = page.locator("#faq details").first();
     await first.locator("summary").click();
@@ -108,17 +115,18 @@ test.describe("crawl files", () => {
     const sitemapRes = await request.get("/sitemap.xml");
     expect(sitemapRes.headers()["content-type"]).toContain("xml");
     const sitemap = await sitemapRes.text();
-    expect([...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])).toEqual([canonical]);
+    const locations = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map((match) => match[1]);
+    expect(locations).toEqual([canonical]);
     const lastmod = /<lastmod>([^<]+)<\/lastmod>/.exec(sitemap)?.[1] ?? "";
     expect(Number.isNaN(Date.parse(lastmod))).toBe(false);
 
     const manifest = (await (await request.get("/manifest.webmanifest")).json()) as {
       icons: { src: string; sizes: string; type: string; purpose?: string }[];
     };
-    expect(manifest.icons.map((i) => i.sizes)).toEqual(
+    expect(manifest.icons.map((icon) => icon.sizes)).toEqual(
       expect.arrayContaining(["192x192", "512x512"]),
     );
-    expect(manifest.icons.some((i) => i.purpose === "maskable")).toBe(true);
+    expect(manifest.icons.some((icon) => icon.purpose === "maskable")).toBe(true);
     for (const icon of manifest.icons) {
       const res = await request.get(icon.src);
       expect(res.status()).toBe(200);
@@ -127,7 +135,7 @@ test.describe("crawl files", () => {
   });
 
   test("plan pages stay out of the index and unknown plans 404", async ({ request, baseURL }) => {
-    const eventDate = new Date(Date.now() + 90 * 86_400_000).toISOString().slice(0, 10);
+    const eventDate = new Date(Date.now() + EVENT_DAYS_AHEAD * DAY_MS).toISOString().slice(0, 10);
     const created = await request.post("/api/plan", {
       headers: { origin: baseURL ?? "" },
       data: {

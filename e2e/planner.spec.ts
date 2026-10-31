@@ -1,6 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { PLAN_TABS, budgetSum, expectNoA11yViolations, openTab, planFromPreset } from "./helpers";
 
+/** Enough keyboard steps to move a budget slider well away from its starting value. */
+const SLIDER_KEY_PRESSES = 8;
+
 test.describe("landing", () => {
   test("renders the hero and passes axe", async ({ page }) => {
     await page.goto("/");
@@ -35,7 +38,7 @@ test.describe("plan", () => {
     expect(await budgetSum(page)).toBe(1_200_000);
     const decor = page.getByRole("slider", { name: "Décor" });
     await decor.focus();
-    for (let i = 0; i < 8; i++) await decor.press("ArrowRight");
+    for (let step = 0; step < SLIDER_KEY_PRESSES; step++) await decor.press("ArrowRight");
     expect(await budgetSum(page)).toBe(1_200_000);
 
     await openTab(page, "Timeline");
