@@ -8,6 +8,7 @@ import { planTitle } from "@/lib/engine";
 import { getPublicPlan, isPlanId } from "@/lib/server/plan-service";
 import { todayIST } from "@/lib/time";
 
+/** Always rendered per request: plans change as they are edited, and carry the CSP nonce. */
 export const dynamic = "force-dynamic";
 
 type Props = { params: Promise<{ id: string }> };

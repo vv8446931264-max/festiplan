@@ -7,7 +7,6 @@ import {
   MeshStandardMaterial,
   Vector2,
   type BufferGeometry,
-  type Material,
   type Texture,
 } from "three";
 import type { Tier } from "./tier";
@@ -117,9 +116,4 @@ export function createBodyMaterial(
 /** Unlit, untone-mapped core material; per-instance colour, brightness via `color`. */
 export function createCoreMaterial(): MeshBasicMaterial {
   return new MeshBasicMaterial({ color: 0xffffff, toneMapped: false });
-}
-
-/** Free a material list (geometries are freed by their owners). */
-export function disposeMaterials(materials: readonly Material[]): void {
-  for (const m of materials) m.dispose();
 }

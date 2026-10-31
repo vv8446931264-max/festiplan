@@ -4,11 +4,18 @@ import type { Tier } from "./tier";
 /** Device-pixel-ratio ceiling per tier (docs/DESIGN.md §8). */
 export const DPR_CAP: Record<Exclude<Tier, "off">, number> = { high: 1.75, low: 1.25 };
 
+/** Slightly above neutral so the warm glass reads bright after ACES compression. */
+const TONE_MAPPING_EXPOSURE = 1.05;
+/** The transmission pass renders at half resolution (its roughness blur hides the difference). */
+const TRANSMISSION_RESOLUTION_SCALE = 0.5;
+/** Longest step a frame may take, so a tab switch or a breakpoint never jumps the simulation. */
+const MAX_FRAME_SECONDS = 0.1;
+
 /**
  * A transparent WebGL2 renderer for a canvas that sits over a CSS backdrop:
  * premultiplied alpha, clear alpha 0, ACES tone mapping, clamped DPR, no stencil.
- * MSAA only on the high tier; the transmission buffer renders at half resolution
- * (its roughness blur hides the difference and it quarters that pass's fill cost).
+ * MSAA only on the high tier; the half-resolution transmission buffer quarters that
+ * pass's fill cost.
  */
 export function createRenderer(
   canvas: HTMLCanvasElement,
@@ -23,12 +30,12 @@ export function createRenderer(
     // A background decoration should not wake a laptop's discrete GPU.
     powerPreference: "default",
   });
-  const dpr = canvas.ownerDocument.defaultView?.devicePixelRatio ?? 1;
-  renderer.setPixelRatio(Math.min(dpr, DPR_CAP[tier]));
+  const devicePixelRatio = canvas.ownerDocument.defaultView?.devicePixelRatio ?? 1;
+  renderer.setPixelRatio(Math.min(devicePixelRatio, DPR_CAP[tier]));
   renderer.setClearColor(0x000000, 0);
   renderer.toneMapping = ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
-  renderer.transmissionResolutionScale = 0.5;
+  renderer.toneMappingExposure = TONE_MAPPING_EXPOSURE;
+  renderer.transmissionResolutionScale = TRANSMISSION_RESOLUTION_SCALE;
   return renderer;
 }
 
@@ -45,29 +52,30 @@ export type Loop = {
 };
 
 /**
- * Drive `frame(dt, time)` from requestAnimationFrame. `dt` is in seconds and
- * capped at 0.1 s; returning false lets the loop sleep until `wake()` (on-demand
+ * Drive `frame(dt, time)` from requestAnimationFrame. `dt` is in seconds and capped at
+ * {@link MAX_FRAME_SECONDS}; returning false lets the loop sleep until `wake()` (on-demand
  * rendering for scenes that come to rest).
  */
 export function createLoop(win: Window, frame: (dt: number, time: number) => boolean): Loop {
-  let raf = 0;
-  let last = -1;
+  let frameHandle = 0;
+  let lastTime = -1;
   let paused = false;
   let disposed = false;
   const tick = (now: number) => {
-    raf = 0;
-    const dt = last < 0 ? 0 : Math.min((now - last) / 1000, 0.1);
-    last = now;
-    if (frame(dt, now / 1000) && !paused && !disposed) raf = win.requestAnimationFrame(tick);
-    else last = -1;
+    frameHandle = 0;
+    const dt = lastTime < 0 ? 0 : Math.min((now - lastTime) / 1000, MAX_FRAME_SECONDS);
+    lastTime = now;
+    const keepGoing = frame(dt, now / 1000);
+    if (keepGoing && !paused && !disposed) frameHandle = win.requestAnimationFrame(tick);
+    else lastTime = -1;
   };
   const schedule = () => {
-    if (raf === 0 && !paused && !disposed) raf = win.requestAnimationFrame(tick);
+    if (frameHandle === 0 && !paused && !disposed) frameHandle = win.requestAnimationFrame(tick);
   };
   const cancel = () => {
-    if (raf !== 0) win.cancelAnimationFrame(raf);
-    raf = 0;
-    last = -1;
+    if (frameHandle !== 0) win.cancelAnimationFrame(frameHandle);
+    frameHandle = 0;
+    lastTime = -1;
   };
   return {
     pause() {
@@ -104,14 +112,14 @@ export function createGatedLoop(
   frame: (dt: number) => boolean,
   onFirstFrame?: () => void,
 ): GatedLoop {
-  let first = true;
+  let firstFrame = true;
   const loop = createLoop(win, (dt) => {
-    const keep = frame(dt);
-    if (first) {
-      first = false;
+    const keepGoing = frame(dt);
+    if (firstFrame) {
+      firstFrame = false;
       onFirstFrame?.();
     }
-    return keep;
+    return keepGoing;
   });
   const gate = { compiled: false, paused: false };
   const sync = () => (gate.compiled && !gate.paused ? loop.resume() : loop.pause());
@@ -144,13 +152,15 @@ export function compileThenStart(
   camera: Camera,
   loop: GatedLoop,
 ): void {
-  void renderer.compileAsync(scene, camera).then(loop.ready, loop.ready);
+  const openGate = () => loop.ready();
+  void renderer.compileAsync(scene, camera).then(openGate, openGate);
 }
 
 /** Pause on WebGL context loss, carry on after restore; returns a cleanup. */
 export function watchContextLoss(canvas: HTMLCanvasElement, loop: GatedLoop): () => void {
-  const onLost = (e: Event) => {
-    e.preventDefault();
+  const onLost = (event: Event) => {
+    // Without preventDefault the browser never tries to restore the context.
+    event.preventDefault();
     loop.pause();
   };
   const onRestored = () => loop.resume();

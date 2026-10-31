@@ -38,11 +38,14 @@ export function Manifesto() {
         </div>
       </div>
       <ol className="mt-16 grid gap-px overflow-hidden rounded-[28px] border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
-        {PRINCIPLES.map((p, i) => (
-          <li key={p.title} className="reveal flex flex-col gap-4 bg-espresso/95 p-6 sm:p-8">
-            <span className="accent text-3xl text-gold">0{i + 1}</span>
-            <h3 className="text-2xl font-bold tracking-tight">{p.title}</h3>
-            <p className="text-muted">{p.body}</p>
+        {PRINCIPLES.map((principle, index) => (
+          <li
+            key={principle.title}
+            className="reveal flex flex-col gap-4 bg-espresso/95 p-6 sm:p-8"
+          >
+            <span className="accent text-3xl text-gold">0{index + 1}</span>
+            <h3 className="text-2xl font-bold tracking-tight">{principle.title}</h3>
+            <p className="text-muted">{principle.body}</p>
           </li>
         ))}
       </ol>

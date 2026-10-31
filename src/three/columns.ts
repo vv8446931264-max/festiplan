@@ -30,6 +30,8 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * world;
 }`;
 
+// Fresnel rim (glass edges catch light), a bright lip at the top, and a faint body;
+// `vGlow` brightens a highlighted column and darkens the others (negative).
 const fragmentShader = /* glsl */ `
 varying vec3 vNormal;
 varying vec3 vView;
@@ -51,24 +53,39 @@ void main() {
 export type GlassColumns = {
   mesh: InstancedMesh;
   /** Set column count, x positions, radius and colours (sRGB hex). */
-  configure(xs: readonly number[], radius: number, colors: readonly string[]): void;
-  /** Target height of column `i` (world units). */
-  setHeight(i: number, height: number): void;
+  configure(xPositions: readonly number[], radius: number, colors: readonly string[]): void;
+  /** Target height of column `index` (world units). */
+  setHeight(index: number, height: number): void;
   /** 1 = highlighted, 0 = normal, negative dims. */
-  setGlow(i: number, glow: number): void;
+  setGlow(index: number, glow: number): void;
   /** Damp heights and glows; returns true while anything is still moving. */
   update(dt: number): boolean;
   dispose(): void;
 };
 
 const MAX_COLUMNS = 16;
+/** An empty category still shows a thin glass disc. */
 const MIN_HEIGHT = 0.12;
+const RADIAL_SEGMENTS = 48;
+/** Drawn after the particles so the glass sits in front of the rupees inside it. */
+const RENDER_ORDER = 5;
+/** Damping rates (1/s): heights ease in calmly, highlights respond quickly. */
+const HEIGHT_EASE_RATE = 6;
+const GLOW_EASE_RATE = 9;
+/** Below this distance from its target a column counts as settled. */
+const SETTLE_EPSILON = 1e-3;
 
-function columnMesh(): { mesh: InstancedMesh; glowAttr: InstancedBufferAttribute } {
-  const geometry = new CylinderGeometry(1, 1, 1, 48, 1, false).translate(0, 0.5, 0);
-  const glowAttr = new InstancedBufferAttribute(new Float32Array(MAX_COLUMNS), 1);
-  glowAttr.setUsage(DynamicDrawUsage);
-  geometry.setAttribute("aGlow", glowAttr);
+type ColumnMesh = {
+  mesh: InstancedMesh;
+  material: ShaderMaterial;
+  glowAttribute: InstancedBufferAttribute;
+};
+
+function createColumnMesh(): ColumnMesh {
+  const geometry = new CylinderGeometry(1, 1, 1, RADIAL_SEGMENTS, 1, false).translate(0, 0.5, 0);
+  const glowAttribute = new InstancedBufferAttribute(new Float32Array(MAX_COLUMNS), 1);
+  glowAttribute.setUsage(DynamicDrawUsage);
+  geometry.setAttribute("aGlow", glowAttribute);
   const material = new ShaderMaterial({
     vertexShader,
     fragmentShader,
@@ -81,34 +98,42 @@ function columnMesh(): { mesh: InstancedMesh; glowAttr: InstancedBufferAttribute
   });
   const mesh = new InstancedMesh(geometry, material, MAX_COLUMNS);
   mesh.instanceMatrix.setUsage(DynamicDrawUsage);
-  mesh.renderOrder = 5;
+  mesh.renderOrder = RENDER_ORDER;
   const white = new Color(1, 1, 1);
-  for (let i = 0; i < MAX_COLUMNS; i++) mesh.setColorAt(i, white);
+  for (let index = 0; index < MAX_COLUMNS; index++) mesh.setColorAt(index, white);
   mesh.count = 0;
-  return { mesh, glowAttr };
+  return { mesh, material, glowAttribute };
 }
 
-type ColumnState = { xs: number[]; radius: number; height: Float32Array; glow: Float32Array };
+type ColumnValues = { height: Float32Array; glow: Float32Array };
+type ColumnState = ColumnValues & { xPositions: number[]; radius: number };
 
-const scratch = new Matrix4();
+function createColumnValues(): ColumnValues {
+  return { height: new Float32Array(MAX_COLUMNS), glow: new Float32Array(MAX_COLUMNS) };
+}
 
-function writeColumns(
-  mesh: InstancedMesh,
-  glowAttr: InstancedBufferAttribute,
-  state: ColumnState,
-): void {
-  state.xs.forEach((x, i) => {
-    mesh.setMatrixAt(
-      i,
-      scratch
-        .makeScale(state.radius, Math.max(state.height[i], MIN_HEIGHT), state.radius)
-        .setPosition(x, 0, 0),
-    );
-    glowAttr.setX(i, state.glow[i]);
+const scratchMatrix = new Matrix4();
+
+function writeColumns({ mesh, glowAttribute }: ColumnMesh, state: ColumnState): void {
+  state.xPositions.forEach((x, index) => {
+    const height = Math.max(state.height[index], MIN_HEIGHT);
+    scratchMatrix.makeScale(state.radius, height, state.radius).setPosition(x, 0, 0);
+    mesh.setMatrixAt(index, scratchMatrix);
+    glowAttribute.setX(index, state.glow[index]);
   });
   mesh.instanceMatrix.needsUpdate = true;
-  glowAttr.needsUpdate = true;
+  glowAttribute.needsUpdate = true;
   mesh.boundingSphere = null;
+}
+
+/** Ease column `index` toward its targets; true while it is still moving. */
+function settleColumn(state: ColumnValues, target: ColumnValues, dt: number, index: number) {
+  state.height[index] = damp(state.height[index], target.height[index], HEIGHT_EASE_RATE, dt);
+  state.glow[index] = damp(state.glow[index], target.glow[index], GLOW_EASE_RATE, dt);
+  return (
+    Math.abs(state.height[index] - target.height[index]) > SETTLE_EPSILON ||
+    Math.abs(state.glow[index] - target.glow[index]) > SETTLE_EPSILON
+  );
 }
 
 /**
@@ -117,44 +142,35 @@ function writeColumns(
  * front one). Heights and highlight glow ease toward their targets.
  */
 export function createGlassColumns(): GlassColumns {
-  const { mesh, glowAttr } = columnMesh();
-  const state: ColumnState = {
-    xs: [],
-    radius: 0.5,
-    height: new Float32Array(MAX_COLUMNS),
-    glow: new Float32Array(MAX_COLUMNS),
-  };
-  const target = { height: new Float32Array(MAX_COLUMNS), glow: new Float32Array(MAX_COLUMNS) };
-  const c = new Color();
-  const write = () => writeColumns(mesh, glowAttr, state);
-  const settle = (dt: number, i: number) => {
-    state.height[i] = damp(state.height[i], target.height[i], 6, dt);
-    state.glow[i] = damp(state.glow[i], target.glow[i], 9, dt);
-    return (
-      Math.abs(state.height[i] - target.height[i]) > 1e-3 ||
-      Math.abs(state.glow[i] - target.glow[i]) > 1e-3
-    );
-  };
+  const columnMesh = createColumnMesh();
+  const { mesh, material } = columnMesh;
+  const state: ColumnState = { ...createColumnValues(), xPositions: [], radius: 0.5 };
+  const target = createColumnValues();
+  const color = new Color();
   return {
     mesh,
-    configure(xs, radius, colors) {
-      state.xs = xs.slice(0, MAX_COLUMNS);
+    configure(xPositions, radius, colors) {
+      state.xPositions = xPositions.slice(0, MAX_COLUMNS);
       state.radius = radius;
-      mesh.count = state.xs.length;
-      colors.slice(0, MAX_COLUMNS).forEach((hex, i) => mesh.setColorAt(i, c.set(hex)));
+      mesh.count = state.xPositions.length;
+      colors.slice(0, MAX_COLUMNS).forEach((hex, index) => mesh.setColorAt(index, color.set(hex)));
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
-      write();
+      writeColumns(columnMesh, state);
     },
-    setHeight: (i, h) => void (target.height[i] = h),
-    setGlow: (i, g) => void (target.glow[i] = g),
+    setHeight(index, height) {
+      target.height[index] = height;
+    },
+    setGlow(index, glow) {
+      target.glow[index] = glow;
+    },
     update(dt) {
-      const moving = state.xs.map((_, i) => settle(dt, i)).some(Boolean);
-      write();
-      return moving;
+      const moving = state.xPositions.map((_, index) => settleColumn(state, target, dt, index));
+      writeColumns(columnMesh, state);
+      return moving.some(Boolean);
     },
     dispose() {
       mesh.geometry.dispose();
-      (mesh.material as ShaderMaterial).dispose();
+      material.dispose();
       mesh.dispose();
     },
   };

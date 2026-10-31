@@ -3,6 +3,7 @@ import { Hanken_Grotesk, JetBrains_Mono, Literata } from "next/font/google";
 import { connection } from "next/server";
 import { LazySceneBackdrop } from "@/components/three/lazy";
 import { rootMetadata } from "@/lib/seo/metadata";
+import { BRAND_COLORS } from "@/lib/site";
 import "./globals.css";
 
 const hanken = Hanken_Grotesk({
@@ -28,8 +29,9 @@ const jetbrains = JetBrains_Mono({
 /** Site-wide defaults; the landing page adds its canonical URL (see `src/lib/seo/metadata.ts`). */
 export const metadata: Metadata = rootMetadata();
 
+/** Dark UI: browser chrome takes the page's espresso background. */
 export const viewport: Viewport = {
-  themeColor: "#100904",
+  themeColor: BRAND_COLORS.espresso,
   colorScheme: "dark",
 };
 

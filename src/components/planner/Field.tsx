@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { InputHTMLAttributes, ReactNode } from "react";
 
 type Props = {
   id: string;
@@ -31,5 +31,50 @@ export function Field({ id, label, hint, error, className = "", children }: Prop
       )}
       {children(describedBy)}
     </div>
+  );
+}
+
+/** Native input attributes a {@link TextField} passes through (type, limits, hints). */
+type InputAttributes = Omit<
+  InputHTMLAttributes<HTMLInputElement>,
+  "id" | "value" | "onChange" | "className" | "aria-invalid" | "aria-describedby"
+>;
+
+type TextFieldProps = InputAttributes & {
+  id: string;
+  label: string;
+  value: string;
+  onValue: (value: string) => void;
+  hint?: ReactNode;
+  error?: string;
+  /** Use tabular figures (numeric fields). */
+  numeric?: boolean;
+};
+
+/** A labelled single-line input wired to its hint and error; `onValue` gets the raw text. */
+export function TextField({
+  id,
+  label,
+  value,
+  onValue,
+  hint,
+  error,
+  numeric = false,
+  ...inputAttributes
+}: TextFieldProps) {
+  return (
+    <Field id={id} label={label} hint={hint} error={error}>
+      {(describedBy) => (
+        <input
+          {...inputAttributes}
+          id={id}
+          className={numeric ? "field tabular" : "field"}
+          value={value}
+          aria-invalid={Boolean(error)}
+          aria-describedby={describedBy}
+          onChange={(event) => onValue(event.target.value)}
+        />
+      )}
+    </Field>
   );
 }

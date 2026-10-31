@@ -2,7 +2,9 @@
 
 import type { EventType } from "@/lib/contracts";
 
-const OPTIONS: { value: EventType; label: string; note: string }[] = [
+type EventTypeOption = { value: EventType; label: string; note: string };
+
+const EVENT_TYPE_OPTIONS: readonly EventTypeOption[] = [
   {
     value: "wedding",
     label: "Wedding",
@@ -16,6 +18,9 @@ const OPTIONS: { value: EventType; label: string; note: string }[] = [
   },
   { value: "other", label: "Something else", note: "Anniversaries, naming ceremonies, reunions." },
 ];
+
+const CARD_CLASS =
+  "group relative flex min-h-36 cursor-pointer flex-col justify-between rounded-3xl border border-line bg-espresso/70 p-4 transition-colors duration-200 hover:border-cream has-[:checked]:border-gold has-[:checked]:bg-brown has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-3 has-[:focus-visible]:outline-ember-bright sm:p-5";
 
 type Props = {
   value: EventType | "";
@@ -39,12 +44,12 @@ export function EventTypePicker({ value, error, onChange }: Props) {
         </p>
       )}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {OPTIONS.map((o, i) => (
+        {EVENT_TYPE_OPTIONS.map((option, index) => (
           <TypeCard
-            key={o.value}
-            option={o}
-            index={i}
-            checked={value === o.value}
+            key={option.value}
+            option={option}
+            number={index + 1}
+            checked={value === option.value}
             onChange={onChange}
           />
         ))}
@@ -54,29 +59,28 @@ export function EventTypePicker({ value, error, onChange }: Props) {
 }
 
 type CardProps = {
-  option: (typeof OPTIONS)[number];
-  index: number;
+  option: EventTypeOption;
+  /** 1-based position, shown as "Nº 01". */
+  number: number;
   checked: boolean;
   onChange: Props["onChange"];
 };
 
-function TypeCard({ option: o, index, checked, onChange }: CardProps) {
+function TypeCard({ option, number, checked, onChange }: CardProps) {
   return (
-    <label className="group relative flex min-h-36 cursor-pointer flex-col justify-between rounded-3xl border border-line bg-espresso/70 p-4 transition-colors duration-200 hover:border-cream has-[:checked]:border-gold has-[:checked]:bg-brown has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-3 has-[:focus-visible]:outline-ember-bright sm:p-5">
+    <label className={CARD_CLASS}>
       <input
         type="radio"
         name="eventType"
-        value={o.value}
+        value={option.value}
         checked={checked}
-        onChange={() => onChange(o.value)}
+        onChange={() => onChange(option.value)}
         className="sr-only"
       />
-      <span className="accent text-sm text-muted group-has-[:checked]:text-gold">
-        Nº 0{index + 1}
-      </span>
+      <span className="accent text-sm text-muted group-has-[:checked]:text-gold">Nº 0{number}</span>
       <span>
-        <span className="block text-xl font-bold tracking-tight sm:text-2xl">{o.label}</span>
-        <span className="mt-1 block text-sm leading-snug text-muted">{o.note}</span>
+        <span className="block text-xl font-bold tracking-tight sm:text-2xl">{option.label}</span>
+        <span className="mt-1 block text-sm leading-snug text-muted">{option.note}</span>
       </span>
       <span
         aria-hidden="true"

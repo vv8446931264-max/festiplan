@@ -5,6 +5,7 @@ import { smoothstep, wrap } from "./math";
  * Where every light lives and how it drifts — plain numbers, no three.js, so
  * the choreography is deterministic (the poster equals the live scene) and cheap.
  * Lights are lanterns (glass body + core + glow) or bodiless bokeh orbs (glow only).
+ * Every property is a hash of (light index, salt), so the field is identical on every load.
  */
 
 /** Static per-light parameters, hashed from the index. */
@@ -48,45 +49,67 @@ export const FOCUS = 9.5;
 const COC_NEAR = 0.05;
 const COC_FAR = 0.008;
 
-const h = (i: number, k: number) => hash01(i * 11 + k);
+/** Share of lanterns that float close to the camera as large, soft shapes. */
+const NEAR_LANTERN_SHARE = 0.07;
+/** Entries per tone table (lantern-tints.ts). */
+const TONE_COUNT = 4;
+/** Orbs hash from their own index range so they never mirror a lantern. */
+const ORB_HASH_OFFSET = 1000;
+/** Orbs are tiny or far away, so they sway less than lanterns. */
+const ORB_SWAY_SCALE = 0.4;
+/** Lights wrap vertically this far past the view edge (× half its height)… */
+const VERTICAL_WRAP = 1.3;
+/** …and fade in between there and here, so nothing pops in at the edge. */
+const EDGE_FADE_END = 1.08;
+/** Lanterns fade in over this distance after the near wrap and out before the far one. */
+const DEPTH_FADE = { near: 2, far: 8 } as const;
+const TAU = Math.PI * 2;
 
-function lantern(i: number): Light {
-  const near = h(i, 1) < 0.07;
-  const depth = near ? 5.5 + 3.5 * h(i, 2) : 10 + 46 * Math.pow(h(i, 2), 0.9);
-  const side = h(i, 3) < 0.5 ? -1 : 1;
-  const x = near ? side * (0.5 + 0.55 * h(i, 4)) : (h(i, 4) * 2 - 1) * 1.15;
+/** A deterministic 0..1 value for (light index, salt). */
+const hash = (index: number, salt: number) => hash01(index * 11 + salt);
+/** `base` plus up to `span`, picked by `unit` (0..1). */
+const ranged = (base: number, span: number, unit: number) => base + span * unit;
+/** Maps 0..1 onto -1..1. */
+const signed = (unit: number) => unit * 2 - 1;
+
+function lantern(index: number): Light {
+  const near = hash(index, 1) < NEAR_LANTERN_SHARE;
+  const side = hash(index, 3) < 0.5 ? -1 : 1;
+  const farDepth = ranged(10, 46, Math.pow(hash(index, 2), 0.9));
   return {
-    x,
-    y: (h(i, 5) * 2 - 1) * 1.1 + (near ? 0.15 : 0),
-    depth,
-    size: 0.42 + 0.3 * h(i, 6),
-    phase: h(i, 7) * Math.PI * 2,
-    rise: 0.6 + 0.8 * h(i, 8),
-    tone: Math.floor(h(i, 9) * 4),
+    // Near lanterns keep to the left and right so they frame the text rather than cover it.
+    x: near ? side * ranged(0.5, 0.55, hash(index, 4)) : signed(hash(index, 4)) * 1.15,
+    y: signed(hash(index, 5)) * 1.1 + (near ? 0.15 : 0),
+    depth: near ? ranged(5.5, 3.5, hash(index, 2)) : farDepth,
+    size: ranged(0.42, 0.3, hash(index, 6)),
+    phase: hash(index, 7) * TAU,
+    rise: ranged(0.6, 0.8, hash(index, 8)),
+    tone: Math.floor(hash(index, 9) * TONE_COUNT),
     body: true,
   };
 }
 
-function orb(i: number): Light {
-  const close = h(i, 21) < 0.5;
+function orb(index: number): Light {
+  const close = hash(index, 21) < 0.5;
   return {
-    x: (h(i, 22) * 2 - 1) * 1.2,
-    y: (h(i, 23) * 2 - 1) * 1.1,
-    depth: close ? 3 + 2.2 * h(i, 24) : 62 + 30 * h(i, 24),
-    size: close ? 0.08 + 0.1 * h(i, 25) : 0.9 + 1.2 * h(i, 25),
-    phase: h(i, 26) * Math.PI * 2,
-    rise: 0.3 + 0.4 * h(i, 27),
-    tone: Math.floor(h(i, 28) * 4),
+    x: signed(hash(index, 22)) * 1.2,
+    y: signed(hash(index, 23)) * 1.1,
+    // Close orbs are specks just in front of the lens; distant ones are large, faint discs.
+    depth: close ? ranged(3, 2.2, hash(index, 24)) : ranged(62, 30, hash(index, 24)),
+    size: close ? ranged(0.08, 0.1, hash(index, 25)) : ranged(0.9, 1.2, hash(index, 25)),
+    phase: hash(index, 26) * TAU,
+    rise: ranged(0.3, 0.4, hash(index, 27)),
+    tone: Math.floor(hash(index, 28) * TONE_COUNT),
     body: false,
   };
 }
 
 /** `lanterns` lanterns followed by `orbs` bokeh orbs, deterministic for a given count. */
 export function placeLights(lanterns: number, orbs: number): Light[] {
-  const out: Light[] = [];
-  for (let i = 0; i < lanterns; i++) out.push(lantern(i));
-  for (let i = 0; i < orbs; i++) out.push(orb(1000 + i));
-  return out;
+  const lights: Light[] = [];
+  for (let index = 0; index < lanterns; index++) lights.push(lantern(index));
+  for (let index = 0; index < orbs; index++) lights.push(orb(ORB_HASH_OFFSET + index));
+  return lights;
 }
 
 /** Frame inputs shared by every light. */
@@ -101,31 +124,54 @@ export type FrameInput = {
   aspect: number;
 };
 
+/** Horizontal drift: a slow sway (quicker for fast risers) plus a gentle ripple. */
+function swayAt(light: Light, time: number): number {
+  const slow = Math.sin(time * 0.23 * (0.7 + light.rise * 0.4) + light.phase) * 0.22;
+  const ripple = Math.sin(time * 0.61 + light.phase * 1.7) * 0.07;
+  return slow + ripple;
+}
+
+/** Vertical bob on top of the steady rise. */
+function bobAt(light: Light, time: number): number {
+  return Math.sin(time * 0.37 + light.phase * 2.3) * 0.14;
+}
+
+/** Lanterns fade in just after the near wrap and out before the far wrap. */
+function depthFade(depth: number): number {
+  const { near, far } = DEPTH_RANGE;
+  return (
+    smoothstep(near, near + DEPTH_FADE.near, depth) * smoothstep(far, far - DEPTH_FADE.far, depth)
+  );
+}
+
+function circleOfConfusion(depth: number): number {
+  return depth < FOCUS ? COC_NEAR * (FOCUS / depth - 1) : COC_FAR * (1 - FOCUS / depth);
+}
+
 /**
  * Pose of `light` this frame: base screen position at its base depth, dollied
  * by `travel` (wrapping far ↔ near, faded at both ends), lifted and wrapped
  * vertically, swaying on two incommensurate sines (a cheap curl-like drift).
  */
-export function poseFor(light: Light, f: FrameInput, out: Pose): Pose {
+export function poseFor(light: Light, frame: FrameInput, out: Pose): Pose {
+  const { time, travel, lift, tanHalf, aspect } = frame;
   const { near, far } = DEPTH_RANGE;
-  const t = f.time;
-  const p = light.phase;
-  const d = light.body ? wrap(light.depth - f.travel, near, far) : light.depth;
-  const halfH = d * f.tanHalf;
-  const baseH = light.depth * f.tanHalf;
-  const sway =
-    Math.sin(t * 0.23 * (0.7 + light.rise * 0.4) + p) * 0.22 + Math.sin(t * 0.61 + p * 1.7) * 0.07;
-  out.x = light.x * baseH * f.aspect + sway * (light.body ? 1 : 0.4);
-  const lifted = light.y * baseH + f.lift * light.rise + Math.sin(t * 0.37 + p * 2.3) * 0.14;
-  out.y = wrap(lifted, -halfH * 1.3, halfH * 1.3);
-  out.z = -d;
-  const edge = smoothstep(1.3, 1.08, Math.abs(out.y) / halfH);
-  out.fade = light.body ? smoothstep(near, near + 2, d) * smoothstep(far, far - 8, d) * edge : edge;
+  const depth = light.body ? wrap(light.depth - travel, near, far) : light.depth;
+  const halfHeight = depth * tanHalf;
+  const baseHalfHeight = light.depth * tanHalf;
+  const sway = swayAt(light, time) * (light.body ? 1 : ORB_SWAY_SCALE);
+  out.x = light.x * baseHalfHeight * aspect + sway;
+  const lifted = light.y * baseHalfHeight + lift * light.rise + bobAt(light, time);
+  out.y = wrap(lifted, -halfHeight * VERTICAL_WRAP, halfHeight * VERTICAL_WRAP);
+  out.z = -depth;
+  const edgeFade = smoothstep(VERTICAL_WRAP, EDGE_FADE_END, Math.abs(out.y) / halfHeight);
+  out.fade = light.body ? depthFade(depth) * edgeFade : edgeFade;
   out.scale = light.size * out.fade;
-  out.blur = d < FOCUS ? COC_NEAR * (FOCUS / d - 1) : COC_FAR * (1 - FOCUS / d);
-  out.rx = Math.sin(t * 0.5 + p) * 0.1;
-  out.ry = p * 3 + t * 0.04 * (light.rise - 1);
-  out.rz = Math.sin(t * 0.41 + p * 1.3) * 0.12;
+  out.blur = circleOfConfusion(depth);
+  // Gentle rocking plus a slow spin: quick risers turn one way, slow ones the other.
+  out.rx = Math.sin(time * 0.5 + light.phase) * 0.1;
+  out.ry = light.phase * 3 + time * 0.04 * (light.rise - 1);
+  out.rz = Math.sin(time * 0.41 + light.phase * 1.3) * 0.12;
   return out;
 }
 

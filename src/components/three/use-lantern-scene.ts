@@ -4,7 +4,7 @@ import { lanternFade, skyFade } from "@/three/dusk";
 import type { LanternScene, LanternSceneOptions } from "@/three/lantern-scene";
 import type { Tier } from "@/three/tier";
 import {
-  createSceneCanvas,
+  attachSceneCanvas,
   nextFrame,
   observeActivity,
   observeSize,
@@ -12,7 +12,7 @@ import {
   whenIdle,
 } from "./dom";
 
-type Create = (canvas: HTMLCanvasElement, options: LanternSceneOptions) => LanternScene;
+type CreateScene = (canvas: HTMLCanvasElement, options: LanternSceneOptions) => LanternScene;
 
 function forward(scene: LanternScene, event: SceneEvent): void {
   if (event.type === "celebrate") scene.celebrate();
@@ -21,46 +21,43 @@ function forward(scene: LanternScene, event: SceneEvent): void {
 }
 
 function followPointer(win: Window, scene: LanternScene): () => void {
-  const onMove = (e: PointerEvent) => {
-    scene.setPointer((e.clientX / win.innerWidth) * 2 - 1, 1 - (e.clientY / win.innerHeight) * 2);
+  const onMove = (event: PointerEvent) => {
+    // Normalised device coordinates: -1..1 from left to right and from bottom to top.
+    const x = (event.clientX / win.innerWidth) * 2 - 1;
+    const y = 1 - (event.clientY / win.innerHeight) * 2;
+    scene.setPointer(x, y);
   };
   win.addEventListener("pointermove", onMove, { passive: true });
   return () => win.removeEventListener("pointermove", onMove);
 }
 
-/** Create the scene on a fresh canvas inside `root` and wire every input; returns teardown. */
+/** Create the scene on a fresh canvas, replay the bus state and wire every input; returns teardown. */
 function mount(
-  create: Create,
+  createScene: CreateScene,
   root: HTMLElement,
   win: Window,
   tier: "high" | "low",
   sceneRef: RefObject<LanternScene | null>,
 ): () => void {
-  const canvas = createSceneCanvas(root.ownerDocument);
-  root.appendChild(canvas);
-  let scene: LanternScene;
-  try {
-    scene = create(canvas, {
+  const { scene, canvas } = attachSceneCanvas(root, (target) =>
+    createScene(target, {
       tier,
-      onFirstFrame: () => canvas.style.setProperty("--lantern-on", "1"),
-    });
-  } catch (error) {
-    canvas.remove();
-    throw error;
-  }
+      onFirstFrame: () => target.style.setProperty("--lantern-on", "1"),
+    }),
+  );
   const { palette, mood } = getState();
   scene.setPalette(palette);
   scene.setMood(mood);
   scene.setScroll(scrollProgress(win));
   sceneRef.current = scene;
-  const offs = [
-    observeSize(root, win, (w, h) => scene.resize(w, h)),
+  const cleanups = [
+    observeSize(root, win, (width, height) => scene.resize(width, height)),
     observeActivity(root, win, (active) => (active ? scene.resume() : scene.pause())),
     subscribe((event) => forward(scene, event)),
     followPointer(win, scene),
   ];
   return () => {
-    offs.forEach((off) => off());
+    cleanups.forEach((cleanup) => cleanup());
     sceneRef.current = null;
     scene.dispose();
     canvas.remove();
@@ -90,8 +87,9 @@ export function useLanternScene(
     let teardown: (() => void) | null = null;
     const cancelIdle = whenIdle(win, () => {
       import("@/three/lantern-scene")
-        .then((mod) => {
-          if (!cancelled) teardown = mount(mod.createLanternScene, root, win, tier, sceneRef);
+        .then((sceneModule) => {
+          if (!cancelled)
+            teardown = mount(sceneModule.createLanternScene, root, win, tier, sceneRef);
         })
         .catch(() => {
           if (!cancelled) failRef.current();
@@ -117,25 +115,25 @@ export function useSkyScroll(
     const sky = skyRef.current;
     if (!sky) return;
     const win = sky.ownerDocument.defaultView ?? window;
-    let cancel: (() => void) | null = null;
+    let cancelPending: (() => void) | null = null;
     const read = () => {
-      cancel = null;
-      const p = scrollProgress(win);
-      sky.style.opacity = String(skyFade(p));
+      cancelPending = null;
+      const progress = scrollProgress(win);
+      sky.style.opacity = String(skyFade(progress));
       sky.parentElement?.style.setProperty(
         "--lantern-dim",
         lanternFade(win.scrollY, win.innerHeight).toFixed(3),
       );
-      sceneRef.current?.setScroll(p);
+      sceneRef.current?.setScroll(progress);
     };
     const onScroll = () => {
-      cancel ??= nextFrame(win, read);
+      cancelPending ??= nextFrame(win, read);
     };
     read();
     win.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       win.removeEventListener("scroll", onScroll);
-      cancel?.();
+      cancelPending?.();
     };
   }, [skyRef, sceneRef]);
 }

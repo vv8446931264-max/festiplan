@@ -1,5 +1,14 @@
 import Link from "next/link";
 
+/** In-page chapters linked from the top bar (hidden on small screens, where the CTA wins). */
+const SECTION_LINKS = [
+  { href: "/#manifesto", label: "How it works" },
+  { href: "/#faq", label: "FAQ" },
+] as const;
+
+const SECTION_LINK_CLASS =
+  "eyebrow inline-flex min-h-11 items-center px-3 text-cream no-underline hover:text-gold";
+
 /** Top bar: wordmark home link, section links (how it works, FAQ) and the primary call to action. */
 export function SiteHeader() {
   return (
@@ -12,22 +21,13 @@ export function SiteHeader() {
       </Link>
       <nav aria-label="Main">
         <ul className="flex items-center gap-1 sm:gap-3">
-          <li className="hidden sm:block">
-            <Link
-              href="/#manifesto"
-              className="eyebrow inline-flex min-h-11 items-center px-3 text-cream no-underline hover:text-gold"
-            >
-              How it works
-            </Link>
-          </li>
-          <li className="hidden sm:block">
-            <Link
-              href="/#faq"
-              className="eyebrow inline-flex min-h-11 items-center px-3 text-cream no-underline hover:text-gold"
-            >
-              FAQ
-            </Link>
-          </li>
+          {SECTION_LINKS.map(({ href, label }) => (
+            <li key={href} className="hidden sm:block">
+              <Link href={href} className={SECTION_LINK_CLASS}>
+                {label}
+              </Link>
+            </li>
+          ))}
           <li>
             <Link href="/#plan" className="btn btn-primary min-h-11 px-5 py-2 text-sm">
               Start planning

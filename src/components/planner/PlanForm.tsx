@@ -16,8 +16,8 @@ export function PlanForm({ busy, minDate, maxDate, onSubmit, ...fields }: Props)
     <form
       noValidate
       aria-labelledby="brief-title"
-      onSubmit={(e) => {
-        e.preventDefault();
+      onSubmit={(event) => {
+        event.preventDefault();
         onSubmit();
       }}
       className="flex flex-col gap-10"

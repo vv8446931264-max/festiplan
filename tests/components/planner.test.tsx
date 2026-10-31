@@ -11,9 +11,12 @@ vi.mock("@/components/three/lazy", () => ({
 const bus = vi.hoisted(() => ({ setPalette: vi.fn(), setMood: vi.fn(), celebrate: vi.fn() }));
 vi.mock("@/three/bus", () => bus);
 
+const jsonResponse = (body: unknown, status: number) =>
+  new Response(JSON.stringify(body), { status });
+
 beforeEach(() => {
   localStorage.clear();
-  Object.values(bus).forEach((f) => f.mockClear());
+  Object.values(bus).forEach((mock) => mock.mockClear());
 });
 
 describe("PlannerApp", () => {
@@ -37,28 +40,25 @@ describe("PlannerApp", () => {
   });
 
   it("a preset posts the brief, shows progress, then unfolds the plan and celebrates", async () => {
-    let resolve: (r: Response) => void = () => {};
-    const fetchMock = vi.fn(() => new Promise<Response>((r) => (resolve = r)));
+    const pending = Promise.withResolvers<Response>();
+    const fetchMock = vi.fn((_url: string, _init?: RequestInit) => pending.promise);
     vi.stubGlobal("fetch", fetchMock);
     render(<PlannerApp />);
     fireEvent.click(screen.getByRole("button", { name: /Priya's sangeet/ }));
     expect(await screen.findByRole("status")).toHaveTextContent("Reading the vibe");
-    const body = JSON.parse(
-      String((fetchMock.mock.calls[0] as unknown[] as [string, RequestInit])[1].body),
-    );
+    const rawBody = fetchMock.mock.calls[0]?.[1]?.body;
+    if (typeof rawBody !== "string") throw new Error("expected a JSON request body");
+    const body: unknown = JSON.parse(rawBody);
     expect(body).toMatchObject({
       eventType: "wedding",
       city: "Jaipur",
       guests: 180,
       budgetINR: 1_200_000,
     });
-    await act(async () =>
-      resolve(
-        new Response(JSON.stringify({ plan: fixturePlan(), editKey: "k".repeat(43) }), {
-          status: 201,
-        }),
-      ),
-    );
+    await act(async () => {
+      pending.resolve(jsonResponse({ plan: fixturePlan(), editKey: "k".repeat(43) }, 201));
+      await pending.promise;
+    });
     expect(
       await screen.findByRole("heading", { level: 2, name: "Riya's sangeet" }),
     ).toBeInTheDocument();
@@ -67,18 +67,13 @@ describe("PlannerApp", () => {
   });
 
   it("maps server validation issues back onto the form", async () => {
+    const invalid = {
+      error: "Check the highlighted fields.",
+      issues: [{ path: "city", message: "We don't know that city." }],
+    };
     vi.stubGlobal(
       "fetch",
-      vi.fn(
-        async () =>
-          new Response(
-            JSON.stringify({
-              error: "Check the highlighted fields.",
-              issues: [{ path: "city", message: "We don't know that city." }],
-            }),
-            { status: 400 },
-          ),
-      ),
+      vi.fn(() => Promise.resolve(jsonResponse(invalid, 400))),
     );
     render(<PlannerApp />);
     fireEvent.click(screen.getByRole("button", { name: /Meera's Diwali mela/ }));

@@ -1,10 +1,11 @@
 "use client";
 
 import { PRESETS } from "@/lib/presets";
+import type { PresetId } from "./usePlanner";
 
 type Props = {
   disabled: boolean;
-  onPick: (id: (typeof PRESETS)[number]["id"]) => void;
+  onPick: (id: PresetId) => void;
 };
 
 /** One-tap demo briefs: each fills the form and starts planning immediately. */
@@ -15,18 +16,18 @@ export function PresetChips({ disabled, onPick }: Props) {
         In a hurry? Try a real brief
       </p>
       <ul className="flex flex-wrap gap-2">
-        {PRESETS.map((p) => (
-          <li key={p.id}>
+        {PRESETS.map((preset) => (
+          <li key={preset.id}>
             <button
               type="button"
               disabled={disabled}
-              onClick={() => onPick(p.id)}
+              onClick={() => onPick(preset.id)}
               className="btn btn-ghost min-h-11 px-4 py-2 text-left text-sm font-semibold hover:bg-brown"
             >
               <span aria-hidden="true" className="text-gold">
                 ✦
               </span>
-              {p.label}
+              {preset.label}
             </button>
           </li>
         ))}

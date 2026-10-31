@@ -9,84 +9,107 @@ type ObserverWindow = Window & {
   ResizeObserver?: typeof ResizeObserver;
 };
 
-/** Run `fn` once the main thread is idle (after first paint); returns a cancel function. */
-export function whenIdle(win: Window, fn: () => void, timeout = 2500): () => void {
+/** Upper bound before an idle callback runs anyway. */
+const IDLE_TIMEOUT_MS = 2500;
+/** Stand-in delays where requestIdleCallback / requestAnimationFrame are missing. */
+const IDLE_FALLBACK_MS = 200;
+const FRAME_FALLBACK_MS = 16;
+
+/** Run `callback` once the main thread is idle (after first paint); returns a cancel function. */
+export function whenIdle(win: Window, callback: () => void, timeout = IDLE_TIMEOUT_MS): () => void {
   if (typeof win.requestIdleCallback === "function") {
-    const id = win.requestIdleCallback(() => fn(), { timeout });
-    return () => win.cancelIdleCallback(id);
+    const handle = win.requestIdleCallback(() => callback(), { timeout });
+    return () => win.cancelIdleCallback(handle);
   }
-  const id = win.setTimeout(fn, 200);
-  return () => win.clearTimeout(id);
+  const handle = win.setTimeout(callback, IDLE_FALLBACK_MS);
+  return () => win.clearTimeout(handle);
 }
 
-/** Schedule `fn` for the next animation frame (setTimeout where rAF is missing). */
-export function nextFrame(win: Window, fn: () => void): () => void {
+/** Schedule `callback` for the next animation frame (setTimeout where rAF is missing). */
+export function nextFrame(win: Window, callback: () => void): () => void {
   if (typeof win.requestAnimationFrame === "function") {
-    const id = win.requestAnimationFrame(() => fn());
-    return () => win.cancelAnimationFrame(id);
+    const handle = win.requestAnimationFrame(() => callback());
+    return () => win.cancelAnimationFrame(handle);
   }
-  const id = win.setTimeout(fn, 16);
-  return () => win.clearTimeout(id);
+  const handle = win.setTimeout(callback, FRAME_FALLBACK_MS);
+  return () => win.clearTimeout(handle);
 }
 
 /** Document scroll progress 0..1 (0 when the page does not scroll). */
 export function scrollProgress(win: Window): number {
-  const max = win.document.documentElement.scrollHeight - win.innerHeight;
-  return max > 0 ? Math.min(Math.max(win.scrollY / max, 0), 1) : 0;
+  const scrollable = win.document.documentElement.scrollHeight - win.innerHeight;
+  return scrollable > 0 ? Math.min(Math.max(win.scrollY / scrollable, 0), 1) : 0;
 }
 
 /**
- * Report whether `el` should be animating: the tab is visible and the element
+ * Report whether `element` should be animating: the tab is visible and the element
  * intersects the viewport. Calls `onChange` on every flip; returns a cleanup.
  * Without IntersectionObserver the element counts as visible.
  */
 export function observeActivity(
-  el: Element,
+  element: Element,
   win: Window,
   onChange: (active: boolean) => void,
   rootMargin = "0px",
 ): () => void {
   const doc = win.document;
-  const IO = (win as ObserverWindow).IntersectionObserver;
-  let intersecting = typeof IO !== "function";
+  const Observer = (win as ObserverWindow).IntersectionObserver;
+  let intersecting = typeof Observer !== "function";
   let active: boolean | null = null;
   const emit = () => {
     const next = intersecting && doc.visibilityState !== "hidden";
-    if (next !== active) {
-      active = next;
-      onChange(next);
-    }
+    if (next === active) return;
+    active = next;
+    onChange(next);
   };
   const onEntries = (entries: IntersectionObserverEntry[]) => {
-    intersecting = entries.some((e) => e.isIntersecting);
+    intersecting = entries.some((entry) => entry.isIntersecting);
     emit();
   };
-  const io = typeof IO === "function" ? new IO(onEntries, { rootMargin }) : null;
-  io?.observe(el);
+  const observer = typeof Observer === "function" ? new Observer(onEntries, { rootMargin }) : null;
+  observer?.observe(element);
   doc.addEventListener("visibilitychange", emit);
-  if (!io) emit();
+  if (!observer) emit();
   return () => {
-    io?.disconnect();
+    observer?.disconnect();
     doc.removeEventListener("visibilitychange", emit);
   };
 }
 
-/** Call `onSize(width, height)` now and whenever `el` resizes; returns a cleanup. */
+/** Call `onSize(width, height)` now and whenever `element` resizes; returns a cleanup. */
 export function observeSize(
-  el: HTMLElement,
+  element: HTMLElement,
   win: Window,
-  onSize: (w: number, h: number) => void,
+  onSize: (width: number, height: number) => void,
 ): () => void {
-  const report = () => onSize(el.clientWidth, el.clientHeight);
+  const report = () => onSize(element.clientWidth, element.clientHeight);
   report();
-  const RO = (win as ObserverWindow).ResizeObserver;
-  if (typeof RO === "function") {
-    const ro = new RO(report);
-    ro.observe(el);
-    return () => ro.disconnect();
+  const Observer = (win as ObserverWindow).ResizeObserver;
+  if (typeof Observer === "function") {
+    const observer = new Observer(report);
+    observer.observe(element);
+    return () => observer.disconnect();
   }
   win.addEventListener("resize", report);
   return () => win.removeEventListener("resize", report);
+}
+
+/**
+ * Append a fresh scene canvas to `host` and build a scene on it. If building throws (no WebGL
+ * context, say), the canvas is removed again and the error rethrown.
+ */
+export function attachSceneCanvas<Scene>(
+  host: HTMLElement,
+  build: (canvas: HTMLCanvasElement) => Scene,
+): { canvas: HTMLCanvasElement; scene: Scene } {
+  const canvas = createSceneCanvas(host.ownerDocument);
+  host.appendChild(canvas);
+  try {
+    return { canvas, scene: build(canvas) };
+  } catch (error) {
+    canvas.remove();
+    throw error;
+  }
 }
 
 /** A canvas for a scene: decorative, absolutely filling its parent, fading in on first frame. */

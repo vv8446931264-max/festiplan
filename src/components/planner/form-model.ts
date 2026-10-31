@@ -15,11 +15,17 @@ export type FormValues = {
   language: Lang;
 };
 
+/** Fields that can be invalid; constraints and language always hold an allowed value. */
 export type FieldName = Exclude<keyof FormValues, "constraints" | "language">;
+
+/** At most one plain-language message per invalid field. */
 export type FieldErrors = Partial<Record<FieldName, string>>;
 
+/** A validation issue as the API reports it (`path` is dot-separated). */
+export type ServerIssue = { path: string; message: string };
+
 /** Order used by the error summary, matching the visual order of the form. */
-export const FIELD_ORDER: FieldName[] = [
+export const FIELD_ORDER: readonly FieldName[] = [
   "eventType",
   "eventDate",
   "city",
@@ -29,6 +35,7 @@ export const FIELD_ORDER: FieldName[] = [
   "vibe",
 ];
 
+/** The blank brief the form starts from. */
 export const EMPTY_FORM: FormValues = {
   eventType: "",
   title: "",
@@ -41,7 +48,11 @@ export const EMPTY_FORM: FormValues = {
   language: "en",
 };
 
-const inr = new Intl.NumberFormat("en-IN");
+/** Indian digit grouping (12,00,000) for the budget field and range messages. */
+const indianGrouping = new Intl.NumberFormat("en-IN");
+
+/** API issue paths whose name differs from the form field they belong to. */
+const ISSUE_PATH_ALIASES: Partial<Record<string, FieldName>> = { budgetINR: "budget" };
 
 /** Parses "12,00,000" or "1200000" into an integer, or NaN. */
 export function parseWhole(raw: string): number {
@@ -49,49 +60,61 @@ export function parseWhole(raw: string): number {
   return /^\d+$/.test(cleaned) ? Number(cleaned) : Number.NaN;
 }
 
-function numberError(n: number, min: number, max: number, what: string): string | null {
-  if (Number.isNaN(n)) return `Enter ${what} as a whole number.`;
-  if (n < min || n > max) return `Enter ${what} between ${inr.format(min)} and ${inr.format(max)}.`;
-  return null;
+function isFieldName(name: string): name is FieldName {
+  return FIELD_ORDER.some((field) => field === name);
 }
 
-/** Field-by-field validation with plain-language messages. */
-export function validateForm(v: FormValues, today: string): FieldErrors {
+function rangeError(value: number, min: number, max: number, subject: string): string | null {
+  if (Number.isNaN(value)) return `Enter ${subject} as a whole number.`;
+  if (value >= min && value <= max) return null;
+  return `Enter ${subject} between ${indianGrouping.format(min)} and ${indianGrouping.format(max)}.`;
+}
+
+function lengthError(text: string, max: number, subject: string): string | null {
+  return text.trim().length > max ? `Keep the ${subject} under ${max} characters.` : null;
+}
+
+function cityError(city: string): string | null {
+  const length = city.trim().length;
+  const valid = length >= LIMITS.cityMin && length <= LIMITS.cityMax;
+  return valid ? null : "Enter the city where it's happening.";
+}
+
+/** Field-by-field validation with plain-language messages, in {@link FIELD_ORDER}. */
+export function validateForm(values: FormValues, today: string): FieldErrors {
+  const { guestsMin, guestsMax, budgetMin, budgetMax } = LIMITS;
+  const messages: Record<FieldName, string | null> = {
+    eventType: values.eventType ? null : "Choose what you're celebrating.",
+    eventDate: values.eventDate
+      ? checkEventDate(values.eventDate, today)
+      : "Choose the date of the event.",
+    city: cityError(values.city),
+    guests: rangeError(parseWhole(values.guests), guestsMin, guestsMax, "the number of guests"),
+    budget: rangeError(parseWhole(values.budget), budgetMin, budgetMax, "a budget in rupees"),
+    title: lengthError(values.title, LIMITS.titleMax, "name"),
+    vibe: lengthError(values.vibe, LIMITS.vibeMax, "description"),
+  };
   const errors: FieldErrors = {};
-  if (!v.eventType) errors.eventType = "Choose what you're celebrating.";
-  errors.eventDate = v.eventDate
-    ? (checkEventDate(v.eventDate, today) ?? undefined)
-    : "Choose the date of the event.";
-  const city = v.city.trim();
-  if (city.length < LIMITS.cityMin || city.length > LIMITS.cityMax)
-    errors.city = "Enter the city where it's happening.";
-  errors.guests =
-    numberError(parseWhole(v.guests), LIMITS.guestsMin, LIMITS.guestsMax, "the number of guests") ??
-    undefined;
-  errors.budget =
-    numberError(parseWhole(v.budget), LIMITS.budgetMin, LIMITS.budgetMax, "a budget in rupees") ??
-    undefined;
-  if (v.title.trim().length > LIMITS.titleMax)
-    errors.title = `Keep the name under ${LIMITS.titleMax} characters.`;
-  if (v.vibe.trim().length > LIMITS.vibeMax)
-    errors.vibe = `Keep the description under ${LIMITS.vibeMax} characters.`;
-  for (const key of FIELD_ORDER) if (errors[key] === undefined) delete errors[key];
+  for (const field of FIELD_ORDER) {
+    const message = messages[field];
+    if (message !== null) errors[field] = message;
+  }
   return errors;
 }
 
 /** Converts validated form values into the API request body. */
-export function toPlanInput(v: FormValues): PlanInput {
-  const title = v.title.trim();
+export function toPlanInput(values: FormValues): PlanInput {
+  const title = values.title.trim();
   return {
-    eventType: v.eventType || "other",
+    eventType: values.eventType || "other",
     ...(title ? { title } : {}),
-    eventDate: v.eventDate,
-    city: v.city.trim(),
-    guests: parseWhole(v.guests),
-    budgetINR: parseWhole(v.budget),
-    vibe: v.vibe.trim(),
-    constraints: v.constraints,
-    language: v.language,
+    eventDate: values.eventDate,
+    city: values.city.trim(),
+    guests: parseWhole(values.guests),
+    budgetINR: parseWhole(values.budget),
+    vibe: values.vibe.trim(),
+    constraints: values.constraints,
+    language: values.language,
   };
 }
 
@@ -103,21 +126,25 @@ export function fromPlanInput(input: PlanInput): FormValues {
     eventDate: input.eventDate,
     city: input.city,
     guests: String(input.guests),
-    budget: inr.format(input.budgetINR),
+    budget: indianGrouping.format(input.budgetINR),
     vibe: input.vibe,
     constraints: [...input.constraints],
     language: input.language,
   };
 }
 
-/** Maps server-side Zod issue paths onto form fields. */
-export function issuesToErrors(issues: { path: string; message: string }[]): FieldErrors {
-  const map: Record<string, FieldName> = { budgetINR: "budget" };
+/** Selects `tag` when it is not selected yet, otherwise deselects it. */
+export function toggleConstraint(selected: readonly string[], tag: string): string[] {
+  return selected.includes(tag) ? selected.filter((other) => other !== tag) : [...selected, tag];
+}
+
+/** Maps API issue paths onto form fields; the first message for a field wins. */
+export function issuesToErrors(issues: readonly ServerIssue[]): FieldErrors {
   const errors: FieldErrors = {};
   for (const issue of issues) {
-    const head = issue.path.split(".")[0] ?? "";
-    const field = map[head] ?? head;
-    if (FIELD_ORDER.includes(field) && !errors[field]) errors[field] = issue.message;
+    const [head = ""] = issue.path.split(".");
+    const name = ISSUE_PATH_ALIASES[head] ?? head;
+    if (isFieldName(name)) errors[name] ??= issue.message;
   }
   return errors;
 }

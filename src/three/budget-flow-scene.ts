@@ -1,15 +1,17 @@
-import { MathUtils, PerspectiveCamera, Scene, type WebGLRenderer } from "three";
+import { PerspectiveCamera, Scene, type WebGLRenderer } from "three";
 import { CATEGORY_COLORS } from "@/lib/category-style";
 import type { BudgetCategory } from "@/lib/contracts";
+import { layoutParticles, type ParticleAllocation } from "@/lib/engine/particles";
 import {
-  DEFAULT_COLUMN_LAYOUT,
-  columnX,
-  layoutParticles,
-  stackHeight,
-  type ColumnLayout,
-  type ParticleAllocation,
-} from "@/lib/engine/particles";
+  CAMERA,
+  INITIAL_PARTICLE_SIZE,
+  configureColumns,
+  frameCamera,
+  layoutFor,
+  particleSizeFor,
+} from "./budget-flow-layout";
 import { createGlassColumns, type GlassColumns } from "./columns";
+import { emphasisOf, type Emphasis } from "./emphasis";
 import { createDuskEnvironment, type Environment } from "./env";
 import { createFlowParticles, type FlowParticles } from "./flow-particles";
 import { createHoverPicker } from "./hover";
@@ -24,7 +26,7 @@ export type BudgetFlowOptions = { tier: Exclude<Tier, "off">; onFirstFrame?: () 
 
 /** Imperative handle the BudgetFlow component drives. */
 export type BudgetFlowScene = {
-  setAllocations(list: readonly ParticleAllocation[]): void;
+  setAllocations(allocations: readonly ParticleAllocation[]): void;
   setHighlight(category: BudgetCategory | null): void;
   /** CSS pixel size of the canvas. */
   resize(width: number, height: number): void;
@@ -32,15 +34,15 @@ export type BudgetFlowScene = {
   resume(): void;
   dispose(): void;
   /** Hovered column changes (category or null); returns an unsubscribe. */
-  onHover(cb: (category: BudgetCategory | null) => void): () => void;
+  onHover(listener: (category: BudgetCategory | null) => void): () => void;
 };
 
-/** Height (world units) that a 40 % share fills. */
-const FIT_HEIGHT = 7;
-const FOV = 30;
+/** Column glow (1 bright … negative dark) and rupee brightness for each emphasis. */
+const COLUMN_GLOW: Record<Emphasis, number> = { normal: 0, lit: 1, dimmed: -0.85 };
+const PARTICLE_LEVEL: Record<Emphasis, number> = { normal: 1, lit: 1.7, dimmed: 0.26 };
 
 type Stage = {
-  n: number;
+  particleCount: number;
   renderer: WebGLRenderer;
   env: Environment;
   scene: Scene;
@@ -56,76 +58,67 @@ type Flow = {
 };
 
 function buildStage(canvas: HTMLCanvasElement, tier: Exclude<Tier, "off">): Stage {
-  const n = FLOW_PARTICLES[tier];
+  const particleCount = FLOW_PARTICLES[tier];
   const renderer = createRenderer(canvas, tier);
   const env = createDuskEnvironment(renderer);
   const scene = new Scene();
-  const camera = new PerspectiveCamera(FOV, 4 / 3, 0.1, 80);
+  const camera = new PerspectiveCamera(CAMERA.fov, CAMERA.initialAspect, CAMERA.near, CAMERA.far);
   const columns = createGlassColumns();
-  const particles = createFlowParticles(n, env.texture);
+  const particles = createFlowParticles(particleCount, env.texture);
   scene.add(particles.mesh, columns.mesh);
-  return { n, renderer, env, scene, camera, columns, particles };
-}
-
-/** Stack geometry: the taller of 30 % or the largest share fills FIT_HEIGHT (it rescales past that). */
-function layoutFor(n: number, counts: readonly number[]): ColumnLayout {
-  const perLayer = n >= 500 ? 7 : 4;
-  const tallest = Math.max(0.3 * n, ...counts);
-  const layerHeight = FIT_HEIGHT / Math.ceil(tallest / perLayer);
-  return {
-    ...DEFAULT_COLUMN_LAYOUT,
-    perLayer,
-    radius: perLayer === 7 ? 0.34 : 0.26,
-    spacing: 1.2,
-    layerHeight,
-  };
-}
-
-/** Fit the row of columns to the viewport width and the stack to its height, looking down onto the lids. */
-function frameCamera(camera: PerspectiveCamera, columns: number): void {
-  const tan = Math.tan(MathUtils.degToRad(FOV / 2));
-  const width = Math.max(columns, 4) * 1.2 + 0.5;
-  const dist = Math.max(width / (2 * tan * camera.aspect), (FIT_HEIGHT * 1.12) / (2 * tan));
-  camera.position.set(0, FIT_HEIGHT * 0.72, dist);
-  camera.lookAt(0, FIT_HEIGHT * 0.36, 0);
-  camera.updateProjectionMatrix();
+  return { particleCount, renderer, env, scene, camera, columns, particles };
 }
 
 /** Brighten the highlighted column and its rupees, dim the rest. */
-function applyHighlight(stage: Stage, f: Flow): void {
-  const any = f.highlight !== null;
-  f.categories.forEach((c, i) => stage.columns.setGlow(i, c === f.highlight ? 1 : any ? -0.85 : 0));
-  stage.particles.setLevels(f.categories.map((c) => (c === f.highlight ? 1.7 : any ? 0.26 : 1)));
+function applyHighlight(stage: Stage, flow: Flow): void {
+  const emphases = flow.categories.map((category) => emphasisOf(category, flow.highlight));
+  emphases.forEach((emphasis, index) => stage.columns.setGlow(index, COLUMN_GLOW[emphasis]));
+  stage.particles.setLevels(emphases.map((emphasis) => PARTICLE_LEVEL[emphasis]));
 }
 
 /** Re-layout for new allocations; returns false when nothing changed. */
-function applyAllocations(stage: Stage, f: Flow, list: readonly ParticleAllocation[]): boolean {
-  const categories = list.map((a) => a.category);
-  const counts = layoutParticles(list, stage.n);
-  const sameCats =
-    categories.length === f.categories.length && categories.every((c, i) => c === f.categories[i]);
-  if (sameCats && counts.every((c, i) => c === f.counts[i])) return false;
-  if (!sameCats) stage.particles.remap(f.categories, categories);
-  const layout = layoutFor(stage.n, counts);
-  const colors = categories.map((c) => CATEGORY_COLORS[c]);
+function applyAllocations(
+  stage: Stage,
+  flow: Flow,
+  allocations: readonly ParticleAllocation[],
+): boolean {
+  const categories = allocations.map((allocation) => allocation.category);
+  const counts = layoutParticles(allocations, stage.particleCount);
+  const sameCategories =
+    categories.length === flow.categories.length &&
+    categories.every((category, index) => category === flow.categories[index]);
+  if (sameCategories && counts.every((count, index) => count === flow.counts[index])) return false;
+  if (!sameCategories) stage.particles.remap(flow.categories, categories);
+  const layout = layoutFor(stage.particleCount, counts);
+  const colors = categories.map((category) => CATEGORY_COLORS[category]);
   stage.particles.assign(counts, layout, colors);
-  stage.columns.configure(
-    categories.map((_, i) => columnX(i, categories.length, layout)),
-    layout.radius + 0.13,
-    colors,
-  );
-  counts.forEach((c, i) =>
-    stage.columns.setHeight(i, c > 0 ? stackHeight(c, layout) + layout.layerHeight * 0.8 : 0),
-  );
-  Object.assign(f, { categories, counts, size: Math.min(0.1, layout.layerHeight * 0.62) });
+  configureColumns(stage.columns, counts, layout, colors);
+  flow.categories = categories;
+  flow.counts = counts;
+  flow.size = particleSizeFor(layout);
   frameCamera(stage.camera, categories.length);
-  applyHighlight(stage, f);
+  applyHighlight(stage, flow);
+  return true;
+}
+
+function changeHighlight(stage: Stage, flow: Flow, category: BudgetCategory | null): boolean {
+  if (category === flow.highlight) return false;
+  flow.highlight = category;
+  applyHighlight(stage, flow);
+  return true;
+}
+
+function resizeStage(stage: Stage, flow: Flow, width: number, height: number): boolean {
+  if (width <= 0 || height <= 0) return false;
+  stage.renderer.setSize(width, height, false);
+  stage.camera.aspect = width / height;
+  frameCamera(stage.camera, flow.categories.length);
   return true;
 }
 
 /** One frame; returns false once particles and columns have settled (the loop then sleeps). */
-function draw(stage: Stage, f: Flow, dt: number): boolean {
-  const flowing = stage.particles.update(dt, f.size);
+function draw(stage: Stage, flow: Flow, dt: number): boolean {
+  const flowing = stage.particles.update(dt, flow.size);
   const growing = stage.columns.update(dt);
   stage.renderer.render(stage.scene, stage.camera);
   return flowing || growing;
@@ -150,44 +143,30 @@ export function createBudgetFlowScene(
   options: BudgetFlowOptions,
 ): BudgetFlowScene {
   const stage = buildStage(canvas, options.tier);
-  const f: Flow = { categories: [], counts: [], highlight: null, size: 0.07 };
-  const loop = createGatedLoop(
-    canvas.ownerDocument.defaultView ?? window,
-    (dt) => draw(stage, f, dt),
-    options.onFirstFrame,
-  );
-  const unwatch = watchContextLoss(canvas, loop);
-  const picker = createHoverPicker(
-    canvas,
-    stage.camera,
-    stage.columns.mesh,
-    (i) => f.categories[i] ?? null,
-  );
+  const flow: Flow = { categories: [], counts: [], highlight: null, size: INITIAL_PARTICLE_SIZE };
+  const win = canvas.ownerDocument.defaultView ?? window;
+  const loop = createGatedLoop(win, (dt) => draw(stage, flow, dt), options.onFirstFrame);
+  const stopWatchingContext = watchContextLoss(canvas, loop);
+  const categoryAt = (index: number) => flow.categories[index] ?? null;
+  const picker = createHoverPicker(canvas, stage.camera, stage.columns.mesh, categoryAt);
+  // Place the camera and write the first instance data before the shaders compile.
   frameCamera(stage.camera, 0);
-  stage.particles.update(0, f.size);
+  stage.particles.update(0, flow.size);
   stage.columns.update(0);
   compileThenStart(stage.renderer, stage.scene, stage.camera, loop);
+  const wakeIfChanged = (changed: boolean) => {
+    if (changed) loop.wake();
+  };
   return {
-    setAllocations: (list) => void (applyAllocations(stage, f, list) && loop.wake()),
-    setHighlight(category) {
-      if (category === f.highlight) return;
-      f.highlight = category;
-      applyHighlight(stage, f);
-      loop.wake();
-    },
-    resize(width, height) {
-      if (width <= 0 || height <= 0) return;
-      stage.renderer.setSize(width, height, false);
-      stage.camera.aspect = width / height;
-      frameCamera(stage.camera, f.categories.length);
-      loop.wake();
-    },
+    setAllocations: (allocations) => wakeIfChanged(applyAllocations(stage, flow, allocations)),
+    setHighlight: (category) => wakeIfChanged(changeHighlight(stage, flow, category)),
+    resize: (width, height) => wakeIfChanged(resizeStage(stage, flow, width, height)),
     pause: () => loop.pause(),
     resume: () => loop.resume(),
-    onHover: (cb) => picker.listen(cb),
+    onHover: (listener) => picker.listen(listener),
     dispose() {
       loop.dispose();
-      unwatch();
+      stopWatchingContext();
       picker.dispose();
       disposeStage(stage);
     },

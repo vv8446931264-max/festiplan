@@ -6,6 +6,7 @@ import {
   issuesToErrors,
   parseWhole,
   toPlanInput,
+  toggleConstraint,
   validateForm,
   type FormValues,
 } from "@/components/planner/form-model";
@@ -79,6 +80,13 @@ describe("toPlanInput / fromPlanInput", () => {
       expect(toPlanInput(fromPlanInput(input))).toEqual(input);
       expect(validateForm(fromPlanInput(input), TODAY)).toEqual({});
     }
+  });
+});
+
+describe("toggleConstraint", () => {
+  it("adds an unselected tag at the end and removes a selected one", () => {
+    expect(toggleConstraint(["Vegetarian"], "No alcohol")).toEqual(["Vegetarian", "No alcohol"]);
+    expect(toggleConstraint(["Vegetarian", "No alcohol"], "Vegetarian")).toEqual(["No alcohol"]);
   });
 });
 

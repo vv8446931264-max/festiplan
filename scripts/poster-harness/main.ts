@@ -8,19 +8,18 @@ import type { Mood } from "../../src/three/bus";
 import { DUSK_BACKGROUND, skyFade } from "../../src/three/dusk";
 import { createLanternScene } from "../../src/three/lantern-scene";
 
-declare global {
-  interface Window {
-    __posterReady?: boolean;
-    __posterError?: string;
-  }
-}
+/** The flags capture-poster.mjs polls for. */
+type PosterWindow = Window & { __posterReady?: boolean; __posterError?: string };
 
+const posterWindow: PosterWindow = window;
 const params = new URLSearchParams(window.location.search);
 const MOODS: readonly Mood[] = ["hero", "focus", "plan"];
+/** Let the lanterns drift into place before the screenshot. */
+const DEFAULT_SETTLE_MS = 2200;
 
 function moodParam(): Mood {
   const raw = params.get("mood");
-  return MOODS.find((m) => m === raw) ?? "hero";
+  return MOODS.find((mood) => mood === raw) ?? "hero";
 }
 
 function start(): void {
@@ -30,25 +29,25 @@ function start(): void {
   const scroll = Number(params.get("scroll") ?? 0);
   if (params.get("sky") !== "0") sky.style.background = DUSK_BACKGROUND;
   sky.style.opacity = String(skyFade(scroll));
-  const wait = Number(params.get("wait") ?? 2200);
+  const settleMs = Number(params.get("wait") ?? DEFAULT_SETTLE_MS);
   if (params.get("scene") === "0") {
-    window.__posterReady = true;
+    posterWindow.__posterReady = true;
     return;
   }
   const scene = createLanternScene(canvas, {
     tier: params.get("tier") === "low" ? "low" : "high",
-    onFirstFrame: () => window.setTimeout(() => (window.__posterReady = true), wait),
+    onFirstFrame: () => window.setTimeout(() => (posterWindow.__posterReady = true), settleMs),
   });
   scene.resize(window.innerWidth, window.innerHeight);
   scene.setScroll(scroll);
   scene.setMood(moodParam());
   const palette = params.get("palette");
-  if (palette) scene.setPalette(palette.split(",").map((h) => `#${h.replace("#", "")}`));
+  if (palette) scene.setPalette(palette.split(",").map((hex) => `#${hex.replace("#", "")}`));
   if (params.get("celebrate") === "1") scene.celebrate();
 }
 
 try {
   start();
 } catch (error) {
-  window.__posterError = error instanceof Error ? error.message : String(error);
+  posterWindow.__posterError = error instanceof Error ? error.message : String(error);
 }

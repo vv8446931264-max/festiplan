@@ -1,6 +1,11 @@
 import { BRAND } from "@/lib/site";
 
 const LETTERS = BRAND.name.split("");
+/** The pitch rises after the eyebrow line has settled. */
+const PITCH_DELAY_MS = 350;
+/** The wordmark letters rise one after another, starting shortly after first paint. */
+const MASTHEAD_DELAY_MS = 120;
+const LETTER_STAGGER_MS = 55;
 
 /** Chapter 0: the masthead over the lantern sky. */
 export function Hero() {
@@ -26,7 +31,10 @@ export function Hero() {
 
 function HeroPitch() {
   return (
-    <div className="rise legible flex flex-col gap-6" style={{ animationDelay: "350ms" }}>
+    <div
+      className="rise legible flex flex-col gap-6"
+      style={{ animationDelay: `${PITCH_DELAY_MS}ms` }}
+    >
       <p className="h3">
         Made for <span className="accent text-gold">moments</span>.
         <br />
@@ -57,13 +65,13 @@ function Masthead() {
           {BRAND.name} — {BRAND.subtitle}
         </span>{" "}
         <span aria-hidden="true" className="flex">
-          {LETTERS.map((ch, i) => (
+          {LETTERS.map((letter, index) => (
             <span
-              key={i}
+              key={index}
               className="rise inline-block"
-              style={{ animationDelay: `${120 + i * 55}ms` }}
+              style={{ animationDelay: `${MASTHEAD_DELAY_MS + index * LETTER_STAGGER_MS}ms` }}
             >
-              {ch}
+              {letter}
             </span>
           ))}
         </span>

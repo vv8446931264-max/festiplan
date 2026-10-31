@@ -1,3 +1,5 @@
+const SOURCE_URL = "https://github.com/vv8446931264-max/festiplan";
+
 /** Closing chapter: oversized wordmark, honest disclaimer, the Google stack. */
 export function SiteFooter() {
   return (
@@ -11,10 +13,7 @@ export function SiteFooter() {
           Built with Gemini on Vertex AI, Grounding with Google Maps, Cloud Firestore and Cloud Run.
         </p>
         <p className="text-muted md:text-right">
-          <a
-            href="https://github.com/vv8446931264-max/festiplan"
-            className="inline-flex min-h-8 items-center"
-          >
+          <a href={SOURCE_URL} className="inline-flex min-h-8 items-center">
             Source on GitHub
           </a>
         </p>

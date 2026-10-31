@@ -18,8 +18,11 @@ import {
   type FormValues,
 } from "./form-model";
 
+/** Id of one of the one-tap demo briefs. */
 export type PresetId = (typeof PRESETS)[number]["id"];
-type Result = { plan: PublicPlan; editKey: string };
+
+/** A freshly created plan and the secret that lets this browser edit it. */
+type CreatedPlan = { plan: PublicPlan; editKey: string };
 
 /** Form values, field errors and focus on the error summary. */
 function useBrief(summaryRef: RefObject<HTMLDivElement | null>) {
@@ -31,10 +34,10 @@ function useBrief(summaryRef: RefObject<HTMLDivElement | null>) {
   const report = (fieldErrors: FieldErrors, message: string | null) => {
     setErrors(fieldErrors);
     setServerError(message);
-    if (Object.keys(fieldErrors).length || message)
-      requestAnimationFrame(() => summaryRef.current?.focus());
+    const hasProblems = Object.keys(fieldErrors).length > 0 || message !== null;
+    if (hasProblems) requestAnimationFrame(() => summaryRef.current?.focus());
   };
-  const update = (patch: Partial<FormValues>) => setValues((v) => ({ ...v, ...patch }));
+  const update = (patch: Partial<FormValues>) => setValues((current) => ({ ...current, ...patch }));
   return { today, values, setValues, errors, serverError, report, update };
 }
 
@@ -48,10 +51,10 @@ function resetScene() {
  * Side effects of a new plan: remember the edit key in this browser, give the plan its
  * own URL (so a refresh keeps it), tint the sky with the first palette and celebrate.
  */
-function unfold(res: Result) {
-  saveEditKey(res.plan.id, res.editKey);
-  window.history.replaceState(null, "", `/plan/${res.plan.id}`);
-  setPalette(res.plan.ai.ideas[0]?.palette ?? null);
+function unfold({ plan, editKey }: CreatedPlan) {
+  saveEditKey(plan.id, editKey);
+  window.history.replaceState(null, "", `/plan/${plan.id}`);
+  setPalette(plan.ai.ideas[0]?.palette ?? null);
   setMood("plan");
   celebrate();
 }
@@ -66,33 +69,35 @@ function backToBrief() {
 /** State machine for the planner: idle → busy → result, with validation and errors. */
 export function usePlanner(summaryRef: RefObject<HTMLDivElement | null>) {
   const brief = useBrief(summaryRef);
-  const now = () => brief.today || todayIST();
+  // Before hydration has read the browser's date, fall back to today in India.
+  const currentDay = () => brief.today || todayIST();
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState<Result | null>(null);
+  const [result, setResult] = useState<CreatedPlan | null>(null);
 
-  async function submit(v: FormValues) {
-    const found = validateForm(v, now());
-    brief.report(found, null);
-    if (Object.keys(found).length > 0) return;
+  async function submit(values: FormValues) {
+    const fieldErrors = validateForm(values, currentDay());
+    brief.report(fieldErrors, null);
+    if (Object.keys(fieldErrors).length > 0) return;
     setBusy(true);
     setMood("focus");
-    const res = await createPlan(toPlanInput(v));
+    const response = await createPlan(toPlanInput(values));
     setBusy(false);
-    if (!res.ok) {
+    if (!response.ok) {
       resetScene();
-      brief.report(res.issues ? issuesToErrors(res.issues) : {}, res.error);
+      brief.report(response.issues ? issuesToErrors(response.issues) : {}, response.error);
       return;
     }
-    unfold(res);
-    setResult({ plan: res.plan, editKey: res.editKey });
+    const created = { plan: response.plan, editKey: response.editKey };
+    unfold(created);
+    setResult(created);
   }
 
   function pickPreset(id: PresetId) {
-    const preset = PRESETS.find((p) => p.id === id);
+    const preset = PRESETS.find((candidate) => candidate.id === id);
     if (!preset) return;
-    const v = fromPlanInput(presetInput(preset, now()));
-    brief.setValues(v);
-    void submit(v);
+    const values = fromPlanInput(presetInput(preset, currentDay()));
+    brief.setValues(values);
+    void submit(values);
   }
 
   const reset = () => {

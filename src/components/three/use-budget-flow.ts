@@ -3,7 +3,7 @@ import type { BudgetCategory } from "@/lib/contracts";
 import type { BudgetFlowOptions, BudgetFlowScene } from "@/three/budget-flow-scene";
 import type { Tier } from "@/three/tier";
 import type { FlowAllocation } from "./BudgetFlowFallback";
-import { createSceneCanvas, observeActivity, observeSize } from "./dom";
+import { attachSceneCanvas, observeActivity, observeSize } from "./dom";
 
 /** Latest props, read by the scene callbacks without re-running the mount effect. */
 export type FlowInputs = {
@@ -12,44 +12,41 @@ export type FlowInputs = {
   onHighlight?: (category: BudgetCategory | null) => void;
 };
 
-type Create = (canvas: HTMLCanvasElement, options: BudgetFlowOptions) => BudgetFlowScene;
+type CreateScene = (canvas: HTMLCanvasElement, options: BudgetFlowOptions) => BudgetFlowScene;
 type Refs = {
   host: RefObject<HTMLDivElement | null>;
   scene: RefObject<BudgetFlowScene | null>;
   inputs: RefObject<FlowInputs>;
 };
 
+/** Start loading the scene chunk this far before the box scrolls into view. */
+const PRELOAD_MARGIN = "200px";
+
 function mount(
-  create: Create,
+  createScene: CreateScene,
   host: HTMLElement,
   win: Window,
   tier: "high" | "low",
   refs: Refs,
   onReady: () => void,
 ): () => void {
-  const canvas = createSceneCanvas(host.ownerDocument);
-  host.appendChild(canvas);
-  let scene: BudgetFlowScene;
-  try {
-    scene = create(canvas, {
+  const { scene, canvas } = attachSceneCanvas(host, (target) =>
+    createScene(target, {
       tier,
       onFirstFrame: () => {
-        canvas.style.opacity = "1";
+        target.style.opacity = "1";
         onReady();
       },
-    });
-  } catch (error) {
-    canvas.remove();
-    throw error;
-  }
+    }),
+  );
   scene.setAllocations(refs.inputs.current.allocations);
   scene.setHighlight(refs.inputs.current.highlight);
   refs.scene.current = scene;
-  const offHover = scene.onHover((category) => refs.inputs.current.onHighlight?.(category));
-  const offSize = observeSize(host, win, (w, h) => scene.resize(w, h));
+  const stopHover = scene.onHover((category) => refs.inputs.current.onHighlight?.(category));
+  const stopResize = observeSize(host, win, (width, height) => scene.resize(width, height));
   return () => {
-    offHover();
-    offSize();
+    stopHover();
+    stopResize();
     refs.scene.current = null;
     scene.dispose();
     canvas.remove();
@@ -72,27 +69,23 @@ export function useBudgetFlowScene(tier: Tier | null, refs: Refs, onReady: () =>
     const load = () => {
       requested = true;
       import("@/three/budget-flow-scene")
-        .then((mod) => {
+        .then((sceneModule) => {
           if (cancelled) return;
-          teardown = mount(mod.createBudgetFlowScene, host, win, tier, refs, onReady);
+          teardown = mount(sceneModule.createBudgetFlowScene, host, win, tier, refs, onReady);
           if (!active) refs.scene.current?.pause();
         })
         .catch(() => undefined);
     };
-    const stop = observeActivity(
-      host,
-      win,
-      (next) => {
-        active = next;
-        if (next && !requested) load();
-        if (next) refs.scene.current?.resume();
-        else refs.scene.current?.pause();
-      },
-      "200px",
-    );
+    const onActivity = (visible: boolean) => {
+      active = visible;
+      if (visible && !requested) load();
+      if (visible) refs.scene.current?.resume();
+      else refs.scene.current?.pause();
+    };
+    const stopObserving = observeActivity(host, win, onActivity, PRELOAD_MARGIN);
     return () => {
       cancelled = true;
-      stop();
+      stopObserving();
       teardown?.();
     };
   }, [tier, refs, onReady]);

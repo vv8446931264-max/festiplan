@@ -8,23 +8,27 @@ import { detectTier, type Tier } from "@/three/tier";
  * only recomputed when the reduced-motion or pointer media queries change.
  */
 
-const WATCHED = ["(prefers-reduced-motion: reduce)", "(pointer: coarse)"];
-let cached: Tier | null = null;
+const WATCHED_MEDIA_QUERIES = ["(prefers-reduced-motion: reduce)", "(pointer: coarse)"];
+
+/** Safari < 14 lists only implement the deprecated addListener API, so treat these as optional. */
+type ChangeTarget = Partial<Pick<MediaQueryList, "addEventListener" | "removeEventListener">>;
+
+let cachedTier: Tier | null = null;
 
 function subscribe(onChange: () => void): () => void {
   if (typeof window.matchMedia !== "function") return () => undefined;
-  const lists = WATCHED.map((q) => window.matchMedia(q));
-  const handler = () => {
-    cached = null;
+  const lists: ChangeTarget[] = WATCHED_MEDIA_QUERIES.map((query) => window.matchMedia(query));
+  const handleChange = () => {
+    cachedTier = null;
     onChange();
   };
-  lists.forEach((l) => l.addEventListener?.("change", handler));
-  return () => lists.forEach((l) => l.removeEventListener?.("change", handler));
+  lists.forEach((list) => list.addEventListener?.("change", handleChange));
+  return () => lists.forEach((list) => list.removeEventListener?.("change", handleChange));
 }
 
 function snapshot(): Tier {
-  cached ??= detectTier(window);
-  return cached;
+  cachedTier ??= detectTier(window);
+  return cachedTier;
 }
 
 const serverSnapshot = (): Tier | null => null;
@@ -36,5 +40,5 @@ export function useTier(): Tier | null {
 
 /** Forget the cached tier (tests, or after a WebGL context failure). */
 export function resetTierCache(): void {
-  cached = null;
+  cachedTier = null;
 }
