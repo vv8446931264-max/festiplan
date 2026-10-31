@@ -1,31 +1,20 @@
 import { randomBytes } from "node:crypto";
-import { CATEGORY_LABELS, PLAN_ID_RE, PLAN_TTL_DAYS } from "@/lib/contracts";
-import type {
-  Allocation,
-  Plan,
-  PlanInput,
-  PlanPatch,
-  PublicPlan,
-  ScheduledTask,
-  VendorItem,
-} from "@/lib/contracts";
+import { PLAN_ID_RE, PLAN_TTL_DAYS } from "@/lib/contracts";
+import type { Plan, PlanInput, PlanPatch, PublicPlan } from "@/lib/contracts";
 import type { AiHandle } from "@/lib/ai/client";
 import { generateAiPlan } from "@/lib/ai/plan";
 import {
   allocateBudget,
-  applyEdits,
   refreshStatus,
   refreshVendorStatus,
   scheduleTimeline,
   scheduleVendors,
-  setActual,
-  setTaskDone,
-  setVendorDone,
 } from "@/lib/engine";
 import { hashEditKey, newEditKey, verifyEditKey } from "@/lib/security/edit-key";
 import { getStore } from "@/lib/store";
 import type { PlanStore } from "@/lib/store";
 import { DAY_MS } from "@/lib/time";
+import { applyPatch } from "./plan-patch";
 
 /** Injectable dependencies; omitted fields use the process store, env AI client and real clock. */
 export type ServiceDeps = { store?: PlanStore; ai?: AiHandle | null; now?: Date };
@@ -46,20 +35,32 @@ const FORBIDDEN = {
     "This link can view the plan but not change it. Open it on the device that created the plan.",
 } as const;
 
+/** Random bytes per plan id: 9 bytes encode to exactly 12 URL-safe base64url characters. */
+const PLAN_ID_BYTES = 9;
+
 /** True when `id` has the shape of a plan id; checked before the store is touched. */
 export function isPlanId(id: string): boolean {
   return PLAN_ID_RE.test(id);
 }
 
-/** A new plan id: 9 random bytes, base64url → 12 URL-safe characters. */
+/** A new random plan id of 12 URL-safe characters. */
 export function newPlanId(): string {
-  return randomBytes(9).toString("base64url");
+  return randomBytes(PLAN_ID_BYTES).toString("base64url");
 }
 
 /** What leaves the server: the edit-key hash is removed and `expireAt` becomes an ISO string. */
 export function toPublic(plan: Plan): PublicPlan {
   const { editKeyHash: _hash, expireAt, ...rest } = plan;
   return { ...rest, expireAt: expireAt.toISOString() };
+}
+
+/** The plan with overdue flags recomputed for `today`. */
+function withStatus(plan: Plan, today: string): Plan {
+  return {
+    ...plan,
+    timeline: refreshStatus(plan.timeline, today),
+    vendors: refreshVendorStatus(plan.vendors, today),
+  };
 }
 
 /**
@@ -72,23 +73,23 @@ export async function createPlan(
   deps: ServiceDeps = {},
 ): Promise<{ plan: PublicPlan; editKey: string }> {
   const now = deps.now ?? new Date();
-  const result = await generateAiPlan(input, { ai: deps.ai, today });
+  const { ai, source, model } = await generateAiPlan(input, { ai: deps.ai, today });
   const { contingencyINR, allocations } = allocateBudget({
     totalINR: input.budgetINR,
-    weights: result.ai.budgetWeights,
+    weights: ai.budgetWeights,
     guests: input.guests,
   });
   const editKey = newEditKey();
   const plan: Plan = {
     id: newPlanId(),
     input,
-    ai: result.ai,
+    ai,
     budget: allocations,
     contingencyINR,
-    timeline: scheduleTimeline(result.ai.tasks, input.eventDate, today),
-    vendors: scheduleVendors(result.ai.vendors, input.eventDate, today),
-    source: result.source,
-    model: result.model,
+    timeline: scheduleTimeline(ai.tasks, input.eventDate, today),
+    vendors: scheduleVendors(ai.vendors, input.eventDate, today),
+    source,
+    model,
     today,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
@@ -97,14 +98,6 @@ export async function createPlan(
   };
   await (deps.store ?? getStore()).create(plan);
   return { plan: toPublic(plan), editKey };
-}
-
-function withStatus(plan: Plan, today: string): Plan {
-  return {
-    ...plan,
-    timeline: refreshStatus(plan.timeline, today),
-    vendors: refreshVendorStatus(plan.vendors, today),
-  };
 }
 
 /** The public plan with overdue flags recomputed for `today`, or null when missing. */
@@ -118,56 +111,7 @@ export async function getPublicPlan(
   return plan ? toPublic(withStatus(plan, today)) : null;
 }
 
-type Step<T> = { ok: true; value: T } | { ok: false; status: 422; error: string };
-const fail = (error: string): { ok: false; status: 422; error: string } => ({
-  ok: false,
-  status: 422,
-  error,
-});
-
-function patchBudget(plan: Plan, patch: PlanPatch): Step<Allocation[]> {
-  let budget = plan.budget;
-  if (patch.allocations) {
-    const edited = applyEdits(budget, patch.allocations, {
-      totalINR: plan.input.budgetINR,
-      guests: plan.input.guests,
-    });
-    if (!edited)
-      return fail(
-        "Those budget changes don't add up: include every category once, and keep the same total.",
-      );
-    budget = edited;
-  }
-  for (const a of patch.actuals ?? []) {
-    if (!budget.some((b) => b.category === a.category)) {
-      return fail(`This budget has no ${CATEGORY_LABELS[a.category]} line.`);
-    }
-    budget = setActual(budget, a.category, a.actualINR);
-  }
-  return { ok: true, value: budget };
-}
-
-function patchTimeline(plan: Plan, patch: PlanPatch): Step<ScheduledTask[]> {
-  let timeline = plan.timeline;
-  for (const t of patch.tasks ?? []) {
-    if (!timeline.some((x) => x.id === t.id))
-      return fail("One of those tasks isn't in this plan. Refresh the page and try again.");
-    timeline = setTaskDone(timeline, t.id, t.done);
-  }
-  return { ok: true, value: timeline };
-}
-
-function patchVendors(plan: Plan, patch: PlanPatch): Step<VendorItem[]> {
-  let vendors = plan.vendors;
-  for (const v of patch.vendors ?? []) {
-    if (!vendors.some((x) => x.category === v.category)) {
-      return fail(`This checklist has no ${CATEGORY_LABELS[v.category]} vendor.`);
-    }
-    vendors = setVendorDone(vendors, v.category, v.done);
-  }
-  return { ok: true, value: vendors };
-}
-
+/** What one atomic edit decides: the plan to write (null writes nothing) and the reply. */
 type Decision = { next: Plan | null; result: PatchResult };
 
 function decidePatch(
@@ -179,22 +123,9 @@ function decidePatch(
 ): Decision {
   if (!plan) return { next: null, result: NOT_FOUND };
   if (!verifyEditKey(editKey, plan.editKeyHash)) return { next: null, result: FORBIDDEN };
-  const budget = patchBudget(plan, patch);
-  if (!budget.ok) return { next: null, result: budget };
-  const timeline = patchTimeline(plan, patch);
-  if (!timeline.ok) return { next: null, result: timeline };
-  const vendors = patchVendors(plan, patch);
-  if (!vendors.ok) return { next: null, result: vendors };
-  const next = withStatus(
-    {
-      ...plan,
-      budget: budget.value,
-      timeline: timeline.value,
-      vendors: vendors.value,
-      updatedAt: now.toISOString(),
-    },
-    today,
-  );
+  const edited = applyPatch(plan, patch);
+  if (!edited.ok) return { next: null, result: edited };
+  const next = withStatus({ ...edited.plan, updatedAt: now.toISOString() }, today);
   return { next, result: { ok: true, plan: toPublic(next) } };
 }
 

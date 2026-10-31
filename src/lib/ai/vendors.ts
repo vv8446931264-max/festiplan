@@ -20,9 +20,14 @@ export type VendorDeps = {
   cache?: TtlCache<VendorResult> | null;
 };
 
+/** Most places one lookup returns. */
 export const MAX_PLACES = 6;
+/** Deadline for one Maps-grounded lookup. */
 export const VENDOR_TIMEOUT_MS = 15_000;
-const sharedCache = new TtlCache<VendorResult>(500, DAY_MS);
+const VENDOR_CACHE_ENTRIES = 500;
+/** Longest place title kept from grounding metadata. */
+const MAX_TITLE_LENGTH = 120;
+const sharedCache = new TtlCache<VendorResult>(VENDOR_CACHE_ENTRIES, DAY_MS);
 
 const EVENT_NOUN: Record<EventType, string> = {
   wedding: "wedding",
@@ -39,8 +44,8 @@ export function clearVendorCache(): void {
 }
 
 /** The Google Maps search query for a vendor lookup, e.g. "Catering for wedding in Jaipur". */
-export function vendorQueryText(q: VendorLookup): string {
-  return `${CATEGORY_LABELS[q.category]} for ${EVENT_NOUN[q.eventType]} in ${q.city.trim()}`;
+export function vendorQueryText(lookup: VendorLookup): string {
+  return `${CATEGORY_LABELS[lookup.category]} for ${EVENT_NOUN[lookup.eventType]} in ${lookup.city.trim()}`;
 }
 
 /**
@@ -52,23 +57,36 @@ export function groundedPlaces(res: AiResponse): Place[] {
   const seen = new Set<string>();
   const places: Place[] = [];
   for (const chunk of chunks) {
-    const title = chunk.maps?.title?.trim().replace(/\s+/g, " ").slice(0, 120);
+    const title = chunk.maps?.title?.trim().replace(/\s+/g, " ").slice(0, MAX_TITLE_LENGTH);
     const uri = chunk.maps?.uri?.trim();
     if (!title || !uri?.startsWith("https://")) continue;
     const keys = [`u:${uri}`, `t:${title.toLowerCase()}`];
-    if (keys.some((k) => seen.has(k))) continue;
-    keys.forEach((k) => seen.add(k));
+    if (keys.some((key) => seen.has(key))) continue;
+    keys.forEach((key) => seen.add(key));
     places.push({ title, uri });
     if (places.length === MAX_PLACES) break;
   }
   return places;
 }
 
-async function askMaps(handle: AiHandle, q: VendorLookup, timeoutMs: number): Promise<Place[]> {
-  const prompt = `${dataBlock("CITY", q.city.trim())}\n\nFind up to ${MAX_PLACES} well-reviewed ${CATEGORY_LABELS[q.category].toLowerCase()} services for a ${EVENT_NOUN[q.eventType]} in the city above, India. List each place with one line on why it suits.`;
+/** The lookup request: the city inside a data block, the trusted instruction after it. */
+function mapsPrompt(lookup: VendorLookup): string {
+  const service = CATEGORY_LABELS[lookup.category].toLowerCase();
+  return [
+    dataBlock("CITY", lookup.city.trim()),
+    "",
+    `Find up to ${MAX_PLACES} well-reviewed ${service} services for a ${EVENT_NOUN[lookup.eventType]} in the city above, India. List each place with one line on why it suits.`,
+  ].join("\n");
+}
+
+async function askMaps(
+  handle: AiHandle,
+  lookup: VendorLookup,
+  timeoutMs: number,
+): Promise<Place[]> {
   const res = await handle.client.models.generateContent({
     model: handle.model,
-    contents: prompt,
+    contents: mapsPrompt(lookup),
     config: {
       systemInstruction: SYSTEM_VENDORS,
       tools: [{ googleMaps: {} }],
@@ -84,17 +102,20 @@ async function askMaps(handle: AiHandle, q: VendorLookup, timeoutMs: number): Pr
  * places; with no backend, no chunks or an error it returns no places and a plain
  * Google Maps search link (always present). Successful lookups are cached for 24 h.
  */
-export async function findVendors(q: VendorLookup, deps: VendorDeps = {}): Promise<VendorResult> {
-  const searchUrl = mapsSearchUrl(vendorQueryText(q));
+export async function findVendors(
+  lookup: VendorLookup,
+  deps: VendorDeps = {},
+): Promise<VendorResult> {
+  const searchUrl = mapsSearchUrl(vendorQueryText(lookup));
   const empty: VendorResult = { places: [], searchUrl, source: "search" };
   const handle = deps.ai === undefined ? getAi() : deps.ai;
   if (!handle) return empty;
   const cache = deps.cache === undefined ? sharedCache : deps.cache;
-  const key = JSON.stringify([q.city.trim().toLowerCase(), q.category, q.eventType]);
+  const key = JSON.stringify([lookup.city.trim().toLowerCase(), lookup.category, lookup.eventType]);
   const hit = cache?.get(key);
   if (hit) return hit;
   try {
-    const places = await askMaps(handle, q, deps.timeoutMs ?? VENDOR_TIMEOUT_MS);
+    const places = await askMaps(handle, lookup, deps.timeoutMs ?? VENDOR_TIMEOUT_MS);
     if (places.length === 0) return empty;
     const result: VendorResult = { places, searchUrl, source: "maps" };
     cache?.set(key, result);

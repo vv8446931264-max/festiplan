@@ -30,9 +30,7 @@ describe("refineStream", () => {
     expect(prompt).toContain(`"amountINR":${p.budget[0]?.amountINR}`);
     expect(prompt).toContain("Where can we cut 20%?");
     expect(prompt).toContain("Reply in தமிழ் (Tamil)");
-    expect(String(streamCalls[0]?.config?.systemInstruction)).toMatch(
-      /Never claim you have changed/,
-    );
+    expect(streamCalls[0]?.config?.systemInstruction).toMatch(/Never claim you have changed/);
   });
 
   it("answers from the template when there is no backend", async () => {

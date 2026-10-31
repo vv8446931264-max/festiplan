@@ -5,7 +5,8 @@ import { POST as refine } from "@/app/api/plan/[id]/refine/route";
 import { POST as vendors } from "@/app/api/vendors/route";
 import type { PublicPlan } from "@/lib/contracts";
 import { AI_GLOBAL_PER_MINUTE, aiGlobalLimit } from "@/lib/server/http";
-import { futureInput, idCtx, jsonRequest, noCtx, offlineEnv } from "./request";
+import { bodyOf, futureInput, idCtx, jsonRequest, noCtx, offlineEnv } from "./request";
+import type { ErrorBody } from "./request";
 
 beforeEach(offlineEnv);
 afterEach(() => vi.unstubAllEnvs());
@@ -21,7 +22,9 @@ function exhaustAiWindow(): void {
 async function expectBusy(res: Response): Promise<void> {
   expect(res.status).toBe(503);
   expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
-  expect((await res.json()).error).toMatch(/very busy right now\. Please try again in \d+ seconds/);
+  expect((await bodyOf<ErrorBody>(res)).error).toMatch(
+    /very busy right now\. Please try again in \d+ seconds/,
+  );
 }
 
 describe("instance-wide AI ceiling", () => {

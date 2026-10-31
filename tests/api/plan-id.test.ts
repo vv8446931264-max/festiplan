@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/plan/route";
 import { GET, PATCH } from "@/app/api/plan/[id]/route";
 import type { PublicPlan } from "@/lib/contracts";
-import { ORIGIN, futureInput, idCtx, jsonRequest, noCtx, offlineEnv } from "./request";
+import { ORIGIN, bodyOf, futureInput, idCtx, jsonRequest, noCtx, offlineEnv } from "./request";
+import type { ErrorBody } from "./request";
 
 beforeEach(offlineEnv);
 afterEach(() => vi.unstubAllEnvs());
@@ -37,7 +38,7 @@ describe("GET /api/plan/[id]", () => {
     for (const id of ["unknown-plan-id", "bad id", "x", "../../etc/passwd"]) {
       const res = await GET(new Request(`${ORIGIN}/api/plan/x`), idCtx(id));
       expect(res.status).toBe(404);
-      expect((await res.json()).error).toMatch(/couldn't find/);
+      expect((await bodyOf<ErrorBody>(res)).error).toMatch(/couldn't find/);
     }
   });
 });
@@ -68,7 +69,7 @@ describe("PATCH /api/plan/[id]", () => {
     }));
     const res = await patch(plan.id, { allocations }, editKey);
     expect(res.status).toBe(422);
-    expect((await res.json()).error).toMatch(/don't add up/);
+    expect((await bodyOf<ErrorBody>(res)).error).toMatch(/don't add up/);
   });
 
   it("400s for an empty or non-strict patch and 404s for unknown plans", async () => {

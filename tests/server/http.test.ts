@@ -1,26 +1,32 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { PlanPatchSchema, PlanInputSchema } from "@/lib/contracts";
 import { resetRateLimits } from "@/lib/security/rate-limit";
 import {
   invalid,
   json,
   perIpLimit,
   problem,
+  readBody,
   requestId,
   runGuards,
   sameOrigin,
   toIssues,
   withRoute,
 } from "@/lib/server/http";
-import { PlanInputSchema } from "@/lib/contracts";
+import type { Issue } from "@/lib/server/http";
 
 beforeEach(() => resetRateLimits());
 afterEach(() => vi.unstubAllEnvs());
 
-const post = (headers: Record<string, string> = {}) =>
+type ErrorBody = { error: string; issues?: Issue[] };
+const errorBody = async (res: Response) => (await res.json()) as ErrorBody;
+
+const post = (headers: Record<string, string> = {}, body?: string) =>
   new Request("http://localhost/api/x", {
     method: "POST",
-    headers: { origin: "http://localhost", ...headers },
+    headers: { origin: "http://localhost", "content-type": "application/json", ...headers },
+    body,
   });
 
 describe("responses", () => {
@@ -30,7 +36,7 @@ describe("responses", () => {
     expect(res.headers.get("cache-control")).toBe("no-store");
     expect(res.headers.get("location")).toBe("/x");
     const err = problem(429, "Slow down", { "Retry-After": "3" });
-    expect(await err.json()).toEqual({ error: "Slow down" });
+    expect(await errorBody(err)).toEqual({ error: "Slow down" });
     expect(err.headers.get("retry-after")).toBe("3");
   });
 
@@ -39,15 +45,35 @@ describe("responses", () => {
     expect(parsed.success).toBe(false);
     if (parsed.success) return;
     const issues = toIssues(parsed.error);
-    expect(issues.some((i) => i.path === "eventType")).toBe(true);
-    const body = await invalid(issues).json();
+    expect(issues.some((issue) => issue.path === "eventType")).toBe(true);
+    const body = await errorBody(invalid(issues));
     expect(body.error).toMatch(/another look/);
     expect(body.issues).toEqual(issues);
   });
 });
 
+describe("readBody", () => {
+  it("returns the validated body", async () => {
+    const body = await readBody(post({}, '{"tasks":[]}'), 1024, PlanPatchSchema);
+    expect(body).toEqual({ ok: true, data: { tasks: [] } });
+  });
+
+  it("answers 415, 413 and 400 for unreadable or invalid bodies", async () => {
+    const cases: [Request, number][] = [
+      [post({ "content-type": "text/plain" }, "{}"), 415],
+      [post({}, JSON.stringify({ tasks: [], pad: "x".repeat(2000) })), 413],
+      [post({}, "{oops"), 400],
+      [post({}, '{"tasks":[],"hack":1}'), 400],
+    ];
+    for (const [req, status] of cases) {
+      const body = await readBody(req, 1024, PlanPatchSchema);
+      expect(body.ok ? 200 : body.response.status).toBe(status);
+    }
+  });
+});
+
 describe("guards", () => {
-  it("blocks cross-site writes", async () => {
+  it("blocks cross-site writes", () => {
     const res = runGuards(post({ origin: "https://evil.example" }), sameOrigin);
     expect(res?.status).toBe(403);
     expect(runGuards(post(), sameOrigin)).toBeNull();
@@ -74,36 +100,39 @@ describe("guards", () => {
 
 describe("withRoute", () => {
   it("adds a request id and keeps the response", async () => {
-    const handler = withRoute("GET /t", async () => json({ ok: true }));
+    const handler = withRoute("GET /t", () => json({ ok: true }));
     const res = await handler(new Request("http://localhost/t"), {});
     expect(res.headers.get("x-request-id")).toMatch(/[0-9a-f-]{32,36}/);
     expect(await res.json()).toEqual({ ok: true });
   });
 
-  it("returns a plain-language 500 when the handler throws", async () => {
-    const handler = withRoute("GET /t", async () => {
-      throw new Error("db exploded with secret details");
-    });
-    const res = await handler(new Request("http://localhost/t"), {});
-    expect(res.status).toBe(500);
-    const body = await res.json();
-    expect(body.error).toMatch(/Something went wrong/);
-    expect(JSON.stringify(body)).not.toContain("secret");
+  it("returns a plain-language 500 when the handler throws or rejects", async () => {
+    const failure = new Error("db exploded with secret details");
+    const handlers = [
+      withRoute("GET /t", () => {
+        throw failure;
+      }),
+      withRoute("GET /t", () => Promise.reject(failure)),
+    ];
+    for (const handler of handlers) {
+      const res = await handler(new Request("http://localhost/t"), {});
+      expect(res.status).toBe(500);
+      const body = await errorBody(res);
+      expect(body.error).toMatch(/Something went wrong/);
+      expect(JSON.stringify(body)).not.toContain("secret");
+    }
   });
 
   it("tolerates responses with immutable headers", async () => {
-    const handler = withRoute("GET /t", async () =>
-      Response.redirect("http://localhost/elsewhere", 303),
-    );
+    const handler = withRoute("GET /t", () => Response.redirect("http://localhost/elsewhere", 303));
     expect((await handler(new Request("http://localhost/t"), {})).status).toBe(303);
   });
 
   it("reuses the Cloud Trace id when present", () => {
     const trace = "105445aa7843bc8bf206b12000100000";
-    expect(
-      requestId(
-        new Request("http://x/", { headers: { "x-cloud-trace-context": `${trace}/1;o=1` } }),
-      ),
-    ).toBe(trace);
+    const traced = new Request("http://x/", {
+      headers: { "x-cloud-trace-context": `${trace}/1;o=1` },
+    });
+    expect(requestId(traced)).toBe(trace);
   });
 });

@@ -4,7 +4,8 @@ import { POST } from "@/app/api/plan/route";
 import { addDays } from "@/lib/engine";
 import type { PublicPlan } from "@/lib/contracts";
 import { todayIST } from "@/lib/time";
-import { ORIGIN, futureInput, jsonRequest, noCtx, offlineEnv } from "./request";
+import { ORIGIN, bodyOf, futureInput, jsonRequest, noCtx, offlineEnv } from "./request";
+import type { ErrorBody } from "./request";
 
 beforeEach(offlineEnv);
 afterEach(() => vi.unstubAllEnvs());
@@ -95,7 +96,7 @@ describe("POST /api/plan", () => {
     const blocked = await POST(jsonRequest("/api/plan", futureInput(), { headers }), noCtx);
     expect(blocked.status).toBe(429);
     expect(Number(blocked.headers.get("retry-after"))).toBeGreaterThan(0);
-    expect((await blocked.json()).error).toMatch(/wait/);
+    expect((await bodyOf<ErrorBody>(blocked)).error).toMatch(/wait/);
   });
 
   it("scales the limit with RATE_LIMIT_SCALE", async () => {

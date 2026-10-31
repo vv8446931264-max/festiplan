@@ -79,7 +79,7 @@ describe("POST /api/plan/[id]/refine", () => {
 
 describe("GET /api/health", () => {
   it("reports template mode and the memory store without caching", async () => {
-    const res = await health();
+    const res = health();
     expect(res.headers.get("cache-control")).toBe("no-store");
     expect(await res.json()).toEqual({
       status: "ok",
@@ -92,7 +92,7 @@ describe("GET /api/health", () => {
   it("reports the configured backend and model", async () => {
     vi.stubEnv("GEMINI_API_KEY", "dev-key");
     vi.stubEnv("GEMINI_MODEL", "gemini-3.5-flash");
-    expect(await (await health()).json()).toMatchObject({
+    expect(await health().json()).toMatchObject({
       ai: "gemini-api",
       model: "gemini-3.5-flash",
     });

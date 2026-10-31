@@ -1,8 +1,13 @@
 import { AiPlanSchema } from "@/lib/contracts";
 import type { AiPlan } from "@/lib/contracts";
 
-const isRecord = (v: unknown): v is Record<string, unknown> =>
-  typeof v === "object" && v !== null && !Array.isArray(v);
+/** Most `dependsOn` entries kept per task (the `AiPlanSchema` limit). */
+const MAX_DEPENDENCIES = 5;
+/** Validation issues quoted back to the model in its correction turn. */
+const MAX_REPORTED_ISSUES = 12;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
 /**
  * Drops `dependsOn` entries that do not name another task in the list (and self-references),
@@ -10,30 +15,37 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
  */
 export function sanitizeDependsOn(raw: unknown): unknown {
   if (!isRecord(raw) || !Array.isArray(raw.tasks)) return raw;
+  const tasks: unknown[] = raw.tasks;
   const ids = new Set(
-    raw.tasks
+    tasks
       .filter(isRecord)
-      .map((t) => t.id)
+      .map((task) => task.id)
       .filter((id) => typeof id === "string"),
   );
-  const tasks = raw.tasks.map((t) => {
-    if (!isRecord(t) || !Array.isArray(t.dependsOn)) return t;
-    const deps = t.dependsOn.filter(
-      (d): d is string => typeof d === "string" && d !== t.id && ids.has(d),
+  const cleaned = tasks.map((task): unknown => {
+    if (!isRecord(task) || !Array.isArray(task.dependsOn)) return task;
+    const dependsOn: unknown[] = task.dependsOn;
+    const known = dependsOn.filter(
+      (dep): dep is string => typeof dep === "string" && dep !== task.id && ids.has(dep),
     );
-    return { ...t, dependsOn: [...new Set(deps)].slice(0, 5) };
+    return { ...task, dependsOn: [...new Set(known)].slice(0, MAX_DEPENDENCIES) };
   });
-  return { ...raw, tasks };
+  return { ...raw, tasks: cleaned };
+}
+
+/** Removes a Markdown code fence the model may wrap its JSON in. */
+function stripCodeFence(text: string): string {
+  return text
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/, "");
 }
 
 /** Parses and validates model text into an `AiPlan`, or returns a short error summary. */
 export function parseAiPlan(
   text: string | undefined,
 ): { ok: true; ai: AiPlan } | { ok: false; error: string } {
-  const body = (text ?? "")
-    .trim()
-    .replace(/^```(?:json)?\s*/i, "")
-    .replace(/\s*```$/, "");
+  const body = stripCodeFence(text ?? "");
   if (!body) return { ok: false, error: "The reply was empty." };
   let raw: unknown;
   try {
@@ -44,7 +56,7 @@ export function parseAiPlan(
   const parsed = AiPlanSchema.safeParse(sanitizeDependsOn(raw));
   if (parsed.success) return { ok: true, ai: parsed.data };
   const issues = parsed.error.issues
-    .slice(0, 12)
-    .map((i) => `${i.path.map(String).join(".") || "(root)"}: ${i.message}`);
+    .slice(0, MAX_REPORTED_ISSUES)
+    .map((issue) => `${issue.path.map(String).join(".") || "(root)"}: ${issue.message}`);
   return { ok: false, error: issues.join("; ") };
 }

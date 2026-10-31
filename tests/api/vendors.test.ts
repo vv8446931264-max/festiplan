@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as createPlanRoute } from "@/app/api/plan/route";
 import { POST as vendors } from "@/app/api/vendors/route";
 import type { PlanInput, PublicPlan } from "@/lib/contracts";
-import { futureInput, jsonRequest, noCtx, offlineEnv } from "./request";
+import { bodyOf, futureInput, jsonRequest, noCtx, offlineEnv } from "./request";
+import type { ErrorBody } from "./request";
 
 beforeEach(offlineEnv);
 afterEach(() => vi.unstubAllEnvs());
@@ -33,7 +34,7 @@ describe("POST /api/vendors", () => {
   it("404s for a well-formed id with no plan behind it", async () => {
     const res = await lookup({ planId: "no-such-plan", category: "venue" });
     expect(res.status).toBe(404);
-    expect((await res.json()).error).toMatch(/couldn't find that plan/);
+    expect((await bodyOf<ErrorBody>(res)).error).toMatch(/couldn't find that plan/);
   });
 
   it("refuses free-form lookups: city/eventType keys, missing or malformed planId, unknown category", async () => {
@@ -48,7 +49,7 @@ describe("POST /api/vendors", () => {
     ]) {
       const res = await lookup(body);
       expect(res.status).toBe(400);
-      expect((await res.json()).issues.length).toBeGreaterThan(0);
+      expect((await bodyOf<ErrorBody>(res)).issues?.length).toBeGreaterThan(0);
     }
   });
 

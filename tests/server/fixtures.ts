@@ -1,11 +1,16 @@
-import type { GenerateContentParameters } from "@google/genai";
+import type { Content, GenerateContentParameters } from "@google/genai";
 import type { AiHandle, AiModels, AiResponse } from "@/lib/ai/client";
-import type { PlanInput } from "@/lib/contracts";
+import type { Allocation, PlanInput } from "@/lib/contracts";
+import { createPlan } from "@/lib/server/plan-service";
+import { MemoryStore } from "@/lib/store";
 
 /** A fixed "today" for engine-facing tests. */
 export const TODAY = "2026-10-24";
 
-/** A valid wedding brief (Priya's sangeet). */
+/** A fixed clock for plans created in tests. */
+export const NOW = new Date("2026-10-24T06:30:00Z");
+
+/** A valid wedding brief (Riya & Arjun's sangeet). */
 export function sampleInput(overrides: Partial<PlanInput> = {}): PlanInput {
   return {
     eventType: "wedding",
@@ -21,8 +26,29 @@ export function sampleInput(overrides: Partial<PlanInput> = {}): PlanInput {
   };
 }
 
+/** The rupees allocated across a budget's lines (contingency excluded). */
+export const budgetTotal = (budget: Allocation[]): number =>
+  budget.reduce((sum, line) => sum + line.amountINR, 0);
+
+/** A template plan for `sampleInput()`, stored in a fresh in-memory store at `NOW`. */
+export async function storedPlan() {
+  const store = new MemoryStore(() => NOW.getTime());
+  const created = await createPlan(sampleInput(), TODAY, { store, ai: null, now: NOW });
+  return { store, ...created };
+}
+
+/** A canned model reply, or the error the call should fail with. */
 export type Reply = AiResponse | Error;
+/** One streamed chunk of text, or the error the stream should fail with. */
 export type StreamPart = string | Error;
+
+const settle = <T>(value: T | Error): Promise<T> =>
+  value instanceof Error ? Promise.reject(value) : Promise.resolve(value);
+
+/** Replays streamed chunks asynchronously, like a network stream, failing where told to. */
+async function* replay(parts: readonly StreamPart[]): AsyncGenerator<AiResponse> {
+  for (const part of parts) yield { text: await settle(part) };
+}
 
 /** A fake Gemini handle that replays canned replies and records every call. */
 export function fakeAi(
@@ -33,22 +59,15 @@ export function fakeAi(
   const calls: GenerateContentParameters[] = [];
   const streamCalls: GenerateContentParameters[] = [];
   const models: AiModels = {
-    async generateContent(params) {
+    generateContent(params) {
       calls.push(params);
-      const reply = replies[Math.min(calls.length, replies.length) - 1];
-      if (reply === undefined) throw new Error("no reply configured");
-      if (reply instanceof Error) throw reply;
-      return reply;
+      // Past the last canned reply, keep answering with the last one.
+      const reply = replies.at(Math.min(calls.length, replies.length) - 1);
+      return settle(reply ?? new Error("no reply configured"));
     },
-    async generateContentStream(params) {
+    generateContentStream(params) {
       streamCalls.push(params);
-      async function* parts(): AsyncGenerator<AiResponse> {
-        for (const part of stream) {
-          if (part instanceof Error) throw part;
-          yield { text: part };
-        }
-      }
-      return parts();
+      return Promise.resolve(replay(stream));
     },
   };
   const handle: AiHandle = { client: { models }, backend: "gemini-api", model };
@@ -58,20 +77,26 @@ export function fakeAi(
 /** A reply whose text is the JSON of `value`. */
 export const jsonReply = (value: unknown): AiResponse => ({ text: JSON.stringify(value) });
 
+const isContent = (item: unknown): item is Content =>
+  typeof item === "object" && item !== null && "parts" in item;
+
+/** The text of a string or `{ text }` part; anything else has none. */
+function partText(part: unknown): string {
+  if (typeof part === "string") return part;
+  if (typeof part === "object" && part !== null && "text" in part) {
+    return typeof part.text === "string" ? part.text : "";
+  }
+  return "";
+}
+
 /** Every text part of a request's `contents`, joined — for prompt assertions. */
 export function promptText(params: GenerateContentParameters | undefined): string {
   const contents = params?.contents;
-  if (typeof contents === "string") return contents;
-  if (!Array.isArray(contents)) return "";
-  return contents
-    .flatMap((c) =>
-      typeof c === "object" && c !== null && "parts" in c && Array.isArray(c.parts) ? c.parts : [],
-    )
-    .map((p) =>
-      typeof p === "object" && p !== null && "text" in p && typeof p.text === "string"
-        ? p.text
-        : "",
-    )
+  if (contents === undefined) return "";
+  const items: unknown[] = Array.isArray(contents) ? contents : [contents];
+  return items
+    .flatMap((item) => (isContent(item) ? (item.parts ?? []) : [item]))
+    .map(partText)
     .join("\n");
 }
 
@@ -82,10 +107,10 @@ export async function readText(stream: ReadableStream<Uint8Array>): Promise<stri
 
 /** Deterministic PRNG (mulberry32) for property-style tests. */
 export function rng(seed: number): () => number {
-  let a = seed >>> 0;
+  let state = seed >>> 0;
   return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
     t = Math.imul(t ^ (t >>> 15), t | 1);
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;

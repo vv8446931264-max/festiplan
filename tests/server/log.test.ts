@@ -3,6 +3,17 @@ import { describe, expect, it, vi } from "vitest";
 import { formatLog, logEvent } from "@/lib/server/log";
 import { dtstamp, todayIST } from "@/lib/time";
 
+/** The parts of a Cloud Logging entry these tests read. */
+type LogEntry = {
+  severity: string;
+  message: string;
+  requestId?: string;
+  reason?: string;
+  httpRequest?: { requestMethod?: string; requestUrl?: string; status?: number; latency?: string };
+};
+
+const parseEntry = (line: string): LogEntry => JSON.parse(line) as LogEntry;
+
 describe("logEvent", () => {
   it("writes one Cloud Logging JSON line with httpRequest fields", () => {
     const lines: string[] = [];
@@ -16,11 +27,10 @@ describe("logEvent", () => {
         latencyMs: 1234,
         requestId: "r1",
       },
-      (l) => lines.push(l),
+      (line) => lines.push(line),
     );
     expect(lines).toHaveLength(1);
-    const entry = JSON.parse(lines[0] ?? "{}");
-    expect(entry).toMatchObject({
+    expect(parseEntry(lines.at(0) ?? "{}")).toMatchObject({
       severity: "INFO",
       message: "request",
       requestId: "r1",
@@ -34,7 +44,7 @@ describe("logEvent", () => {
   });
 
   it("omits httpRequest for non-request events and clamps long values", () => {
-    const entry = JSON.parse(
+    const entry = parseEntry(
       formatLog({ severity: "WARNING", message: "x".repeat(500), reason: "y".repeat(500) }),
     );
     expect(entry.httpRequest).toBeUndefined();

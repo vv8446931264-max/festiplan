@@ -18,15 +18,16 @@ const SUMMARY_MAX = 320;
 /**
  * A deterministic, high-quality `AiPlan` for the input's event type, used when Gemini
  * is unavailable or fails validation twice. The UI labels it "Template plan — AI unavailable".
- * Text is English; the brief's constraints add matching tips.
+ * Text is English; the brief's constraints add matching tips. Every call returns a fresh deep
+ * copy, so callers can never change the shared template data.
  */
 export function templatePlan(input: PlanInput): AiPlan {
   const base = BUILDERS[input.eventType](input);
-  return {
+  return structuredClone({
     ...base,
     summary: clip(base.summary, SUMMARY_MAX),
     tips: mergeTips(base.tips, constraintTips(input)),
-  };
+  });
 }
 
 export { ageFrom, isKidsParty, ordinal } from "./birthday";

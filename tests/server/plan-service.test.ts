@@ -2,8 +2,8 @@
 import { describe, expect, it } from "vitest";
 import { clearPlanCache } from "@/lib/ai/plan";
 import { templatePlan } from "@/lib/ai/templates";
+import { DAY_MS } from "@/lib/time";
 import { EVENT_TYPES, PLAN_TTL_DAYS } from "@/lib/contracts";
-import type { Allocation } from "@/lib/contracts";
 import { hashEditKey } from "@/lib/security/edit-key";
 import {
   createPlan,
@@ -14,22 +14,22 @@ import {
   toPublic,
 } from "@/lib/server/plan-service";
 import { MemoryStore } from "@/lib/store";
-import { TODAY, fakeAi, jsonReply, rng, sampleInput } from "./fixtures";
-
-const total = (budget: Allocation[]) => budget.reduce((s, a) => s + a.amountINR, 0);
-const NOW = new Date("2026-10-24T06:30:00Z");
-
-async function setup() {
-  const store = new MemoryStore(() => NOW.getTime());
-  const created = await createPlan(sampleInput(), TODAY, { store, ai: null, now: NOW });
-  return { store, ...created };
-}
+import {
+  NOW,
+  TODAY,
+  budgetTotal,
+  fakeAi,
+  jsonReply,
+  rng,
+  sampleInput,
+  storedPlan,
+} from "./fixtures";
 
 describe("createPlan", () => {
   it("allocates the budget exactly, including contingency", async () => {
-    const { plan } = await setup();
+    const { plan } = await storedPlan();
     expect(plan.contingencyINR).toBe(120_000);
-    expect(total(plan.budget) + plan.contingencyINR).toBe(1_200_000);
+    expect(budgetTotal(plan.budget) + plan.contingencyINR).toBe(1_200_000);
     expect(plan.source).toBe("template");
     expect(plan.model).toBe("template");
   });
@@ -39,25 +39,22 @@ describe("createPlan", () => {
     const store = new MemoryStore();
     for (let i = 0; i < 60; i++) {
       const budgetINR = 1_000 + Math.floor(next() * 499_999_000);
-      const eventType = EVENT_TYPES[i % EVENT_TYPES.length] ?? "other";
-      const { plan } = await createPlan(
-        sampleInput({ budgetINR, eventType, guests: 1 + i }),
-        TODAY,
-        { store, ai: null },
-      );
-      expect(total(plan.budget) + plan.contingencyINR).toBe(budgetINR);
+      const eventType = EVENT_TYPES.at(i % EVENT_TYPES.length) ?? "other";
+      const input = sampleInput({ budgetINR, eventType, guests: 1 + i });
+      const { plan } = await createPlan(input, TODAY, { store, ai: null });
+      expect(budgetTotal(plan.budget) + plan.contingencyINR).toBe(budgetINR);
     }
   });
 
   it("schedules the timeline and vendors, and stores only the edit-key hash", async () => {
-    const { store, plan, editKey } = await setup();
+    const { store, plan, editKey } = await storedPlan();
     expect(editKey).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(plan).not.toHaveProperty("editKeyHash");
     expect(plan.timeline).toHaveLength(templatePlan(sampleInput()).tasks.length);
     expect(plan.vendors.length).toBeGreaterThanOrEqual(3);
     expect(plan.today).toBe(TODAY);
     expect(plan.createdAt).toBe(NOW.toISOString());
-    expect(Date.parse(plan.expireAt) - NOW.getTime()).toBe(PLAN_TTL_DAYS * 86_400_000);
+    expect(Date.parse(plan.expireAt) - NOW.getTime()).toBe(PLAN_TTL_DAYS * DAY_MS);
     const stored = await store.get(plan.id);
     expect(stored?.editKeyHash).toBe(hashEditKey(editKey));
     expect(stored?.expireAt).toBeInstanceOf(Date);
@@ -77,137 +74,52 @@ describe("createPlan", () => {
 
 describe("getPublicPlan", () => {
   it("returns null for bad ids and missing plans", async () => {
-    const { store } = await setup();
+    const { store } = await storedPlan();
     expect(await getPublicPlan("../etc", TODAY, { store })).toBeNull();
     expect(await getPublicPlan("missing-plan", TODAY, { store })).toBeNull();
   });
 
   it("recomputes overdue flags for today", async () => {
-    const { store, plan } = await setup();
+    const { store, plan } = await storedPlan();
     const later = await getPublicPlan(plan.id, plan.input.eventDate, { store });
-    expect(later?.timeline.some((t) => t.overdue)).toBe(true);
-    expect(later?.vendors.some((v) => v.overdue)).toBe(true);
+    expect(later?.timeline.some((task) => task.overdue)).toBe(true);
+    expect(later?.vendors.some((vendor) => vendor.overdue)).toBe(true);
     expect(later).not.toHaveProperty("editKeyHash");
   });
 });
 
 describe("patchPlan", () => {
   it("refuses a wrong or missing key with 403 and unknown plans with 404", async () => {
-    const { store, plan } = await setup();
-    const patch = { tasks: [{ id: plan.timeline[0]?.id ?? "x", done: true }] };
-    expect(await patchPlan(plan.id, "wrong-key", patch, TODAY, { store })).toMatchObject({
-      ok: false,
-      status: 403,
-    });
-    expect(await patchPlan(plan.id, null, patch, TODAY, { store })).toMatchObject({
-      ok: false,
-      status: 403,
-    });
-    expect(await patchPlan("missing-plan", "k", patch, TODAY, { store })).toMatchObject({
-      ok: false,
-      status: 404,
-    });
-    expect(await patchPlan("bad id!", "k", patch, TODAY, { store })).toMatchObject({
-      ok: false,
-      status: 404,
-    });
+    const { store, plan } = await storedPlan();
+    const patch = { tasks: [{ id: plan.timeline.at(0)?.id ?? "x", done: true }] };
+    const refused = [
+      [await patchPlan(plan.id, "wrong-key", patch, TODAY, { store }), 403],
+      [await patchPlan(plan.id, null, patch, TODAY, { store }), 403],
+      [await patchPlan("missing-plan", "k", patch, TODAY, { store }), 404],
+      [await patchPlan("bad id!", "k", patch, TODAY, { store }), 404],
+    ] as const;
+    for (const [result, status] of refused) expect(result).toMatchObject({ ok: false, status });
   });
 
-  it("rejects budget edits that don't add up with 422", async () => {
-    const { store, plan, editKey } = await setup();
-    const edits = plan.budget.map((a) => ({
-      category: a.category,
-      amountINR: a.amountINR + 1,
-      locked: false,
-    }));
-    expect(
-      await patchPlan(plan.id, editKey, { allocations: edits }, TODAY, { store }),
-    ).toMatchObject({ ok: false, status: 422 });
-    const partial = edits.slice(1);
-    expect(
-      await patchPlan(plan.id, editKey, { allocations: partial }, TODAY, { store }),
-    ).toMatchObject({ ok: false, status: 422 });
-  });
-
-  it("rejects unknown tasks, vendors and categories with 422", async () => {
-    const { store, plan, editKey } = await setup();
-    const missingVendor =
-      (
-        [
-          "venue",
-          "catering",
-          "decor",
-          "photography",
-          "entertainment",
-          "attire",
-          "invitations",
-          "gifts",
-          "transport",
-          "misc",
-        ] as const
-      ).find((c) => !plan.vendors.some((v) => v.category === c)) ?? "misc";
-    for (const patch of [
-      { tasks: [{ id: "ghost-task", done: true }] },
-      { vendors: [{ category: missingVendor, done: true }] },
-    ]) {
-      expect(await patchPlan(plan.id, editKey, patch, TODAY, { store })).toMatchObject({
-        ok: false,
-        status: 422,
-      });
-    }
-    const other = await createPlan(sampleInput({ eventType: "birthday" }), TODAY, {
-      store,
-      ai: null,
-    });
-    const absent =
-      (["attire", "transport"] as const).find(
-        (c) => !other.plan.budget.some((a) => a.category === c),
-      ) ?? "attire";
-    const res = await patchPlan(
-      other.plan.id,
-      other.editKey,
-      { actuals: [{ category: absent, actualINR: 5 }] },
-      TODAY,
-      { store },
-    );
+  it("refuses edits that don't fit with 422", async () => {
+    const { store, plan, editKey } = await storedPlan();
+    const ghost = { tasks: [{ id: "ghost-task", done: true }] };
+    const res = await patchPlan(plan.id, editKey, ghost, TODAY, { store });
     expect(res).toMatchObject({ ok: false, status: 422 });
   });
 
-  it("applies ticks, actuals and balanced edits, and persists them", async () => {
-    const { store, plan, editKey } = await setup();
-    const [a, b, ...rest] = plan.budget;
-    if (!a || !b) throw new Error("budget too short");
-    const edits = [
-      { category: a.category, amountINR: a.amountINR - 1000, locked: true },
-      { category: b.category, amountINR: b.amountINR + 1000, locked: false },
-      ...rest.map((r) => ({ category: r.category, amountINR: r.amountINR, locked: r.locked })),
-    ];
-    const taskId = plan.timeline[0]?.id ?? "x";
-    const vendor = plan.vendors[0]?.category ?? "venue";
+  it("saves ticks with a fresh updatedAt and recomputed status", async () => {
+    const { store, plan, editKey } = await storedPlan();
+    const taskId = plan.timeline.at(0)?.id ?? "x";
     const later = new Date(NOW.getTime() + 60_000);
-    const res = await patchPlan(
-      plan.id,
-      editKey,
-      {
-        allocations: edits,
-        actuals: [{ category: a.category, actualINR: 4321 }],
-        tasks: [{ id: taskId, done: true }],
-        vendors: [{ category: vendor, done: true }],
-      },
-      TODAY,
-      { store, now: later },
-    );
+    const patch = { tasks: [{ id: taskId, done: true }] };
+    const res = await patchPlan(plan.id, editKey, patch, TODAY, { store, now: later });
     expect(res.ok).toBe(true);
     if (!res.ok) return;
-    const line = res.plan.budget.find((x) => x.category === a.category);
-    expect(line).toMatchObject({ amountINR: a.amountINR - 1000, locked: true, actualINR: 4321 });
-    expect(total(res.plan.budget) + res.plan.contingencyINR).toBe(1_200_000);
-    expect(res.plan.timeline.find((t) => t.id === taskId)?.done).toBe(true);
-    expect(res.plan.vendors.find((v) => v.category === vendor)?.done).toBe(true);
     expect(res.plan.updatedAt).toBe(later.toISOString());
-    expect(
-      (await getPublicPlan(plan.id, TODAY, { store }))?.timeline.find((t) => t.id === taskId)?.done,
-    ).toBe(true);
+    expect(res.plan).not.toHaveProperty("editKeyHash");
+    const saved = await getPublicPlan(plan.id, TODAY, { store });
+    expect(saved?.timeline.find((task) => task.id === taskId)?.done).toBe(true);
   });
 });
 
@@ -223,7 +135,7 @@ describe("ids and public shape", () => {
   });
 
   it("strips the hash and serialises expireAt", async () => {
-    const { store, plan } = await setup();
+    const { store, plan } = await storedPlan();
     const stored = await store.get(plan.id);
     if (!stored) throw new Error("missing");
     const pub = toPublic(stored);

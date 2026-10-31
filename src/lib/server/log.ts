@@ -18,30 +18,39 @@ export type LogFields = {
   [extra: string]: Scalar;
 };
 
-const MAX_VALUE = 200;
+/** Longest string value written to a log line; longer values are cut. */
+const MAX_VALUE_LENGTH = 200;
 
 function clamp(value: Scalar): Scalar {
-  return typeof value === "string" && value.length > MAX_VALUE ? value.slice(0, MAX_VALUE) : value;
+  return typeof value === "string" && value.length > MAX_VALUE_LENGTH
+    ? value.slice(0, MAX_VALUE_LENGTH)
+    : value;
+}
+
+type HttpFields = Pick<LogFields, "route" | "method" | "status" | "latencyMs">;
+
+/** Cloud Logging's `httpRequest` object for request events; undefined for anything else. */
+function httpRequestOf({ route, method, status, latencyMs }: HttpFields) {
+  if (route === undefined && status === undefined) return undefined;
+  return {
+    requestMethod: method,
+    requestUrl: route,
+    status,
+    latency: latencyMs === undefined ? undefined : `${(latencyMs / 1000).toFixed(3)}s`,
+  };
 }
 
 /** Builds the Cloud Logging JSON payload (severity, message, httpRequest, extras). */
 export function formatLog(fields: LogFields, now: Date = new Date()): string {
   const { severity, message, route, method, status, latencyMs, requestId, ...rest } = fields;
-  const extras = Object.fromEntries(Object.entries(rest).map(([k, v]) => [k, clamp(v)]));
-  const httpRequest =
-    route !== undefined || status !== undefined
-      ? {
-          requestMethod: method,
-          requestUrl: route,
-          status,
-          latency: latencyMs === undefined ? undefined : `${(latencyMs / 1000).toFixed(3)}s`,
-        }
-      : undefined;
+  const extras = Object.fromEntries(
+    Object.entries(rest).map(([key, value]) => [key, clamp(value)]),
+  );
   return JSON.stringify({
     severity,
     message: clamp(message),
     time: now.toISOString(),
-    httpRequest,
+    httpRequest: httpRequestOf({ route, method, status, latencyMs }),
     requestId,
     latencyMs,
     ...extras,

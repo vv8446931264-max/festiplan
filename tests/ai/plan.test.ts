@@ -31,7 +31,7 @@ describe("generateAiPlan", () => {
     expect(config?.responseMimeType).toBe("application/json");
     expect(config?.responseJsonSchema).toBe(AI_PLAN_JSON_SCHEMA);
     expect(config?.abortSignal).toBeInstanceOf(AbortSignal);
-    expect(String(config?.systemInstruction)).toMatch(/NEVER do arithmetic/);
+    expect(config?.systemInstruction).toMatch(/NEVER do arithmetic/);
     expect(config?.thinkingConfig).toEqual({ thinkingLevel: "LOW" });
     expect(promptText(calls[0])).toContain("about 16 week(s) away");
   });
@@ -105,7 +105,7 @@ describe("parseAiPlan and sanitizeDependsOn", () => {
   it("drops unknown, self and duplicate dependencies and caps them at five", () => {
     const plan = geminiPlan();
     const ids = plan.tasks.map((t) => t.id);
-    const first = plan.tasks[0];
+    const first = plan.tasks.at(0);
     if (!first) throw new Error("no tasks");
     const raw = {
       ...plan,

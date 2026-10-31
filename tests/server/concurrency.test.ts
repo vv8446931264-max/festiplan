@@ -8,29 +8,27 @@ describe("concurrent edits", () => {
   it("two simultaneous checklist saves both survive (atomic read-modify-write)", async () => {
     const store = new MemoryStore();
     const { plan, editKey } = await createPlan(sampleInput(), TODAY, { store, ai: null });
-    const [a, b] = plan.timeline;
-    if (!a || !b) throw new Error("fixture plan has no tasks");
+    const first = plan.timeline.at(0);
+    const second = plan.timeline.at(1);
+    if (!first || !second) throw new Error("fixture plan has fewer than two tasks");
+    const vendor = plan.vendors.at(0)?.category ?? "venue";
 
     const results = await Promise.all([
-      patchPlan(plan.id, editKey, { tasks: [{ id: a.id, done: true }] }, TODAY, { store }),
-      patchPlan(plan.id, editKey, { tasks: [{ id: b.id, done: true }] }, TODAY, { store }),
-      patchPlan(
-        plan.id,
-        editKey,
-        { vendors: [{ category: plan.vendors[0]?.category ?? "venue", done: true }] },
-        TODAY,
-        { store },
-      ),
+      patchPlan(plan.id, editKey, { tasks: [{ id: first.id, done: true }] }, TODAY, { store }),
+      patchPlan(plan.id, editKey, { tasks: [{ id: second.id, done: true }] }, TODAY, { store }),
+      patchPlan(plan.id, editKey, { vendors: [{ category: vendor, done: true }] }, TODAY, {
+        store,
+      }),
     ]);
 
-    expect(results.every((r) => r.ok)).toBe(true);
+    expect(results.every((result) => result.ok)).toBe(true);
     const saved = await getPublicPlan(plan.id, TODAY, { store });
     const done = saved?.timeline
-      .filter((t) => t.done)
-      .map((t) => t.id)
+      .filter((task) => task.done)
+      .map((task) => task.id)
       .sort();
-    expect(done).toEqual([a.id, b.id].sort());
-    expect(saved?.vendors[0]?.done).toBe(true);
+    expect(done).toEqual([first.id, second.id].sort());
+    expect(saved?.vendors.at(0)?.done).toBe(true);
   });
 
   it("a rejected edit writes nothing", async () => {

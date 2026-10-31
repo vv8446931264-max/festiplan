@@ -8,8 +8,17 @@ import { SYSTEM_REFINE, dataBlock, languageName } from "./prompts";
 /** Injectable dependencies (tests pass a fake client). */
 export type RefineDeps = { ai?: AiHandle | null; timeoutMs?: number };
 
+/** Deadline for one streamed answer, first token to last. */
 export const REFINE_TIMEOUT_MS = 30_000;
+/** First line of every deterministic answer, so readers (and tests) can tell it apart. */
 export const TEMPLATE_ANSWER_PREFIX = "Template answer — AI unavailable.";
+
+/** Output ceiling for one answer; the prompt asks for at most 180 words. */
+const REFINE_MAX_TOKENS = 1024;
+/** Open tasks the model sees: enough context without sending the whole timeline. */
+const MAX_OPEN_TASKS = 15;
+/** Budget lines and next tasks the template answer lists. */
+const TEMPLATE_LIST_LENGTH = 3;
 
 /** The plan facts the model may quote, kept small: numbers come from the engine, never the model. */
 export function compactPlan(plan: PublicPlan) {
@@ -26,23 +35,27 @@ export function compactPlan(plan: PublicPlan) {
       constraints: input.constraints,
     },
     contingencyINR: plan.contingencyINR,
-    budget: plan.budget.map((a) => ({
-      category: a.category,
-      amountINR: a.amountINR,
-      percent: a.percent,
-      perGuestINR: a.perGuestINR,
-      locked: a.locked,
-      actualINR: a.actualINR,
+    budget: plan.budget.map((line) => ({
+      category: line.category,
+      amountINR: line.amountINR,
+      percent: line.percent,
+      perGuestINR: line.perGuestINR,
+      locked: line.locked,
+      actualINR: line.actualINR,
     })),
-    ideas: plan.ai.ideas.map((i) => ({ name: i.name, concept: i.concept })),
-    openTasks: nextActions(plan.timeline, 15).map((t) => ({
-      title: t.title,
-      due: t.due,
-      phase: t.phase,
-      overdue: t.overdue,
+    ideas: plan.ai.ideas.map((idea) => ({ name: idea.name, concept: idea.concept })),
+    openTasks: nextActions(plan.timeline, MAX_OPEN_TASKS).map((task) => ({
+      title: task.title,
+      due: task.due,
+      phase: task.phase,
+      overdue: task.overdue,
     })),
-    tasksDone: plan.timeline.filter((t) => t.done).length,
-    vendors: plan.vendors.map((v) => ({ category: v.category, bookBy: v.bookBy, done: v.done })),
+    tasksDone: plan.timeline.filter((task) => task.done).length,
+    vendors: plan.vendors.map((item) => ({
+      category: item.category,
+      bookBy: item.bookBy,
+      done: item.done,
+    })),
   };
 }
 
@@ -57,20 +70,25 @@ export function refinePrompt(plan: PublicPlan, question: string): string {
 
 /** Deterministic answer used when the model is unavailable: biggest budget lines and next tasks. */
 export function templateAnswer(plan: PublicPlan): string {
-  const top = [...plan.budget].sort((a, b) => b.amountINR - a.amountINR).slice(0, 3);
-  const lines = top.map((a) => `${CATEGORY_LABELS[a.category]} (${formatINR(a.amountINR)})`);
-  const next = nextActions(plan.timeline, 3).map((t) => `- ${t.title} — due ${formatDate(t.due)}`);
+  const biggest = [...plan.budget]
+    .sort((a, b) => b.amountINR - a.amountINR)
+    .slice(0, TEMPLATE_LIST_LENGTH)
+    .map((line) => `${CATEGORY_LABELS[line.category]} (${formatINR(line.amountINR)})`);
+  const nextUp = nextActions(plan.timeline, TEMPLATE_LIST_LENGTH).map(
+    (task) => `- ${task.title} — due ${formatDate(task.due)}`,
+  );
   return [
     TEMPLATE_ANSWER_PREFIX,
     "",
-    `Your biggest budget lines are ${lines.join(", ")}, with ${formatINR(plan.contingencyINR)} held back as contingency. To move money between categories, drag the budget sliders — the totals rebalance automatically.`,
+    `Your biggest budget lines are ${biggest.join(", ")}, with ${formatINR(plan.contingencyINR)} held back as contingency. To move money between categories, drag the budget sliders — the totals rebalance automatically.`,
     "",
-    next.length ? `Next up:\n${next.join("\n")}` : "Every task is ticked off — well done!",
+    nextUp.length > 0 ? `Next up:\n${nextUp.join("\n")}` : "Every task is ticked off — well done!",
     "",
     "Ask again in a minute for a personalised answer.",
   ].join("\n");
 }
 
+/** The model's answer as it streams in, skipping empty chunks. */
 async function* modelChunks(
   handle: AiHandle,
   prompt: string,
@@ -82,7 +100,7 @@ async function* modelChunks(
     config: {
       systemInstruction: SYSTEM_REFINE,
       thinkingConfig: thinkingFor(handle.model),
-      maxOutputTokens: 1024,
+      maxOutputTokens: REFINE_MAX_TOKENS,
       abortSignal: signal,
     },
   });
@@ -92,6 +110,7 @@ async function* modelChunks(
   }
 }
 
+/** The model's answer, falling back to (or finishing with) the template answer on failure. */
 async function* answerChunks(
   plan: PublicPlan,
   question: string,

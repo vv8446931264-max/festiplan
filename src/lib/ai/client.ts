@@ -26,6 +26,7 @@ export type AiModels = {
   generateContentStream(params: GenerateContentParameters): Promise<AsyncIterable<AiResponse>>;
 };
 
+/** Which Gemini endpoint a handle talks to: Vertex AI (production, ADC) or the Gemini API (dev). */
 export type AiBackend = "vertex" | "gemini-api";
 
 /** A ready-to-use Gemini client plus which backend and model it talks to. */
@@ -33,25 +34,30 @@ export type AiHandle = { client: { models: AiModels }; backend: AiBackend; model
 
 type Env = Record<string, string | undefined>;
 
+/** The model used when `GEMINI_MODEL` is not set. */
 export const DEFAULT_MODEL = "gemini-3.5-flash";
 
-let cached: { signature: string; handle: AiHandle | null } | null = null;
+/** Smallest thinking budget Gemini 2.5 Pro accepts (it cannot switch thinking off). */
+const PRO_MIN_THINKING_BUDGET = 128;
 
-const clean = (v: string | undefined): string | undefined => {
-  const t = v?.trim();
-  return t ? t : undefined;
-};
+let cachedHandle: { signature: string; handle: AiHandle | null } | null = null;
 
-function build(env: Env, model: string): AiHandle | null {
-  if (clean(env.GOOGLE_GENAI_USE_VERTEXAI)?.toLowerCase() === "true") {
+/** The trimmed value, or undefined when the variable is unset or blank. */
+function setting(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed === "" ? undefined : trimmed;
+}
+
+function createHandle(env: Env, model: string): AiHandle | null {
+  if (setting(env.GOOGLE_GENAI_USE_VERTEXAI)?.toLowerCase() === "true") {
     const client = new GoogleGenAI({
       vertexai: true,
-      project: clean(env.GOOGLE_CLOUD_PROJECT),
-      location: clean(env.GOOGLE_CLOUD_LOCATION) ?? "global",
+      project: setting(env.GOOGLE_CLOUD_PROJECT),
+      location: setting(env.GOOGLE_CLOUD_LOCATION) ?? "global",
     });
     return { client, backend: "vertex", model };
   }
-  const apiKey = clean(env.GEMINI_API_KEY);
+  const apiKey = setting(env.GEMINI_API_KEY);
   if (!apiKey) return null;
   return { client: new GoogleGenAI({ apiKey }), backend: "gemini-api", model };
 }
@@ -62,7 +68,7 @@ function build(env: Env, model: string): AiHandle | null {
  * else `GEMINI_API_KEY` → Gemini API; else null. Cached per process (per configuration).
  */
 export function getAi(env: Env = process.env): AiHandle | null {
-  const model = clean(env.GEMINI_MODEL) ?? DEFAULT_MODEL;
+  const model = setting(env.GEMINI_MODEL) ?? DEFAULT_MODEL;
   const signature = JSON.stringify([
     env.GOOGLE_GENAI_USE_VERTEXAI,
     env.GOOGLE_CLOUD_PROJECT,
@@ -70,14 +76,15 @@ export function getAi(env: Env = process.env): AiHandle | null {
     env.GEMINI_API_KEY,
     model,
   ]);
-  if (cached?.signature === signature) return cached.handle;
+  if (cachedHandle?.signature === signature) return cachedHandle.handle;
   let handle: AiHandle | null;
   try {
-    handle = build(env, model);
+    handle = createHandle(env, model);
   } catch {
+    // A misconfigured client must not take the app down: fall back to template mode.
     handle = null;
   }
-  cached = { signature, handle };
+  cachedHandle = { signature, handle };
   return handle;
 }
 
@@ -91,7 +98,7 @@ export function thinkingFor(model: string): ThinkingConfig | undefined {
   const major = Number(match[1]);
   if (major >= 3) return { thinkingLevel: ThinkingLevel.LOW };
   if (major === 2 && match[2] === "5") {
-    return { thinkingBudget: model.includes("pro") ? 128 : 0 };
+    return { thinkingBudget: model.includes("pro") ? PRO_MIN_THINKING_BUDGET : 0 };
   }
   return undefined;
 }
