@@ -31,18 +31,19 @@ vi.mock("@google-cloud/firestore", () => {
   });
   class DocumentReference {
     constructor(readonly path: string) {}
-    async create(data: Data): Promise<void> {
-      if (sdk.docs.has(this.path)) throw new Error("6 ALREADY_EXISTS");
+    create(data: Data): Promise<void> {
+      if (sdk.docs.has(this.path)) return Promise.reject(new Error("6 ALREADY_EXISTS"));
       sdk.docs.set(this.path, { ...data });
+      return Promise.resolve();
     }
-    async get() {
-      return snapshot(this.path);
+    get() {
+      return Promise.resolve(snapshot(this.path));
     }
   }
   class Transaction {
-    async get(ref: DocumentReference) {
+    get(ref: DocumentReference) {
       sdk.txReads.push(ref.path);
-      return snapshot(ref.path);
+      return Promise.resolve(snapshot(ref.path));
     }
     set(ref: DocumentReference, data: Data): void {
       sdk.txWrites.push(ref.path);
@@ -95,7 +96,7 @@ describe("FirestoreStore.mutate inside runTransaction", () => {
   it("reads, decides and writes within one transaction", async () => {
     const store = new FirestoreStore(() => loadFirestore({}));
     const { plan, editKey } = await createPlan(sampleInput(), TODAY, { store, ai: null });
-    const task = plan.timeline[0];
+    const task = plan.timeline.at(0);
     if (!task) throw new Error("fixture plan has no tasks");
     const res = await patchPlan(plan.id, editKey, { tasks: [{ id: task.id, done: true }] }, TODAY, {
       store,
@@ -113,7 +114,7 @@ describe("FirestoreStore.mutate inside runTransaction", () => {
     const store = new FirestoreStore(() => loadFirestore({}));
     const { plan, editKey } = await createPlan(sampleInput(), TODAY, { store, ai: null });
     const before = structuredClone(sdk.docs.get(`plans/${plan.id}`));
-    const tick = { tasks: [{ id: plan.timeline[0]?.id ?? "x", done: true }] };
+    const tick = { tasks: [{ id: plan.timeline.at(0)?.id ?? "x", done: true }] };
     expect(await patchPlan(plan.id, "wrong-key", tick, TODAY, { store })).toMatchObject({
       ok: false,
       status: 403,

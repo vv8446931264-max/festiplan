@@ -1,37 +1,25 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { BUDGET_CATEGORIES } from "@/lib/contracts";
+import { BUDGET_CATEGORIES } from "@/lib/contracts/constants";
 import type { Allocation, BudgetWeight } from "@/lib/contracts";
-import {
-  allocateBudget,
-  applyEdits,
-  largestRemainder,
-  rebalance,
-  withDerived,
-} from "@/lib/engine/budget";
-
-/** Tiny seeded PRNG so failures are reproducible. */
-function mulberry32(seed: number): () => number {
-  let a = seed;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+import { allocateBudget, withDerived } from "@/lib/engine/budget";
+import { applyEdits, rebalance } from "@/lib/engine/budget-edit";
+import { largestRemainder } from "@/lib/engine/largest-remainder";
+import { amountsOf, sum } from "./builders";
+import { int, mulberry32 } from "./prng";
 
 const CASES = 500;
-const sum = (xs: number[]): number => xs.reduce((a, b) => a + b, 0);
-const int = (rand: () => number, lo: number, hi: number): number =>
-  lo + Math.floor(rand() * (hi - lo + 1));
-const isWhole = (n: number): boolean => Number.isInteger(n) && n >= 0;
+const isWhole = (amount: number): boolean => Number.isInteger(amount) && amount >= 0;
 
 function randomWeights(rand: () => number): BudgetWeight[] {
-  const cats = [...BUDGET_CATEGORIES]
+  const categories = [...BUDGET_CATEGORIES]
     .sort(() => rand() - 0.5)
     .slice(0, int(rand, 4, BUDGET_CATEGORIES.length));
-  return cats.map((category) => ({ category, weight: int(rand, 1, 100), rationale: category }));
+  return categories.map((category) => ({
+    category,
+    weight: int(rand, 1, 100),
+    rationale: category,
+  }));
 }
 
 function randomPlan(rand: () => number): {
@@ -54,19 +42,20 @@ function randomPlan(rand: () => number): {
 describe("largestRemainder (property)", () => {
   it("always sums exactly to the total with whole, non-negative parts, within 1 of exact", () => {
     const rand = mulberry32(1);
-    for (let n = 0; n < CASES; n++) {
+    for (let run = 0; run < CASES; run++) {
       const total = rand() < 0.2 ? int(rand, 0, 20) : int(rand, 0, 500_000_000);
       const big = rand() < 0.3;
       const weights = Array.from({ length: int(rand, 1, 12) }, () =>
         rand() < 0.15 ? 0 : big ? int(rand, 0, 500_000_000) : int(rand, 0, 1_000),
       );
       const out = largestRemainder(total, weights);
-      const all = sum(weights);
+      const totalWeight = sum(weights);
       expect(out).toHaveLength(weights.length);
       expect(sum(out)).toBe(total);
       expect(out.every(isWhole)).toBe(true);
-      out.forEach((part, i) => {
-        const exact = all > 0 ? (total * weights[i]) / all : total / weights.length;
+      out.forEach((part, index) => {
+        const exact =
+          totalWeight > 0 ? (total * weights[index]) / totalWeight : total / weights.length;
         expect(Math.abs(part - exact)).toBeLessThan(1 + 1e-6);
       });
     }
@@ -76,13 +65,14 @@ describe("largestRemainder (property)", () => {
 describe("allocateBudget (property)", () => {
   it("allocations plus contingency equal the total exactly, sorted, unique, non-negative", () => {
     const rand = mulberry32(2);
-    for (let n = 0; n < CASES; n++) {
+    for (let run = 0; run < CASES; run++) {
       const { total, contingency, lines } = randomPlan(rand);
-      expect(sum(lines.map((a) => a.amountINR)) + contingency).toBe(total);
-      expect(lines.every((a) => isWhole(a.amountINR))).toBe(true);
-      expect(new Set(lines.map((a) => a.category)).size).toBe(lines.length);
-      for (let i = 1; i < lines.length; i++)
-        expect(lines[i - 1].amountINR).toBeGreaterThanOrEqual(lines[i].amountINR);
+      expect(sum(amountsOf(lines)) + contingency).toBe(total);
+      expect(lines.every((line) => isWhole(line.amountINR))).toBe(true);
+      expect(new Set(lines.map((line) => line.category)).size).toBe(lines.length);
+      for (let index = 1; index < lines.length; index++) {
+        expect(lines[index - 1].amountINR).toBeGreaterThanOrEqual(lines[index].amountINR);
+      }
     }
   });
 });
@@ -90,27 +80,26 @@ describe("allocateBudget (property)", () => {
 describe("rebalance (property)", () => {
   it("never drifts, never goes negative, never moves a locked line, keeps order", () => {
     const rand = mulberry32(3);
-    for (let n = 0; n < CASES; n++) {
+    for (let run = 0; run < CASES; run++) {
       const { total, guests, lines } = randomPlan(rand);
-      const locked = lines.map((a) => (rand() < 0.3 ? { ...a, locked: true } : a));
+      const locked = lines.map((line) => (rand() < 0.3 ? { ...line, locked: true } : line));
       const target = locked[int(rand, 0, locked.length - 1)];
       const asked = int(rand, -500, Math.floor(total * 1.5));
       const out = rebalance(locked, target.category, asked, { totalINR: total, guests });
 
-      expect(sum(out.map((a) => a.amountINR))).toBe(sum(locked.map((a) => a.amountINR)));
-      expect(out.every((a) => isWhole(a.amountINR))).toBe(true);
-      expect(out.map((a) => a.category)).toEqual(locked.map((a) => a.category));
-      locked.forEach((before, i) => {
-        if (before.locked && before.category !== target.category)
-          expect(out[i].amountINR).toBe(before.amountINR);
+      expect(sum(amountsOf(out))).toBe(sum(amountsOf(locked)));
+      expect(out.every((line) => isWhole(line.amountINR))).toBe(true);
+      expect(out.map((line) => line.category)).toEqual(locked.map((line) => line.category));
+      locked.forEach((before, index) => {
+        if (before.locked && before.category !== target.category) {
+          expect(out[index].amountINR).toBe(before.amountINR);
+        }
       });
 
-      const lockedOthers = sum(
-        locked.filter((a) => a.locked && a.category !== target.category).map((a) => a.amountINR),
-      );
-      const room = sum(locked.map((a) => a.amountINR)) - lockedOthers;
-      const hasFree = locked.some((a) => !a.locked && a.category !== target.category);
-      const result = out.find((a) => a.category === target.category)?.amountINR;
+      const others = locked.filter((line) => line.category !== target.category);
+      const room = sum(amountsOf(locked)) - sum(amountsOf(others.filter((line) => line.locked)));
+      const hasFree = others.some((line) => !line.locked);
+      const result = out.find((line) => line.category === target.category)?.amountINR;
       expect(result).toBe(hasFree ? Math.min(Math.max(asked, 0), room) : room);
       expect(out).toEqual(withDerived(out, total, guests));
     }
@@ -120,24 +109,25 @@ describe("rebalance (property)", () => {
 describe("applyEdits (property)", () => {
   it("accepts any redistribution with the same total and rejects any drift", () => {
     const rand = mulberry32(4);
-    for (let n = 0; n < CASES; n++) {
+    for (let run = 0; run < CASES; run++) {
       const { total, guests, lines } = randomPlan(rand);
-      const ctx = { totalINR: total, guests };
-      const current = sum(lines.map((a) => a.amountINR));
+      const context = { totalINR: total, guests };
       const shares = largestRemainder(
-        current,
+        sum(amountsOf(lines)),
         lines.map(() => int(rand, 0, 100)),
       );
-      const edits = lines.map((a, i) => ({
-        category: a.category,
-        amountINR: shares[i],
+      const edits = lines.map((line, index) => ({
+        category: line.category,
+        amountINR: shares[index],
         locked: rand() < 0.5,
       }));
-      const out = applyEdits(lines, edits, ctx);
-      expect(out?.map((a) => a.amountINR)).toEqual(shares);
-      expect(out?.map((a) => a.locked)).toEqual(edits.map((e) => e.locked));
-      const drift = edits.map((e, i) => (i === 0 ? { ...e, amountINR: e.amountINR + 1 } : e));
-      expect(applyEdits(lines, drift, ctx)).toBeNull();
+      const out = applyEdits(lines, edits, context);
+      expect(out?.map((line) => line.amountINR)).toEqual(shares);
+      expect(out?.map((line) => line.locked)).toEqual(edits.map((edit) => edit.locked));
+      const drift = edits.map((edit, index) =>
+        index === 0 ? { ...edit, amountINR: edit.amountINR + 1 } : edit,
+      );
+      expect(applyEdits(lines, drift, context)).toBeNull();
     }
   });
 });

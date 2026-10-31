@@ -1,9 +1,15 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import type { ScheduledTask } from "@/lib/contracts";
-import { compareByDue, isOverdue, refreshStatus, setTaskDone } from "@/lib/engine/timeline";
-
-const TODAY = "2026-10-24";
+import { addDays } from "@/lib/engine/dates";
+import {
+  compareByDue,
+  isOverdue,
+  phaseFor,
+  refreshStatus,
+  setTaskDone,
+} from "@/lib/engine/timeline";
+import { EVENT, TODAY } from "./builders";
 
 describe("isOverdue / compareByDue", () => {
   it("is overdue only when not done and due before today", () => {
@@ -75,5 +81,18 @@ describe("refreshStatus / setTaskDone", () => {
 
   it("ignores an unknown id", () => {
     expect(setTaskDone(timeline, "nope", true)).toEqual(timeline);
+  });
+});
+
+describe("phaseFor", () => {
+  const phase = (daysBefore: number) => phaseFor(addDays(EVENT, -daysBefore), EVENT);
+
+  it("buckets by days before the event, inclusive at the upper edge", () => {
+    expect([-3, -1, 0].map(phase)).toEqual(["day-of", "day-of", "day-of"]);
+    expect([1, 7].map(phase)).toEqual(["final-week", "final-week"]);
+    expect([8, 28].map(phase)).toEqual(["2-4w", "2-4w"]);
+    expect([29, 91].map(phase)).toEqual(["1-3m", "1-3m"]);
+    expect([92, 182].map(phase)).toEqual(["3-6m", "3-6m"]);
+    expect([183, 1000].map(phase)).toEqual(["6m+", "6m+"]);
   });
 });

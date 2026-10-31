@@ -1,4 +1,4 @@
-import { BUDGET_CATEGORIES, PHASES } from "@/lib/contracts/constants";
+import { PHASES } from "@/lib/contracts/constants";
 import type {
   BudgetCategory,
   Phase,
@@ -8,7 +8,13 @@ import type {
 } from "@/lib/contracts";
 import { compressedLeadDays, scheduleCompression } from "./compression";
 import { addDays, maxDate } from "./dates";
+import { budgetCategoryRank, compareAscending } from "./shared";
 import { compareByDue, isOverdue } from "./timeline";
+
+/** Earliest book-by date first; on the same day, the canonical category order. */
+const byBookByThenCategory = (a: VendorItem, b: VendorItem): number =>
+  compareAscending(a.bookBy, b.bookBy) ||
+  budgetCategoryRank(a.category) - budgetCategoryRank(b.category);
 
 /**
  * Turns AI vendor guidance into a dated checklist. `bookBy = max(event − bookByWeeks·7·f, today)`
@@ -25,27 +31,25 @@ export function scheduleVendors(
   eventDate: string,
   today: string,
 ): VendorItem[] {
-  const rank = (c: BudgetCategory): number => BUDGET_CATEGORIES.indexOf(c);
   const { factor } = scheduleCompression(
-    vendors.map((v) => ({ leadWeeks: v.bookByWeeks })),
+    vendors.map((guide) => ({ leadWeeks: guide.bookByWeeks })),
     eventDate,
     today,
   );
   return vendors
-    .map((v) => {
-      const bookBy = maxDate(addDays(eventDate, -compressedLeadDays(v.bookByWeeks, factor)), today);
+    .map((guide): VendorItem => {
+      const leadDays = compressedLeadDays(guide.bookByWeeks, factor);
+      const bookBy = maxDate(addDays(eventDate, -leadDays), today);
       return {
-        category: v.category,
+        category: guide.category,
         bookBy,
-        questions: [...v.questions],
-        redFlags: [...v.redFlags],
+        questions: [...guide.questions],
+        redFlags: [...guide.redFlags],
         done: false,
         overdue: isOverdue(false, bookBy, today),
       };
     })
-    .sort((a, b) =>
-      a.bookBy < b.bookBy ? -1 : a.bookBy > b.bookBy ? 1 : rank(a.category) - rank(b.category),
-    );
+    .sort(byBookByThenCategory);
 }
 
 /**
@@ -54,7 +58,7 @@ export function scheduleVendors(
  * @param today ISO "today" (injected).
  */
 export function refreshVendorStatus(items: VendorItem[], today: string): VendorItem[] {
-  return items.map((v) => ({ ...v, overdue: isOverdue(v.done, v.bookBy, today) }));
+  return items.map((item) => ({ ...item, overdue: isOverdue(item.done, item.bookBy, today) }));
 }
 
 /**
@@ -69,8 +73,8 @@ export function setVendorDone(
   category: BudgetCategory,
   done: boolean,
 ): VendorItem[] {
-  return items.map((v) =>
-    v.category === category ? { ...v, done, overdue: !done && v.overdue } : v,
+  return items.map((item) =>
+    item.category === category ? { ...item, done, overdue: !done && item.overdue } : item,
   );
 }
 
@@ -84,7 +88,7 @@ export function progress(items: { done: boolean }[]): {
   total: number;
   percent: number;
 } {
-  const done = items.filter((i) => i.done).length;
+  const done = items.filter((item) => item.done).length;
   const total = items.length;
   return { done, total, percent: total === 0 ? 0 : Math.round((done / total) * 100) };
 }
@@ -92,13 +96,13 @@ export function progress(items: { done: boolean }[]): {
 /**
  * The next tasks to work on: not done, by due date then start date (ties keep timeline order).
  * @param timeline Scheduled tasks.
- * @param n How many to return.
+ * @param limit How many to return.
  */
-export function nextActions(timeline: ScheduledTask[], n = 3): ScheduledTask[] {
+export function nextActions(timeline: ScheduledTask[], limit = 3): ScheduledTask[] {
   return timeline
-    .filter((t) => !t.done)
+    .filter((task) => !task.done)
     .sort(compareByDue)
-    .slice(0, Math.max(0, n));
+    .slice(0, Math.max(0, limit));
 }
 
 /**
@@ -110,6 +114,6 @@ export function groupByPhase(
 ): { phase: Phase; tasks: ScheduledTask[] }[] {
   return PHASES.map((phase) => ({
     phase,
-    tasks: timeline.filter((t) => t.phase === phase),
-  })).filter((g) => g.tasks.length > 0);
+    tasks: timeline.filter((task) => task.phase === phase),
+  })).filter((group) => group.tasks.length > 0);
 }

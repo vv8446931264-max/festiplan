@@ -1,16 +1,16 @@
 import type { AiTask, Phase, ScheduledTask } from "@/lib/contracts";
 import { compressedLeadDays, scheduleCompression } from "./compression";
 import { addDays, diffDays, maxDate, minDate } from "./dates";
+import { DAYS_PER_WEEK, compareAscending } from "./shared";
 
-const PHASE_LIMITS: readonly (readonly [number, Phase])[] = [
+/** Phase for a due date, by the most days left before the event that still belong to it. */
+const PHASE_BY_MAX_DAYS_LEFT: readonly (readonly [number, Phase])[] = [
   [0, "day-of"],
   [7, "final-week"],
   [28, "2-4w"],
   [91, "1-3m"],
   [182, "3-6m"],
 ];
-
-const cmp = (a: string | number, b: string | number): number => (a < b ? -1 : a > b ? 1 : 0);
 
 /**
  * Whether something due on `due` is late: not done and due before `today`.
@@ -31,7 +31,7 @@ export function compareByDue(
   a: { due: string; start: string },
   b: { due: string; start: string },
 ): number {
-  return cmp(a.due, b.due) || cmp(a.start, b.start);
+  return compareAscending(a.due, b.due) || compareAscending(a.start, b.start);
 }
 
 /**
@@ -41,39 +41,40 @@ export function compareByDue(
  * @param eventDate ISO event date.
  */
 export function phaseFor(due: string, eventDate: string): Phase {
-  const days = diffDays(due, eventDate);
-  const hit = PHASE_LIMITS.find(([max]) => days <= max);
-  return hit ? hit[1] : "6m+";
+  const daysLeft = diffDays(due, eventDate);
+  const bucket = PHASE_BY_MAX_DAYS_LEFT.find(([maxDaysLeft]) => daysLeft <= maxDaysLeft);
+  return bucket ? bucket[1] : "6m+";
 }
 
-const firstIndexById = (tasks: AiTask[]): Map<string, number> => {
-  const index = new Map<string, number>();
-  tasks.forEach((t, i) => {
-    if (!index.has(t.id)) index.set(t.id, i);
+/** Index of each id's first occurrence (a repeated id refers to the first task with it). */
+function firstIndexById(tasks: AiTask[]): Map<string, number> {
+  const indexById = new Map<string, number>();
+  tasks.forEach((task, index) => {
+    if (!indexById.has(task.id)) indexById.set(task.id, index);
   });
-  return index;
-};
+  return indexById;
+}
 
 /** Kahn's algorithm over indices; ready tasks are taken lowest original index first. */
 function topoOrder(tasks: AiTask[]): number[] | null {
-  const index = firstIndexById(tasks);
-  const indegree = tasks.map(() => 0);
+  const indexById = firstIndexById(tasks);
+  const inDegree = tasks.map(() => 0);
   const dependents: number[][] = tasks.map(() => []);
-  tasks.forEach((task, j) => {
-    for (const dep of new Set(task.dependsOn)) {
-      const i = index.get(dep);
-      if (i === undefined) continue;
-      dependents[i].push(j);
-      indegree[j] += 1;
+  tasks.forEach((task, taskIndex) => {
+    for (const prerequisiteId of new Set(task.dependsOn)) {
+      const prerequisite = indexById.get(prerequisiteId);
+      if (prerequisite === undefined) continue;
+      dependents[prerequisite].push(taskIndex);
+      inDegree[taskIndex] += 1;
     }
   });
-  const ready = indegree.flatMap((d, i) => (d === 0 ? [i] : []));
+  const ready = inDegree.flatMap((degree, index) => (degree === 0 ? [index] : []));
   const order: number[] = [];
-  for (let i = ready.shift(); i !== undefined; i = ready.shift()) {
-    order.push(i);
-    for (const j of dependents[i]) {
-      indegree[j] -= 1;
-      if (indegree[j] === 0) ready.push(j);
+  for (let next = ready.shift(); next !== undefined; next = ready.shift()) {
+    order.push(next);
+    for (const dependent of dependents[next]) {
+      inDegree[dependent] -= 1;
+      if (inDegree[dependent] === 0) ready.push(dependent);
     }
     ready.sort((a, b) => a - b);
   }
@@ -88,16 +89,17 @@ function topoOrder(tasks: AiTask[]): number[] | null {
  */
 export function topoSort(tasks: AiTask[]): AiTask[] | null {
   const order = topoOrder(tasks);
-  return order === null ? null : order.map((i) => tasks[i]);
+  return order === null ? null : order.map((index) => tasks[index]);
 }
 
-type Slot = { index: number; task: ScheduledTask };
+/** The schedule every task is placed in: event, today and the compression factor. */
 type Frame = { eventDate: string; today: string; factor: number };
 
-function placeTask(task: AiTask, deps: number[], dues: string[], frame: Frame): ScheduledTask {
+/** Dates one task, given the due dates of its prerequisites (already placed). */
+function placeTask(task: AiTask, prerequisiteDues: string[], frame: Frame): ScheduledTask {
   const { eventDate, today, factor } = frame;
   const idealStart = addDays(eventDate, -compressedLeadDays(task.leadWeeks, factor));
-  const start = deps.reduce((s, d) => maxDate(s, dues[d]), maxDate(idealStart, today));
+  const start = prerequisiteDues.reduce(maxDate, maxDate(idealStart, today));
   const duration = Math.max(1, Math.round(task.durationDays * factor));
   const latest = task.leadWeeks > 0 ? addDays(eventDate, -1) : eventDate;
   const due = maxDate(start, minDate(addDays(start, duration), latest));
@@ -110,7 +112,7 @@ function placeTask(task: AiTask, deps: number[], dues: string[], frame: Frame): 
     phase: phaseFor(due, eventDate),
     done: false,
     overdue: isOverdue(false, due, today),
-    crunch: addDays(eventDate, -task.leadWeeks * 7) < today,
+    crunch: addDays(eventDate, -task.leadWeeks * DAYS_PER_WEEK) < today,
   };
 }
 
@@ -134,22 +136,24 @@ export function scheduleTimeline(
   today: string,
 ): ScheduledTask[] {
   const order = topoOrder(tasks);
-  const index = firstIndexById(tasks);
-  const frame: Frame = {
-    eventDate,
-    today,
-    factor: scheduleCompression(tasks, eventDate, today).factor,
-  };
-  const dues: string[] = [];
-  const slots: Slot[] = [];
-  for (const i of order ?? tasks.map((_, k) => k)) {
-    const deps = order === null ? [] : tasks[i].dependsOn.flatMap((id) => index.get(id) ?? []);
-    const task = placeTask(tasks[i], deps, dues, frame);
-    dues[i] = task.due;
-    slots.push({ index: i, task });
+  const indexById = firstIndexById(tasks);
+  const { factor } = scheduleCompression(tasks, eventDate, today);
+  const frame: Frame = { eventDate, today, factor };
+  const dueByIndex: string[] = [];
+  const placed: { index: number; task: ScheduledTask }[] = [];
+  for (const index of order ?? tasks.map((_, position) => position)) {
+    const prerequisites =
+      order === null ? [] : tasks[index].dependsOn.flatMap((id) => indexById.get(id) ?? []);
+    const task = placeTask(
+      tasks[index],
+      prerequisites.map((prerequisite) => dueByIndex[prerequisite]),
+      frame,
+    );
+    dueByIndex[index] = task.due;
+    placed.push({ index, task });
   }
-  slots.sort((a, b) => compareByDue(a.task, b.task) || a.index - b.index);
-  return slots.map((s) => s.task);
+  placed.sort((a, b) => compareByDue(a.task, b.task) || a.index - b.index);
+  return placed.map((entry) => entry.task);
 }
 
 /**
@@ -158,7 +162,7 @@ export function scheduleTimeline(
  * @param today ISO "today" (injected).
  */
 export function refreshStatus(timeline: ScheduledTask[], today: string): ScheduledTask[] {
-  return timeline.map((t) => ({ ...t, overdue: isOverdue(t.done, t.due, today) }));
+  return timeline.map((task) => ({ ...task, overdue: isOverdue(task.done, task.due, today) }));
 }
 
 /**
@@ -169,5 +173,7 @@ export function refreshStatus(timeline: ScheduledTask[], today: string): Schedul
  * @param done New completion state.
  */
 export function setTaskDone(timeline: ScheduledTask[], id: string, done: boolean): ScheduledTask[] {
-  return timeline.map((t) => (t.id === id ? { ...t, done, overdue: !done && t.overdue } : t));
+  return timeline.map((task) =>
+    task.id === id ? { ...task, done, overdue: !done && task.overdue } : task,
+  );
 }

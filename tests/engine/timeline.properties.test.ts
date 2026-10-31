@@ -4,9 +4,8 @@ import type { AiTask, ScheduledTask } from "@/lib/contracts";
 import { compressedLeadDays, scheduleCompression } from "@/lib/engine/compression";
 import { addDays, diffDays, maxDate, minDate } from "@/lib/engine/dates";
 import { compareByDue, phaseFor, scheduleTimeline, topoSort } from "@/lib/engine/timeline";
+import { TODAY } from "./builders";
 import { int, mulberry32 } from "./prng";
-
-const TODAY = "2026-10-24";
 
 /** Mix of near events (heavy compression) and far ones (none), always at least a day away. */
 const eventAfter = (rand: () => number): string =>
@@ -44,9 +43,9 @@ function dependsOnDayOf(tasks: AiTask[]): Set<string> {
   const tainted = (id: string): boolean => {
     const cached = memo.get(id);
     if (cached !== undefined) return cached;
-    const t = byId.get(id);
+    const task = byId.get(id);
     const hit =
-      t !== undefined && t.dependsOn.some((d) => byId.get(d)?.leadWeeks === 0 || tainted(d));
+      task?.dependsOn.some((dep) => byId.get(dep)?.leadWeeks === 0 || tainted(dep)) ?? false;
     memo.set(id, hit);
     return hit;
   };

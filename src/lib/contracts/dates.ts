@@ -1,9 +1,9 @@
-import { LIMITS as L } from "./constants";
+import { LIMITS } from "./constants";
 
 /** The latest allowed event date: `maxYearsAhead` calendar years after `today` (ISO). */
 export function maxEventDate(today: string): string {
   const limit = new Date(`${today}T00:00:00Z`);
-  limit.setUTCFullYear(limit.getUTCFullYear() + L.maxYearsAhead);
+  limit.setUTCFullYear(limit.getUTCFullYear() + LIMITS.maxYearsAhead);
   return limit.toISOString().slice(0, 10);
 }
 
@@ -18,6 +18,6 @@ export function checkEventDate(eventDate: string, today: string): string | null 
     return "That date doesn't exist — pick one from the calendar.";
   }
   if (event <= now) return "Pick a date from tomorrow onwards.";
-  if (eventDate > maxEventDate(today)) return `Pick a date within ${L.maxYearsAhead} years.`;
+  if (eventDate > maxEventDate(today)) return `Pick a date within ${LIMITS.maxYearsAhead} years.`;
   return null;
 }

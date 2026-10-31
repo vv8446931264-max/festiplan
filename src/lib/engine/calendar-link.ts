@@ -1,16 +1,18 @@
 import { addDays } from "./dates";
+import { toBasicDate } from "./shared";
 
 /** Fields of an all-day Google Calendar "TEMPLATE" link. Dates are ISO `YYYY-MM-DD`. */
 export type CalendarLinkInput = {
   title: string;
   date: string;
-  /** Exclusive end date, as Google expects (the day after the last day). Defaults to the day after `date`. */
+  /**
+   * Exclusive end date, as Google expects (the day after the last day).
+   * Defaults to the day after `date`.
+   */
   endDate?: string;
   details?: string;
   location?: string;
 };
-
-const compact = (iso: string): string => iso.replaceAll("-", "");
 
 /**
  * Builds a Google Calendar "add event" URL for an all-day entry.
@@ -24,7 +26,7 @@ export function googleCalendarUrl(input: CalendarLinkInput): string {
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: input.title,
-    dates: `${compact(input.date)}/${compact(end)}`,
+    dates: `${toBasicDate(input.date)}/${toBasicDate(end)}`,
   });
   if (input.details !== undefined) params.set("details", input.details);
   if (input.location !== undefined) params.set("location", input.location);

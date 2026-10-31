@@ -10,7 +10,7 @@ export type DocRefLike = {
 /** One transactional read-modify-write of a raw document (`write` null = no write). */
 export type Transact = <T>(
   id: string,
-  fn: (data: Record<string, unknown> | undefined) => {
+  decide: (data: Record<string, unknown> | undefined) => {
     write: Record<string, unknown> | null;
     result: T;
   },
@@ -23,7 +23,16 @@ export type FirestoreBinding = {
   toTimestamp(date: Date): unknown;
 };
 
+/** Firestore collection that holds one document per plan. */
 export const PLANS_COLLECTION = "plans";
+
+const DEFAULT_DATABASE_ID = "festiplan";
+
+/** `FIRESTORE_DATABASE`, or the default database when it is unset or blank. */
+function databaseId(env: Record<string, string | undefined>): string {
+  const configured = env.FIRESTORE_DATABASE?.trim() ?? "";
+  return configured.length > 0 ? configured : DEFAULT_DATABASE_ID;
+}
 
 /**
  * Loads `@google-cloud/firestore` lazily (memory mode never imports it) and binds the
@@ -34,26 +43,29 @@ export async function loadFirestore(
 ): Promise<FirestoreBinding> {
   const { Firestore, Timestamp } = await import("@google-cloud/firestore");
   const db = new Firestore({
-    databaseId: env.FIRESTORE_DATABASE?.trim() || "festiplan",
+    databaseId: databaseId(env),
     ignoreUndefinedProperties: true,
   });
   const plans = db.collection(PLANS_COLLECTION);
   return {
     doc: (id) => plans.doc(id),
-    transact: (id, fn) =>
-      db.runTransaction(async (tx) => {
+    transact: (id, decide) =>
+      db.runTransaction(async (transaction) => {
         const ref = plans.doc(id);
-        const snap = await tx.get(ref);
-        const { write, result } = fn(snap.exists ? snap.data() : undefined);
-        if (write) tx.set(ref, write);
+        const snapshot = await transaction.get(ref);
+        const { write, result } = decide(snapshot.exists ? snapshot.data() : undefined);
+        if (write) transaction.set(ref, write);
         return result;
       }),
     toTimestamp: (date) => Timestamp.fromDate(date),
   };
 }
 
-const hasToDate = (v: unknown): v is { toDate(): Date } =>
-  typeof v === "object" && v !== null && "toDate" in v && typeof v.toDate === "function";
+const hasToDate = (value: unknown): value is { toDate(): Date } =>
+  typeof value === "object" &&
+  value !== null &&
+  "toDate" in value &&
+  typeof value.toDate === "function";
 
 /** Converts a stored `expireAt` (Firestore Timestamp, Date or ISO string) back to a Date. */
 export function toDate(value: unknown): Date {
@@ -65,10 +77,12 @@ export function toDate(value: unknown): Date {
 /** Firestore document → `Plan`, or null when the document is not a plan we wrote. */
 export function fromDoc(data: Record<string, unknown> | undefined): Plan | null {
   if (!data || typeof data.id !== "string" || typeof data.editKeyHash !== "string") return null;
+  // Only this adapter writes plan documents, so one carrying our id and key hash is a Plan.
   return { ...data, expireAt: toDate(data.expireAt) } as Plan;
 }
 
-const live = (plan: Plan | null): Plan | null =>
+/** The plan unless it is past `expireAt` (Firestore TTL deletion is not instant). */
+const unexpired = (plan: Plan | null): Plan | null =>
   plan && plan.expireAt.getTime() > Date.now() ? plan : null;
 
 /**
@@ -89,29 +103,29 @@ export class FirestoreStore implements PlanStore {
     return this.binding;
   }
 
-  private toDoc(b: FirestoreBinding, plan: Plan): Record<string, unknown> {
-    return { ...plan, expireAt: b.toTimestamp(plan.expireAt) };
+  private toDoc(binding: FirestoreBinding, plan: Plan): Record<string, unknown> {
+    return { ...plan, expireAt: binding.toTimestamp(plan.expireAt) };
   }
 
   /** Creates `plans/{id}`; rejects if it already exists. */
   async create(plan: Plan): Promise<void> {
-    const b = await this.bind();
-    await b.doc(plan.id).create(this.toDoc(b, plan));
+    const binding = await this.bind();
+    await binding.doc(plan.id).create(this.toDoc(binding, plan));
   }
 
   /** Reads `plans/{id}`; null when missing or past `expireAt` (TTL deletion is not instant). */
   async get(id: string): Promise<Plan | null> {
-    const b = await this.bind();
-    const snap = await b.doc(id).get();
-    return snap.exists ? live(fromDoc(snap.data())) : null;
+    const binding = await this.bind();
+    const snapshot = await binding.doc(id).get();
+    return snapshot.exists ? unexpired(fromDoc(snapshot.data())) : null;
   }
 
   /** Read-modify-write inside a Firestore transaction (retried by the SDK on contention). */
-  async mutate<T>(id: string, fn: Mutator<T>): Promise<T> {
-    const b = await this.bind();
-    return b.transact(id, (data) => {
-      const { next, result } = fn(live(fromDoc(data)));
-      return { write: next ? this.toDoc(b, next) : null, result };
+  async mutate<T>(id: string, decide: Mutator<T>): Promise<T> {
+    const binding = await this.bind();
+    return binding.transact(id, (data) => {
+      const { next, result } = decide(unexpired(fromDoc(data)));
+      return { write: next ? this.toDoc(binding, next) : null, result };
     });
   }
 }

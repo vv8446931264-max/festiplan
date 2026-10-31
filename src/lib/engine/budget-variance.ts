@@ -1,6 +1,5 @@
 import type { Allocation, BudgetCategory } from "@/lib/contracts";
-
-const sum = (values: number[]): number => values.reduce((a, b) => a + b, 0);
+import { sum } from "./shared";
 
 /** Planned versus actual spend for one category. */
 export type VarianceRow = {
@@ -26,27 +25,29 @@ export type OverspendAlert = {
   coveredByContingency: boolean;
 };
 
+type TrackedLine = Allocation & { actualINR: number };
+
+const hasActual = (line: Allocation): line is TrackedLine => line.actualINR !== null;
+
 /**
  * Planned versus actual per category. `actualINR` sums the recorded actuals; `varianceINR`
  * is actual minus planned over only the rows that have an actual (positive means overspent).
  * @param allocations Current lines.
  */
 export function budgetVariance(allocations: Allocation[]): BudgetVariance {
-  const rows: VarianceRow[] = allocations.map((a) => ({
-    category: a.category,
-    plannedINR: a.amountINR,
-    actualINR: a.actualINR,
-    varianceINR: a.actualINR === null ? null : a.actualINR - a.amountINR,
-    overspent: a.actualINR !== null && a.actualINR > a.amountINR,
+  const rows: VarianceRow[] = allocations.map((line) => ({
+    category: line.category,
+    plannedINR: line.amountINR,
+    actualINR: line.actualINR,
+    varianceINR: line.actualINR === null ? null : line.actualINR - line.amountINR,
+    overspent: line.actualINR !== null && line.actualINR > line.amountINR,
   }));
-  const tracked = allocations.filter(
-    (a): a is Allocation & { actualINR: number } => a.actualINR !== null,
-  );
+  const tracked = allocations.filter(hasActual);
   return {
     rows,
-    plannedINR: sum(allocations.map((a) => a.amountINR)),
-    actualINR: sum(tracked.map((a) => a.actualINR)),
-    varianceINR: sum(tracked.map((a) => a.actualINR - a.amountINR)),
+    plannedINR: sum(allocations.map((line) => line.amountINR)),
+    actualINR: sum(tracked.map((line) => line.actualINR)),
+    varianceINR: sum(tracked.map((line) => line.actualINR - line.amountINR)),
   };
 }
 
@@ -60,16 +61,16 @@ export function overspendAlerts(
   allocations: Allocation[],
   contingencyINR: number,
 ): OverspendAlert[] {
-  let running = 0;
+  let overspentSoFar = 0;
   const alerts: OverspendAlert[] = [];
-  for (const a of allocations) {
-    if (a.actualINR === null || a.actualINR <= a.amountINR) continue;
-    const overByINR = a.actualINR - a.amountINR;
-    running += overByINR;
+  for (const line of allocations) {
+    if (line.actualINR === null || line.actualINR <= line.amountINR) continue;
+    const overByINR = line.actualINR - line.amountINR;
+    overspentSoFar += overByINR;
     alerts.push({
-      category: a.category,
+      category: line.category,
       overByINR,
-      coveredByContingency: running <= contingencyINR,
+      coveredByContingency: overspentSoFar <= contingencyINR,
     });
   }
   return alerts;

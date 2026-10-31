@@ -1,4 +1,5 @@
 import type { PlanInput } from "./contracts";
+import { addDays } from "./engine";
 
 /** Constraint tags offered as toggles in the brief form. */
 export const CONSTRAINT_OPTIONS = [
@@ -14,7 +15,8 @@ export const CONSTRAINT_OPTIONS = [
   "Outdoor venue",
 ] as const;
 
-type Preset = {
+/** A one-tap demo brief; the event date is set relative to today when it is used. */
+export type Preset = {
   id: "sangeet" | "birthday" | "mela";
   label: string;
   persona: string;
@@ -76,7 +78,5 @@ export const PRESETS: readonly Preset[] = [
 
 /** Builds a complete PlanInput for a preset, dated `daysAhead` days after `today` (ISO). */
 export function presetInput(preset: Preset, today: string): PlanInput {
-  const date = new Date(`${today}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + preset.daysAhead);
-  return { ...preset.input, eventDate: date.toISOString().slice(0, 10) };
+  return { ...preset.input, eventDate: addDays(today, preset.daysAhead) };
 }

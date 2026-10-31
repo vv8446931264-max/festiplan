@@ -4,12 +4,13 @@ import {
   LIMITS,
   PLAN_TTL_DAYS,
 } from "@/lib/contracts/constants";
-import { PLAN_LANGUAGES, rupees } from "./copy";
+import { formatINR } from "@/lib/engine";
+import { PLAN_LANGUAGES } from "./copy";
 
 /** One question and its plain-text answer, rendered on the landing page and in `FAQPage` JSON-LD. */
 export type FaqItem = { readonly id: string; readonly question: string; readonly answer: string };
 
-const count = (n: number) => new Intl.NumberFormat("en-IN").format(n);
+const formatCount = (value: number) => new Intl.NumberFormat("en-IN").format(value);
 const languages = new Intl.ListFormat("en", { type: "disjunction" }).format(PLAN_LANGUAGES);
 
 /**
@@ -31,12 +32,12 @@ export const FAQ: readonly FaqItem[] = [
   {
     id: "events",
     question: "Which events can I plan with FestiPlan?",
-    answer: `Weddings (haldi, mehendi, sangeet, reception), birthdays for kids or adults, and community events like society Diwali melas and fundraisers. Anything else works under “${EVENT_TYPE_LABELS.other}”, for ${count(LIMITS.guestsMin)} to ${count(LIMITS.guestsMax)} guests and budgets of ${rupees(LIMITS.budgetMin)} to ${rupees(LIMITS.budgetMax)}.`,
+    answer: `Weddings (haldi, mehendi, sangeet, reception), birthdays for kids or adults, and community events like society Diwali melas and fundraisers. Anything else works under “${EVENT_TYPE_LABELS.other}”, for ${formatCount(LIMITS.guestsMin)} to ${formatCount(LIMITS.guestsMax)} guests and budgets of ${formatINR(LIMITS.budgetMin)} to ${formatINR(LIMITS.budgetMax)}.`,
   },
   {
     id: "languages",
     question: "Which languages does FestiPlan support?",
-    answer: `The site is in English. Gemini can write your plan in ${languages}, with amounts in Indian digit grouping like ${rupees(1_200_000)}. If Gemini is unavailable, you get a labelled template plan in English.`,
+    answer: `The site is in English. Gemini can write your plan in ${languages}, with amounts in Indian digit grouping like ${formatINR(1_200_000)}. If Gemini is unavailable, you get a labelled template plan in English.`,
   },
   {
     id: "vendors",

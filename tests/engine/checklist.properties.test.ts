@@ -5,9 +5,8 @@ import type { VendorGuide } from "@/lib/contracts";
 import { scheduleVendors } from "@/lib/engine/checklist";
 import { scheduleCompression } from "@/lib/engine/compression";
 import { addDays, maxDate } from "@/lib/engine/dates";
+import { TODAY } from "./builders";
 import { int, mulberry32 } from "./prng";
-
-const TODAY = "2026-10-24";
 
 /** Mix of near events (heavy compression) and far ones (none), always at least a day away. */
 const eventAfter = (rand: () => number): string =>
@@ -35,13 +34,13 @@ describe("scheduleVendors (property)", () => {
       const out = scheduleVendors(vendors, event, TODAY);
       expect(out).toHaveLength(vendors.length);
       for (const v of out) {
-        const guide = vendors.find((g) => g.category === v.category);
-        expect(guide).toBeDefined();
+        const guide = vendors.find((candidate) => candidate.category === v.category);
+        if (!guide) throw new Error(`no guidance for ${v.category}`);
         expect(v.bookBy >= TODAY && v.bookBy <= event).toBe(true);
         expect(v.done || v.overdue).toBe(false);
-        if (guide && guide.bookByWeeks >= 1) expect(v.bookBy < event).toBe(true);
-        if (guide && guide.bookByWeeks === 0) expect(v.bookBy).toBe(event);
-        if (guide) expect(v.bookBy >= addDays(event, -guide.bookByWeeks * 7)).toBe(true);
+        if (guide.bookByWeeks >= 1) expect(v.bookBy < event).toBe(true);
+        if (guide.bookByWeeks === 0) expect(v.bookBy).toBe(event);
+        expect(v.bookBy >= addDays(event, -guide.bookByWeeks * 7)).toBe(true);
       }
       const rank = (c: string): number => BUDGET_CATEGORIES.findIndex((b) => b === c);
       for (let i = 1; i < out.length; i++) {

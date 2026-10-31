@@ -27,45 +27,46 @@ export type LandingJsonLdInput = {
   readonly faq: readonly FaqItem[];
 };
 
-const ref = (siteUrl: string, fragment: string) => ({ "@id": `${siteUrl}/#${fragment}` });
+/** A reference to another node in the same graph. */
+const nodeRef = (siteUrl: string, fragment: string) => ({ "@id": `${siteUrl}/#${fragment}` });
 
-function websiteNode(i: LandingJsonLdInput): JsonLdNode {
+function websiteNode(input: LandingJsonLdInput): JsonLdNode {
   return {
     "@type": "WebSite",
-    ...ref(i.siteUrl, "website"),
-    url: i.siteUrl,
-    name: i.name,
-    inLanguage: i.language,
-    publisher: ref(i.siteUrl, "organization"),
+    ...nodeRef(input.siteUrl, "website"),
+    url: input.siteUrl,
+    name: input.name,
+    inLanguage: input.language,
+    publisher: nodeRef(input.siteUrl, "organization"),
   };
 }
 
-function organizationNode(i: LandingJsonLdInput): JsonLdNode {
+function organizationNode(input: LandingJsonLdInput): JsonLdNode {
   return {
     "@type": "Organization",
-    ...ref(i.siteUrl, "organization"),
-    name: i.name,
-    url: i.siteUrl,
-    logo: i.logoUrl,
+    ...nodeRef(input.siteUrl, "organization"),
+    name: input.name,
+    url: input.siteUrl,
+    logo: input.logoUrl,
   };
 }
 
 /** The product itself. Free, browser-based; deliberately no ratings or reviews (we have none to cite). */
-function applicationNode(i: LandingJsonLdInput): JsonLdNode {
+function applicationNode(input: LandingJsonLdInput): JsonLdNode {
   return {
     "@type": "WebApplication",
-    ...ref(i.siteUrl, "app"),
-    name: i.name,
-    url: i.siteUrl,
-    description: i.description,
-    image: i.imageUrl,
+    ...nodeRef(input.siteUrl, "app"),
+    name: input.name,
+    url: input.siteUrl,
+    description: input.description,
+    image: input.imageUrl,
     applicationCategory: "LifestyleApplication",
     operatingSystem: "Any",
-    inLanguage: i.language,
+    inLanguage: input.language,
     isAccessibleForFree: true,
     offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
-    featureList: [...i.features],
-    publisher: ref(i.siteUrl, "organization"),
+    featureList: [...input.features],
+    publisher: nodeRef(input.siteUrl, "organization"),
   };
 }
 
@@ -78,7 +79,7 @@ function applicationNode(i: LandingJsonLdInput): JsonLdNode {
 export function faqPageNode(siteUrl: string, faq: readonly FaqItem[]): JsonLdNode {
   return {
     "@type": "FAQPage",
-    ...ref(siteUrl, "faq"),
+    ...nodeRef(siteUrl, "faq"),
     url: siteUrl,
     mainEntity: faq.map((item) => ({
       "@type": "Question",
@@ -105,11 +106,14 @@ export function buildLandingJsonLd(input: LandingJsonLdInput): JsonLdGraph {
   };
 }
 
+/** `JSON.stringify`, typed honestly: it returns undefined for undefined, functions and symbols. */
+const stringify = (value: unknown): string | undefined => JSON.stringify(value);
+
 /**
- * JSON for an inline `<script type="application/ld+json">`. Every `<` becomes `<`, so no
+ * JSON for an inline `<script type="application/ld+json">`. Every `<` is escaped as `\u003c`, so no
  * string inside the data can close the script element or open an HTML comment.
  * @param data any JSON-serialisable value
  */
 export function serializeJsonLd(data: unknown): string {
-  return (JSON.stringify(data) ?? "null").replace(/</g, "\\u003c");
+  return (stringify(data) ?? "null").replace(/</g, "\\u003c");
 }

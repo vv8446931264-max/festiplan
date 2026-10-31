@@ -8,6 +8,7 @@ afterEach(async () => {
   }
 });
 
-if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
-  Element.prototype.scrollIntoView = () => {};
+// jsdom does not implement scrollIntoView; components call it when tabs and focus change.
+if (typeof Element !== "undefined" && !Reflect.has(Element.prototype, "scrollIntoView")) {
+  Element.prototype.scrollIntoView = () => undefined;
 }

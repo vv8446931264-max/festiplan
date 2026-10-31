@@ -1,4 +1,5 @@
 import { diffDays } from "./dates";
+import { DAYS_PER_WEEK } from "./shared";
 
 /** How a plan's ideal lead times compare with the days actually left before the event. */
 export type ScheduleCompression = {
@@ -31,7 +32,7 @@ export function compressionFactor(idealSpanDays: number, availableDays: number):
  * @param factor Result of `compressionFactor`.
  */
 export function compressedLeadDays(leadWeeks: number, factor: number): number {
-  return leadWeeks > 0 ? Math.max(1, Math.round(leadWeeks * 7 * factor)) : 0;
+  return leadWeeks > 0 ? Math.max(1, Math.round(leadWeeks * DAYS_PER_WEEK * factor)) : 0;
 }
 
 /**
@@ -47,7 +48,10 @@ export function scheduleCompression(
   today: string,
 ): ScheduleCompression {
   const availableDays = Math.max(0, diffDays(today, eventDate));
-  const idealDays = tasks.reduce((max, t) => Math.max(max, t.leadWeeks * 7), 0);
+  const idealDays = tasks.reduce(
+    (longest, task) => Math.max(longest, task.leadWeeks * DAYS_PER_WEEK),
+    0,
+  );
   const factor = compressionFactor(idealDays, availableDays);
   return { compressed: factor < 1, factor, availableDays, idealDays };
 }

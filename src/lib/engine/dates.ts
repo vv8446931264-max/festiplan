@@ -2,16 +2,17 @@
 
 const DAY_MS = 86_400_000;
 
-const toMs = (iso: string): number => Date.parse(`${iso}T00:00:00Z`);
+/** Midnight UTC of an ISO date, in epoch milliseconds (NaN when unparsable). */
+const utcMidnightMs = (iso: string): number => Date.parse(`${iso}T00:00:00Z`);
 
 /**
- * Adds `n` whole days (negative to subtract) to an ISO date.
+ * Adds whole days (negative to subtract) to an ISO date.
  * @param iso ISO date, e.g. "2027-02-14".
- * @param n Number of days to add.
+ * @param days Number of days to add.
  * @returns The resulting ISO date.
  */
-export function addDays(iso: string, n: number): string {
-  return new Date(toMs(iso) + n * DAY_MS).toISOString().slice(0, 10);
+export function addDays(iso: string, days: number): string {
+  return new Date(utcMidnightMs(iso) + days * DAY_MS).toISOString().slice(0, 10);
 }
 
 /**
@@ -20,11 +21,11 @@ export function addDays(iso: string, n: number): string {
  * @param to ISO end date.
  */
 export function diffDays(from: string, to: string): number {
-  return Math.round((toMs(to) - toMs(from)) / DAY_MS);
+  return Math.round((utcMidnightMs(to) - utcMidnightMs(from)) / DAY_MS);
 }
 
 /**
- * The later of two ISO dates.
+ * The later of two ISO dates (ISO dates order correctly as strings).
  * @param a ISO date.
  * @param b ISO date.
  */

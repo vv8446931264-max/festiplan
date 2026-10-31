@@ -1,18 +1,20 @@
 import type { ScheduledTask } from "@/lib/contracts";
 import { addDays } from "./dates";
 import { formatDate } from "./format";
+import { toBasicDate } from "./shared";
 
 const CRLF = "\r\n";
-const MAX_OCTETS = 75;
+/** RFC 5545 §3.1: content lines are folded so none exceeds 75 octets. */
+const MAX_LINE_OCTETS = 75;
 const UTF8 = new TextEncoder();
 
 /**
  * Escapes text for an iCalendar TEXT value: backslash, semicolon and comma are
  * backslash-escaped and line breaks become a literal `\n`.
- * @param s Raw text.
+ * @param text Raw text.
  */
-export function escapeIcsText(s: string): string {
-  return s
+export function escapeIcsText(text: string): string {
+  return text
     .replace(/\\/g, "\\\\")
     .replace(/;/g, "\\;")
     .replace(/,/g, "\\,")
@@ -29,18 +31,18 @@ export function escapeIcsText(s: string): string {
 export function foldLine(line: string): string {
   const parts: string[] = [];
   let current = "";
-  let used = 0;
-  let budget = MAX_OCTETS;
-  for (const ch of line) {
-    const size = UTF8.encode(ch).length;
-    if (used + size > budget) {
+  let usedOctets = 0;
+  let limit = MAX_LINE_OCTETS;
+  for (const char of line) {
+    const size = UTF8.encode(char).length;
+    if (usedOctets + size > limit) {
       parts.push(current);
       current = "";
-      used = 0;
-      budget = MAX_OCTETS - 1;
+      usedOctets = 0;
+      limit = MAX_LINE_OCTETS - 1; // the leading continuation space counts too
     }
-    current += ch;
-    used += size;
+    current += char;
+    usedOctets += size;
   }
   parts.push(current);
   return parts.join(`${CRLF} `);
@@ -57,17 +59,20 @@ export type IcsInput = {
   dtstamp: string;
 };
 
-const noBreaks = (s: string): string => s.replace(/[\r\n]+/g, "");
-const basic = (iso: string): string => iso.replaceAll("-", "");
+/** One all-day VEVENT: identity, its date and any extra content lines. */
+type AllDayEvent = { uid: string; dtstamp: string; date: string; lines: string[] };
 
-function allDayEvent(f: { uid: string; dtstamp: string; date: string; lines: string[] }): string[] {
+/** Removes line breaks from values that must stay on one content line (ids, stamps, URLs). */
+const stripLineBreaks = (value: string): string => value.replace(/[\r\n]+/g, "");
+
+function allDayEvent(event: AllDayEvent): string[] {
   return [
     "BEGIN:VEVENT",
-    `UID:${noBreaks(f.uid)}`,
-    `DTSTAMP:${noBreaks(f.dtstamp)}`,
-    `DTSTART;VALUE=DATE:${basic(f.date)}`,
-    `DTEND;VALUE=DATE:${basic(addDays(f.date, 1))}`,
-    ...f.lines,
+    `UID:${stripLineBreaks(event.uid)}`,
+    `DTSTAMP:${stripLineBreaks(event.dtstamp)}`,
+    `DTSTART;VALUE=DATE:${toBasicDate(event.date)}`,
+    `DTEND;VALUE=DATE:${toBasicDate(addDays(event.date, 1))}`,
+    ...event.lines,
     "END:VEVENT",
   ];
 }
@@ -89,14 +94,14 @@ function taskEvent(input: IcsInput, task: ScheduledTask): string[] {
  * @returns The `.ics` file contents.
  */
 export function buildIcs(input: IcsInput): string {
-  const event = allDayEvent({
+  const celebration = allDayEvent({
     uid: `${input.planId}@festiplan`,
     dtstamp: input.dtstamp,
     date: input.eventDate,
     lines: [
       `SUMMARY:${escapeIcsText(input.title)}`,
       `LOCATION:${escapeIcsText(input.city)}`,
-      `URL:${noBreaks(input.url)}`,
+      `URL:${stripLineBreaks(input.url)}`,
     ],
   });
   const lines = [
@@ -106,7 +111,7 @@ export function buildIcs(input: IcsInput): string {
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     `X-WR-CALNAME:${escapeIcsText(input.title)}`,
-    ...event,
+    ...celebration,
     ...input.tasks.flatMap((task) => taskEvent(input, task)),
     "END:VCALENDAR",
   ];

@@ -1,21 +1,11 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import type { Allocation, BudgetCategory } from "@/lib/contracts";
-import { budgetVariance, overspendAlerts } from "@/lib/engine/budget";
+import type { BudgetCategory } from "@/lib/contracts";
+import { budgetVariance, overspendAlerts } from "@/lib/engine/budget-variance";
+import { allocation } from "./builders";
 
-const line = (
-  category: BudgetCategory,
-  amountINR: number,
-  actualINR: number | null,
-): Allocation => ({
-  category,
-  amountINR,
-  percent: 0,
-  perGuestINR: 0,
-  rationale: "",
-  locked: false,
-  actualINR,
-});
+const line = (category: BudgetCategory, amountINR: number, actualINR: number | null) =>
+  allocation(category, amountINR, { actualINR });
 
 const lines = [
   line("venue", 400, 450),
@@ -49,10 +39,10 @@ describe("budgetVariance", () => {
   });
 
   it("totals plan, recorded actuals and variance over rows that have an actual", () => {
-    const v = budgetVariance(lines);
-    expect(v.plannedINR).toBe(1_050);
-    expect(v.actualINR).toBe(790);
-    expect(v.varianceINR).toBe(40);
+    const variance = budgetVariance(lines);
+    expect(variance.plannedINR).toBe(1_050);
+    expect(variance.actualINR).toBe(790);
+    expect(variance.varianceINR).toBe(40);
   });
 
   it("is all zero with no actuals or no lines", () => {
@@ -66,17 +56,22 @@ describe("budgetVariance", () => {
 });
 
 describe("overspendAlerts", () => {
+  const coverage = (contingencyINR: number) =>
+    overspendAlerts(lines, contingencyINR).map((alert) => alert.coveredByContingency);
+
   it("lists only overspent rows, in order", () => {
-    expect(overspendAlerts(lines, 1_000).map((a) => [a.category, a.overByINR])).toEqual([
-      ["venue", 50],
-      ["misc", 40],
-    ]);
+    expect(overspendAlerts(lines, 1_000).map((alert) => [alert.category, alert.overByINR])).toEqual(
+      [
+        ["venue", 50],
+        ["misc", 40],
+      ],
+    );
   });
 
   it("marks coverage by the cumulative overspend against contingency", () => {
-    expect(overspendAlerts(lines, 60).map((a) => a.coveredByContingency)).toEqual([true, false]);
-    expect(overspendAlerts(lines, 90).map((a) => a.coveredByContingency)).toEqual([true, true]);
-    expect(overspendAlerts(lines, 49).map((a) => a.coveredByContingency)).toEqual([false, false]);
+    expect(coverage(60)).toEqual([true, false]);
+    expect(coverage(90)).toEqual([true, true]);
+    expect(coverage(49)).toEqual([false, false]);
   });
 
   it("is empty when nothing is overspent", () => {

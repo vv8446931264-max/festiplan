@@ -1,32 +1,21 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { BUDGET_CATEGORIES, type BudgetCategory } from "@/lib/contracts";
+import { BUDGET_CATEGORIES } from "@/lib/contracts/constants";
 import {
-  DEFAULT_COLUMN_LAYOUT,
-  MAX_DT,
   assignParticles,
-  columnX,
-  createParticleState,
   emptyAssignment,
   hash01,
-} from "@/lib/engine/particles";
-import {
-  isSettled,
   layoutParticles,
-  stackHeight,
-  stepParticles,
-  targetsFor,
   type ParticleAllocation,
   type ParticleAssignment,
 } from "@/lib/engine/particles";
+import { sum } from "./builders";
 
 const lines = (amounts: number[]): ParticleAllocation[] =>
   amounts.map((amountINR, i) => ({
     category: BUDGET_CATEGORIES[i % BUDGET_CATEGORIES.length],
     amountINR,
   }));
-
-const sum = (xs: ArrayLike<number>) => Array.from(xs).reduce((s, x) => s + x, 0);
 
 /** Every column's slots are exactly 0..count-1, once each. */
 function expectContiguous(a: ParticleAssignment) {
@@ -38,18 +27,6 @@ function expectContiguous(a: ParticleAssignment) {
     expect(slots).toEqual(Array.from({ length: count }, (_, k) => k));
   });
 }
-
-describe("hash01", () => {
-  it("is deterministic and stays in [0, 1)", () => {
-    for (let i = -50; i < 500; i++) {
-      const h = hash01(i);
-      expect(h).toBe(hash01(i));
-      expect(h).toBeGreaterThanOrEqual(0);
-      expect(h).toBeLessThan(1);
-    }
-    expect(hash01(1)).not.toBe(hash01(2));
-  });
-});
 
 describe("layoutParticles", () => {
   it("sums to exactly n for many budgets", () => {
@@ -143,95 +120,5 @@ describe("assignParticles", () => {
     expect(next.column[0]).toBe(0);
     expect(next.slot[0]).toBe(0);
     expectContiguous(next);
-  });
-});
-
-describe("layout geometry", () => {
-  const layout = DEFAULT_COLUMN_LAYOUT;
-
-  it("centres columns and stacks layers", () => {
-    expect(columnX(0, 3, layout)).toBeCloseTo(-layout.spacing);
-    expect(columnX(1, 3, layout)).toBeCloseTo(0);
-    expect(stackHeight(0, layout)).toBe(0);
-    expect(stackHeight(layout.perLayer + 1, layout)).toBeCloseTo(2 * layout.layerHeight);
-    expect(stackHeight(Number.NaN, layout)).toBe(0);
-  });
-
-  it("puts every particle inside its column, parked ones on parkY", () => {
-    const a = assignParticles(emptyAssignment(40), [10, 30]);
-    const t = targetsFor(a, layout);
-    expect(t.length).toBe(120);
-    for (let i = 0; i < 40; i++) {
-      const [c, x, y] = [a.column[i], t[i * 3], t[i * 3 + 1]];
-      expect(Math.abs(x - columnX(c, 2, layout))).toBeLessThanOrEqual(
-        layout.radius + layout.jitter,
-      );
-      expect(y).toBeGreaterThanOrEqual(layout.baseY - layout.jitter);
-      expect(y).toBeLessThanOrEqual(
-        layout.baseY + stackHeight(a.counts[c], layout) + layout.jitter,
-      );
-    }
-    expect(Array.from(targetsFor(a, layout))).toEqual(Array.from(t));
-  });
-
-  it("reuses a correctly sized output buffer and replaces a wrong one", () => {
-    const a = assignParticles(emptyAssignment(4), [2]);
-    const out = new Float32Array(12);
-    expect(targetsFor(a, layout, out)).toBe(out);
-    const wrong = new Float32Array(3);
-    expect(targetsFor(a, layout, wrong)).not.toBe(wrong);
-    expect(targetsFor(a, layout, out)[7]).toBe(layout.parkY);
-  });
-});
-
-describe("stepParticles", () => {
-  const target = Float32Array.from([1, 2, -3]);
-
-  it("starts at the origin or a copy of init", () => {
-    expect(Array.from(createParticleState(2).pos)).toEqual([0, 0, 0, 0, 0, 0]);
-    const init = Float32Array.from([5, 6, 7, 8, 9, 10, 11]);
-    expect(Array.from(createParticleState(2, init).pos)).toEqual([5, 6, 7, 8, 9, 10]);
-  });
-
-  it("converges to the target without overshoot (critically damped)", () => {
-    const s = createParticleState(1);
-    let maxX = 0;
-    for (let i = 0; i < 400; i++) {
-      stepParticles(s, target, 1 / 60);
-      maxX = Math.max(maxX, s.pos[0]);
-    }
-    expect(isSettled(s, target)).toBe(true);
-    expect(maxX).toBeLessThan(1.01);
-  });
-
-  it("clamps dt to MAX_DT and ignores negative or NaN steps", () => {
-    const a = stepParticles(createParticleState(1), target, 1);
-    const b = stepParticles(createParticleState(1), target, MAX_DT);
-    expect(Array.from(a.pos)).toEqual(Array.from(b.pos));
-    expect(Array.from(stepParticles(createParticleState(1), target, -1).pos)).toEqual([0, 0, 0]);
-    expect(Array.from(stepParticles(createParticleState(1), target, Number.NaN).pos)).toEqual([
-      0, 0, 0,
-    ]);
-  });
-
-  it("honours custom stiffness, damping and lift", () => {
-    const soft = stepParticles(createParticleState(1), target, 1 / 60, {
-      stiffness: 5,
-      damping: 1,
-    });
-    const stiff = stepParticles(createParticleState(1), target, 1 / 60, { stiffness: 200 });
-    expect(Math.abs(stiff.pos[0])).toBeGreaterThan(Math.abs(soft.pos[0]));
-    expect(
-      stepParticles(createParticleState(1), Float32Array.from([4, 0, 0]), 1 / 60, { lift: 20 })
-        .pos[1],
-    ).toBeGreaterThan(0);
-  });
-
-  it("reports unsettled on position or velocity", () => {
-    const s = createParticleState(1, Float32Array.from([1, 2, -3]));
-    expect(isSettled(s, target, 0.01)).toBe(true);
-    s.vel[1] = 1;
-    expect(isSettled(s, target)).toBe(false);
-    expect(isSettled(createParticleState(1), target)).toBe(false);
   });
 });

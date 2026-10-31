@@ -15,6 +15,7 @@ const SHORT_DATE = new Intl.DateTimeFormat("en-IN", DATE_PARTS);
 const CRORE = 10_000_000;
 const LAKH = 100_000;
 const THOUSAND = 1_000;
+/** Compact units, largest first: [size in rupees, suffix]. */
 const UNITS: readonly (readonly [number, string])[] = [
   [CRORE, "Cr"],
   [LAKH, "L"],
@@ -24,30 +25,32 @@ const UNITS: readonly (readonly [number, string])[] = [
 /**
  * Formats whole rupees with Indian digit grouping, e.g. 1200000 → "₹12,00,000".
  * Fractions are rounded; negatives keep the sign in front of the symbol.
- * @param n Amount in rupees.
+ * @param amountINR Amount in rupees.
  */
-export function formatINR(n: number): string {
-  return INR.format(Math.round(n) + 0);
+export function formatINR(amountINR: number): string {
+  // `+ 0` turns -0 (from rounding a tiny negative) into 0, so it never prints as "-₹0".
+  return INR.format(Math.round(amountINR) + 0);
 }
 
-const trimmed = (value: number): string => value.toFixed(1).replace(/\.0$/, "");
+/** One decimal place without a trailing ".0": 12.0 → "12", 2.5 → "2.5". */
+const oneDecimal = (value: number): string => value.toFixed(1).replace(/\.0$/, "");
 
 /**
  * Compact rupee label: "₹1.2Cr", "₹12L", "₹2.5L", "₹40K"; below 1,000 falls back to `formatINR`.
- * @param n Amount in rupees.
+ * @param amountINR Amount in rupees.
  */
-export function formatINRCompact(n: number): string {
-  const abs = Math.abs(n);
-  const sign = n < 0 ? "-" : "";
-  const index = UNITS.findIndex(([size]) => abs >= size);
-  if (index === -1) return formatINR(n);
+export function formatINRCompact(amountINR: number): string {
+  const magnitude = Math.abs(amountINR);
+  const sign = amountINR < 0 ? "-" : "";
+  const index = UNITS.findIndex(([size]) => magnitude >= size);
+  if (index === -1) return formatINR(amountINR);
   const [size, suffix] = UNITS[index];
-  const bigger = UNITS[index - 1];
+  const larger = index > 0 ? UNITS[index - 1] : undefined;
   // Rounding can carry into the next unit: ₹99,99,999 is "₹1Cr", not "₹100L".
-  if (bigger && Number((abs / size).toFixed(1)) * size >= bigger[0]) {
-    return `${sign}₹${trimmed(abs / bigger[0])}${bigger[1]}`;
+  if (larger && Number((magnitude / size).toFixed(1)) * size >= larger[0]) {
+    return `${sign}₹${oneDecimal(magnitude / larger[0])}${larger[1]}`;
   }
-  return `${sign}₹${trimmed(abs / size)}${suffix}`;
+  return `${sign}₹${oneDecimal(magnitude / size)}${suffix}`;
 }
 
 /**
@@ -55,20 +58,22 @@ export function formatINRCompact(n: number): string {
  * @param input The plan's brief.
  */
 export function planTitle(input: Pick<PlanInput, "title" | "eventType" | "city">): string {
-  return input.title?.trim() || `${EVENT_TYPE_LABELS[input.eventType]} in ${input.city}`;
+  const ownTitle = input.title?.trim() ?? "";
+  return ownTitle.length > 0 ? ownTitle : `${EVENT_TYPE_LABELS[input.eventType]} in ${input.city}`;
 }
 
-const withFormatter = (fmt: Intl.DateTimeFormat, iso: string): string => {
+/** Formats an ISO date with `formatter`; an unparsable input is returned unchanged. */
+function formatIsoDate(formatter: Intl.DateTimeFormat, iso: string): string {
   const ms = Date.parse(`${iso}T00:00:00Z`);
-  return Number.isNaN(ms) ? iso : fmt.format(new Date(ms));
-};
+  return Number.isNaN(ms) ? iso : formatter.format(new Date(ms));
+}
 
 /**
  * Formats an ISO date as "14 Feb 2027" (en-IN, UTC). An unparsable input is returned unchanged.
  * @param iso ISO date `YYYY-MM-DD`.
  */
 export function formatDate(iso: string): string {
-  return withFormatter(LONG_DATE, iso);
+  return formatIsoDate(LONG_DATE, iso);
 }
 
 /**
@@ -76,15 +81,15 @@ export function formatDate(iso: string): string {
  * @param iso ISO date `YYYY-MM-DD`.
  */
 export function formatDateShort(iso: string): string {
-  return withFormatter(SHORT_DATE, iso);
+  return formatIsoDate(SHORT_DATE, iso);
 }
 
 /**
  * Formats a percentage with at most one decimal: 12.5 → "12.5%", 12 → "12%".
- * @param n Percentage value (not a fraction).
+ * @param percent Percentage value (not a fraction).
  */
-export function formatPercent(n: number): string {
-  return `${Number(n.toFixed(1))}%`;
+export function formatPercent(percent: number): string {
+  return `${Number(percent.toFixed(1))}%`;
 }
 
 /**

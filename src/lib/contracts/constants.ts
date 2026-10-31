@@ -1,11 +1,16 @@
 /** Closed vocabularies and hard limits shared by the client, the server and the engine. */
 
+/** Kinds of celebration the planner supports. */
 export const EVENT_TYPES = ["wedding", "birthday", "community", "other"] as const;
+/** One of {@link EVENT_TYPES}. */
 export type EventType = (typeof EVENT_TYPES)[number];
 
+/** Languages the model can write a plan in (ISO 639-1). */
 export const LANGS = ["en", "hi", "bn", "ta", "te", "mr", "kn", "gu"] as const;
+/** One of {@link LANGS}. */
 export type Lang = (typeof LANGS)[number];
 
+/** Budget lines, in the canonical order used to break ties. */
 export const BUDGET_CATEGORIES = [
   "venue",
   "catering",
@@ -18,15 +23,22 @@ export const BUDGET_CATEGORIES = [
   "transport",
   "misc",
 ] as const;
+/** One of {@link BUDGET_CATEGORIES}. */
 export type BudgetCategory = (typeof BUDGET_CATEGORIES)[number];
 
+/** Task categories: every budget line plus `admin` for paperwork. */
 export const TASK_CATEGORIES = [...BUDGET_CATEGORIES, "admin"] as const;
+/** One of {@link TASK_CATEGORIES}. */
 export type TaskCategory = (typeof TASK_CATEGORIES)[number];
 
+/** Timeline phases, earliest first. */
 export const PHASES = ["6m+", "3-6m", "1-3m", "2-4w", "final-week", "day-of"] as const;
+/** One of {@link PHASES}. */
 export type Phase = (typeof PHASES)[number];
 
+/** Kinds of practical tip the model adds to a plan. */
 export const TIP_KINDS = ["sustainability", "accessibility", "culture", "savings"] as const;
+/** One of {@link TIP_KINDS}. */
 export type TipKind = (typeof TIP_KINDS)[number];
 
 /** Input and payload limits. Every number here is enforced by a schema or a guard. */
@@ -55,6 +67,7 @@ export const CONTINGENCY_PERCENT = 10;
 /** Plans expire (Firestore TTL) this many days after creation. */
 export const PLAN_TTL_DAYS = 180;
 
+/** Display names for event types. */
 export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   wedding: "Wedding",
   birthday: "Birthday",
@@ -62,6 +75,7 @@ export const EVENT_TYPE_LABELS: Record<EventType, string> = {
   other: "Something else",
 };
 
+/** Display names for plan languages, native script first. */
 export const LANG_LABELS: Record<Lang, string> = {
   en: "English",
   hi: "हिन्दी (Hindi)",
@@ -73,6 +87,7 @@ export const LANG_LABELS: Record<Lang, string> = {
   gu: "ગુજરાતી (Gujarati)",
 };
 
+/** Display names for budget and task categories. */
 export const CATEGORY_LABELS: Record<TaskCategory, string> = {
   venue: "Venue",
   catering: "Catering",
@@ -87,6 +102,7 @@ export const CATEGORY_LABELS: Record<TaskCategory, string> = {
   admin: "Admin",
 };
 
+/** Display names for timeline phases. */
 export const PHASE_LABELS: Record<Phase, string> = {
   "6m+": "Six months or more",
   "3-6m": "Three to six months",
