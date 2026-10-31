@@ -10,4 +10,5 @@ export function mulberry32(seed: number): () => number {
 }
 
 /** Uniform integer in `[lo, hi]` (inclusive). */
-export const int = (rand: () => number, lo: number, hi: number): number => lo + Math.floor(rand() * (hi - lo + 1));
+export const int = (rand: () => number, lo: number, hi: number): number =>
+  lo + Math.floor(rand() * (hi - lo + 1));

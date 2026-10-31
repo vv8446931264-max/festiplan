@@ -39,15 +39,45 @@ describe("instance-wide AI ceiling", () => {
     const created = await createPlanRoute(jsonRequest("/api/plan", futureInput()), noCtx);
     const { plan } = (await created.json()) as { plan: PublicPlan };
     exhaustAiWindow();
-    await expectBusy(await createPlanRoute(jsonRequest("/api/plan", futureInput(), { headers: { "x-forwarded-for": "198.51.100.20" } }), noCtx));
-    await expectBusy(await refine(jsonRequest(`/api/plan/${plan.id}/refine`, { question: "Ideas?" }), idCtx(plan.id)));
-    await expectBusy(await vendors(jsonRequest("/api/vendors", { planId: plan.id, category: "decor" }), noCtx));
+    await expectBusy(
+      await createPlanRoute(
+        jsonRequest("/api/plan", futureInput(), {
+          headers: { "x-forwarded-for": "198.51.100.20" },
+        }),
+        noCtx,
+      ),
+    );
+    await expectBusy(
+      await refine(
+        jsonRequest(`/api/plan/${plan.id}/refine`, { question: "Ideas?" }),
+        idCtx(plan.id),
+      ),
+    );
+    await expectBusy(
+      await vendors(jsonRequest("/api/vendors", { planId: plan.id, category: "decor" }), noCtx),
+    );
   });
 
   it("is checked after the per-client limit and validation, so junk requests do not spend it", async () => {
     exhaustAiWindow();
-    expect((await createPlanRoute(jsonRequest("/api/plan", { nope: true }), noCtx)).status).toBe(400);
-    expect((await vendors(jsonRequest("/api/vendors", { planId: "no-such-plan", category: "decor" }), noCtx)).status).toBe(404);
-    expect((await refine(jsonRequest("/api/plan/no-such-plan/refine", { question: "Ideas?" }), idCtx("no-such-plan"))).status).toBe(404);
+    expect((await createPlanRoute(jsonRequest("/api/plan", { nope: true }), noCtx)).status).toBe(
+      400,
+    );
+    expect(
+      (
+        await vendors(
+          jsonRequest("/api/vendors", { planId: "no-such-plan", category: "decor" }),
+          noCtx,
+        )
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await refine(
+          jsonRequest("/api/plan/no-such-plan/refine", { question: "Ideas?" }),
+          idCtx("no-such-plan"),
+        )
+      ).status,
+    ).toBe(404);
   });
 });

@@ -32,7 +32,11 @@ export function isTruncated(res: AiResponse): boolean {
 /** Token counts summed over every attempt of one plan request (numbers only, safe to log). */
 export type TokenTotals = Required<AiUsage>;
 
-const NO_TOKENS: TokenTotals = { promptTokenCount: 0, candidatesTokenCount: 0, thoughtsTokenCount: 0 };
+const NO_TOKENS: TokenTotals = {
+  promptTokenCount: 0,
+  candidatesTokenCount: 0,
+  thoughtsTokenCount: 0,
+};
 
 /** Adds one reply's `usageMetadata` to the running totals; missing counts add 0. */
 export function addUsage(total: TokenTotals, usage: AiUsage | undefined): TokenTotals {
@@ -52,7 +56,9 @@ type Step = { contents: Content[]; budget: number; reason: string };
 /** The next request after an invalid reply: a concise re-ask with a bigger budget when cut off, else a correction turn. */
 function nextStep(prompt: string, step: Step, res: AiResponse, error: string): Step {
   if (isTruncated(res)) {
-    const contents: Content[] = [{ role: "user", parts: [{ text: prompt }, { text: CONCISE_NOTE }] }];
+    const contents: Content[] = [
+      { role: "user", parts: [{ text: prompt }, { text: CONCISE_NOTE }] },
+    ];
     return { contents, budget: raisedBudget(step.budget), reason: "max_tokens" };
   }
   const text = res.text?.trim() ? res.text.slice(0, 30_000) : "";
@@ -84,16 +90,29 @@ export type Run = { ai: AiPlan | null; attempts: number; reason: string; usage: 
  * retry; a reply cut off at the token limit is not echoed back — the brief is asked again
  * with a 1.5× budget and a note to be concise. A thrown call (timeout, network) is final.
  */
-export async function runAttempts(handle: AiHandle, prompt: string, opts: { lang: Lang; timeoutMs: number }): Promise<Run> {
+export async function runAttempts(
+  handle: AiHandle,
+  prompt: string,
+  opts: { lang: Lang; timeoutMs: number },
+): Promise<Run> {
   const signal = AbortSignal.timeout(opts.timeoutMs);
-  let step: Step = { contents: [{ role: "user", parts: [{ text: prompt }] }], budget: planTokenBudget(opts.lang), reason: "invalid" };
+  let step: Step = {
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    budget: planTokenBudget(opts.lang),
+    reason: "invalid",
+  };
   let usage = NO_TOKENS;
   for (let attempt = 1; attempt <= 2; attempt++) {
     let res: AiResponse;
     try {
       res = await callModel(handle, step, signal);
     } catch (err) {
-      return { ai: null, attempts: attempt, reason: err instanceof Error ? err.name : "error", usage };
+      return {
+        ai: null,
+        attempts: attempt,
+        reason: err instanceof Error ? err.name : "error",
+        usage,
+      };
     }
     usage = addUsage(usage, res.usageMetadata);
     const parsed = parseAiPlan(res.text);

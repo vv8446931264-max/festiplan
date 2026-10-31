@@ -32,7 +32,12 @@ export function StagedProgress() {
   }, []);
 
   return (
-    <div ref={panel} tabIndex={-1} aria-label="Planning in progress" className="panel p-6 outline-none sm:p-8">
+    <div
+      ref={panel}
+      tabIndex={-1}
+      aria-label="Planning in progress"
+      className="panel p-6 outline-none sm:p-8"
+    >
       <p role="status" aria-live="polite" className="h3">
         <span className="accent text-gold">{STAGES[stage]}</span>
         <span aria-hidden="true" className="inline-block w-8 animate-pulse">
@@ -48,7 +53,9 @@ export function StagedProgress() {
             />
             <span className={`eyebrow ${i <= stage ? "text-cream" : ""}`}>
               {s}
-              <span className="sr-only">{i < stage ? " — done" : i === stage ? " — in progress" : " — waiting"}</span>
+              <span className="sr-only">
+                {i < stage ? " — done" : i === stage ? " — in progress" : " — waiting"}
+              </span>
             </span>
           </li>
         ))}

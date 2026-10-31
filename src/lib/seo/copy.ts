@@ -19,7 +19,11 @@ export const SEO_COPY = {
  * @param amount an integer amount in rupees
  */
 export function rupees(amount: number): string {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount);
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
 }
 
 /** English names of the plan languages, from the labels the form shows ("हिन्दी (Hindi)" → "Hindi"). */

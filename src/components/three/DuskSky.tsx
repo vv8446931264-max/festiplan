@@ -44,7 +44,13 @@ export type DuskSkyProps = {
 /** Fixed, aria-hidden dusk backdrop: CSS gradient, optional poster, slot for the canvas. */
 export function DuskSky({ rootRef, skyRef, poster = false, tier = "pending" }: DuskSkyProps) {
   return (
-    <div ref={rootRef} aria-hidden="true" data-scene-backdrop="" data-tier={tier} style={ROOT_STYLE}>
+    <div
+      ref={rootRef}
+      aria-hidden="true"
+      data-scene-backdrop=""
+      data-tier={tier}
+      style={ROOT_STYLE}
+    >
       <style href="festiplan-backdrop" precedence="default">
         {"body{isolation:isolate}"}
       </style>
@@ -53,7 +59,14 @@ export function DuskSky({ rootRef, skyRef, poster = false, tier = "pending" }: D
           // A plain <img>: decorative, fixed 1600×1000 WebP already sized for the
           // job, and next/image's optimiser would only re-encode it.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src="/poster.webp" alt="" width={1600} height={1000} decoding="async" style={POSTER_STYLE} />
+          <img
+            src="/poster.webp"
+            alt=""
+            width={1600}
+            height={1000}
+            decoding="async"
+            style={POSTER_STYLE}
+          />
         ) : null}
       </div>
     </div>

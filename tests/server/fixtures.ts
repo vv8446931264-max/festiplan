@@ -25,7 +25,11 @@ export type Reply = AiResponse | Error;
 export type StreamPart = string | Error;
 
 /** A fake Gemini handle that replays canned replies and records every call. */
-export function fakeAi(replies: Reply[] = [], stream: StreamPart[] = [], model = "gemini-3.5-flash") {
+export function fakeAi(
+  replies: Reply[] = [],
+  stream: StreamPart[] = [],
+  model = "gemini-3.5-flash",
+) {
   const calls: GenerateContentParameters[] = [];
   const streamCalls: GenerateContentParameters[] = [];
   const models: AiModels = {
@@ -60,8 +64,14 @@ export function promptText(params: GenerateContentParameters | undefined): strin
   if (typeof contents === "string") return contents;
   if (!Array.isArray(contents)) return "";
   return contents
-    .flatMap((c) => (typeof c === "object" && c !== null && "parts" in c && Array.isArray(c.parts) ? c.parts : []))
-    .map((p) => (typeof p === "object" && p !== null && "text" in p && typeof p.text === "string" ? p.text : ""))
+    .flatMap((c) =>
+      typeof c === "object" && c !== null && "parts" in c && Array.isArray(c.parts) ? c.parts : [],
+    )
+    .map((p) =>
+      typeof p === "object" && p !== null && "text" in p && typeof p.text === "string"
+        ? p.text
+        : "",
+    )
     .join("\n");
 }
 

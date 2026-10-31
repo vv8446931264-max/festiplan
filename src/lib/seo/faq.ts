@@ -1,4 +1,9 @@
-import { CONTINGENCY_PERCENT, EVENT_TYPE_LABELS, LIMITS, PLAN_TTL_DAYS } from "@/lib/contracts/constants";
+import {
+  CONTINGENCY_PERCENT,
+  EVENT_TYPE_LABELS,
+  LIMITS,
+  PLAN_TTL_DAYS,
+} from "@/lib/contracts/constants";
 import { PLAN_LANGUAGES, rupees } from "./copy";
 
 /** One question and its plain-text answer, rendered on the landing page and in `FAQPage` JSON-LD. */

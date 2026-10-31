@@ -4,12 +4,19 @@ import { PlanView } from "@/components/plan/PlanView";
 import { fixturePlan } from "../fixtures/plan";
 import { axeViolations } from "./axe";
 
-vi.mock("@/components/three/lazy", () => ({ LazyBudgetFlow: () => null, LazySceneBackdrop: () => null }));
+vi.mock("@/components/three/lazy", () => ({
+  LazyBudgetFlow: () => null,
+  LazySceneBackdrop: () => null,
+}));
 vi.mock("@/three/bus", () => ({ setPalette: vi.fn(), setMood: vi.fn(), celebrate: vi.fn() }));
 
 const sumOf = (container: HTMLElement) => {
-  const lines = [...container.querySelectorAll("[data-amount]")].map((el) => Number(el.getAttribute("data-amount")));
-  const contingency = Number(container.querySelector("[data-contingency]")?.getAttribute("data-contingency"));
+  const lines = [...container.querySelectorAll("[data-amount]")].map((el) =>
+    Number(el.getAttribute("data-amount")),
+  );
+  const contingency = Number(
+    container.querySelector("[data-contingency]")?.getAttribute("data-contingency"),
+  );
   return lines.reduce((a, b) => a + b, 0) + contingency;
 };
 
@@ -18,7 +25,10 @@ const openTab = (name: string) => fireEvent.click(screen.getByRole("tab", { name
 beforeEach(() => {
   localStorage.clear();
   window.history.replaceState(null, "", "/");
-  vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ plan: {} }), { status: 200 })));
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => new Response(JSON.stringify({ plan: {} }), { status: 200 })),
+  );
 });
 
 describe("PlanView", () => {
@@ -74,7 +84,9 @@ describe("PlanView", () => {
     const venue = screen.getByRole("slider", { name: "Venue" });
     fireEvent.change(venue, { target: { value: "50000" } });
     expect(sumOf(container)).toBe(1_200_000);
-    expect(container.querySelector('[data-category="venue"]')?.getAttribute("data-amount")).toBe("50000");
+    expect(container.querySelector('[data-category="venue"]')?.getAttribute("data-amount")).toBe(
+      "50000",
+    );
     fireEvent.click(screen.getByRole("checkbox", { name: "Lock Venue" }));
     expect(venue).toBeDisabled();
   });
@@ -85,7 +97,9 @@ describe("PlanView", () => {
     openTab("Budget");
     expect(screen.queryAllByRole("slider")).toHaveLength(0);
     openTab("Timeline");
-    expect(within(screen.getByRole("tabpanel", { name: "Timeline" })).queryAllByRole("checkbox")).toHaveLength(0);
+    expect(
+      within(screen.getByRole("tabpanel", { name: "Timeline" })).queryAllByRole("checkbox"),
+    ).toHaveLength(0);
     expect(await axeViolations(container)).toEqual([]);
   });
 
@@ -102,7 +116,9 @@ describe("PlanView", () => {
   });
 
   it("marks AI-written text with the plan language", () => {
-    const { container } = render(<PlanView plan={fixturePlan({ language: "hi" })} editKey={null} />);
+    const { container } = render(
+      <PlanView plan={fixturePlan({ language: "hi" })} editKey={null} />,
+    );
     expect(container.querySelectorAll('[lang="hi"]').length).toBeGreaterThan(5);
   });
 

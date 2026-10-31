@@ -4,7 +4,10 @@ const firstValue = (header: string | null): string | null => {
 };
 
 function requestHosts(req: Request): string[] {
-  const hosts = [firstValue(req.headers.get("x-forwarded-host")), firstValue(req.headers.get("host"))];
+  const hosts = [
+    firstValue(req.headers.get("x-forwarded-host")),
+    firstValue(req.headers.get("host")),
+  ];
   try {
     hosts.push(new URL(req.url).host.toLowerCase());
   } catch {

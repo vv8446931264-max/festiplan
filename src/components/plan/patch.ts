@@ -1,6 +1,10 @@
 import type { PlanPatch } from "@/lib/contracts";
 
-function mergeBy<T>(a: T[] | undefined, b: T[] | undefined, key: (t: T) => string): T[] | undefined {
+function mergeBy<T>(
+  a: T[] | undefined,
+  b: T[] | undefined,
+  key: (t: T) => string,
+): T[] | undefined {
   if (!a) return b;
   if (!b) return a;
   const map = new Map(a.map((t) => [key(t), t]));

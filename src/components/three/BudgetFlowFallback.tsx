@@ -15,7 +15,14 @@ type Props = {
 const FLOOR = 68;
 const MAX_H = 60;
 
-type BarProps = { category: BudgetCategory; x: number; width: number; height: number; state: "normal" | "lit" | "dim"; onHighlight?: Props["onHighlight"] };
+type BarProps = {
+  category: BudgetCategory;
+  x: number;
+  width: number;
+  height: number;
+  state: "normal" | "lit" | "dim";
+  onHighlight?: Props["onHighlight"];
+};
 
 /** One glass-shaded bar: category fill, cylinder shading overlay, cream lip. */
 function Bar({ category, x, width, height, state, onHighlight }: BarProps) {
@@ -27,9 +34,25 @@ function Bar({ category, x, width, height, state, onHighlight }: BarProps) {
       onPointerEnter={() => onHighlight?.(category)}
       onPointerLeave={() => onHighlight?.(null)}
     >
-      <rect x={x} y={y} width={width} height={height} rx={1.4} fill={CATEGORY_COLORS[category]} fillOpacity={0.78} />
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        rx={1.4}
+        fill={CATEGORY_COLORS[category]}
+        fillOpacity={0.78}
+      />
       <rect x={x} y={y} width={width} height={height} rx={1.4} fill="url(#festiplan-flow-glass)" />
-      <rect x={x} y={y} width={width} height={0.9} rx={0.45} fill="#ffedd7" fillOpacity={state === "lit" ? 0.9 : 0.35} />
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={0.9}
+        rx={0.45}
+        fill="#ffedd7"
+        fillOpacity={state === "lit" ? 0.9 : 0.35}
+      />
     </g>
   );
 }
@@ -50,15 +73,29 @@ const GLASS = (
  * frame). Decorative — the parent is aria-hidden; the table is the source of truth.
  */
 export function BudgetFlowFallback({ allocations, highlight, hidden, onHighlight }: Props) {
-  const amounts = allocations.map((a) => (Number.isFinite(a.amountINR) && a.amountINR > 0 ? a.amountINR : 0));
+  const amounts = allocations.map((a) =>
+    Number.isFinite(a.amountINR) && a.amountINR > 0 ? a.amountINR : 0,
+  );
   const total = amounts.reduce((s, a) => s + a, 0);
   const shares = amounts.map((a) => (total > 0 ? a / total : 0));
   const scale = Math.max(0.4, ...shares);
   const slot = 100 / Math.max(allocations.length, 1);
   const width = slot * 0.58;
-  const style = { position: "absolute", inset: 0, opacity: hidden ? 0 : 1, transition: "opacity 600ms ease" } as const;
+  const style = {
+    position: "absolute",
+    inset: 0,
+    opacity: hidden ? 0 : 1,
+    transition: "opacity 600ms ease",
+  } as const;
   return (
-    <svg viewBox="0 0 100 75" width="100%" height="100%" focusable="false" data-flow-fallback="" style={style}>
+    <svg
+      viewBox="0 0 100 75"
+      width="100%"
+      height="100%"
+      focusable="false"
+      data-flow-fallback=""
+      style={style}
+    >
       <defs>{GLASS}</defs>
       {allocations.map((a, i) => (
         <Bar

@@ -1,13 +1,23 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest";
 import { TtlCache } from "@/lib/ai/cache";
-import { clearPlanCache, generateAiPlan, parseAiPlan, planCacheKey, sanitizeDependsOn, weeksUntil } from "@/lib/ai/plan";
+import {
+  clearPlanCache,
+  generateAiPlan,
+  parseAiPlan,
+  planCacheKey,
+  sanitizeDependsOn,
+  weeksUntil,
+} from "@/lib/ai/plan";
 import { AI_PLAN_JSON_SCHEMA } from "@/lib/ai/schema";
 import { templatePlan } from "@/lib/ai/templates";
 import type { AiPlan } from "@/lib/contracts";
 import { TODAY, fakeAi, jsonReply, promptText, sampleInput } from "../server/fixtures";
 
-const geminiPlan = (): AiPlan => ({ ...templatePlan(sampleInput()), summary: "Straight from Gemini." });
+const geminiPlan = (): AiPlan => ({
+  ...templatePlan(sampleInput()),
+  summary: "Straight from Gemini.",
+});
 
 beforeEach(() => clearPlanCache());
 
@@ -38,7 +48,10 @@ describe("generateAiPlan", () => {
   });
 
   it("recovers from a non-JSON first reply", async () => {
-    const { handle, calls } = fakeAi([{ text: "Sure! Here is your plan:" }, jsonReply(geminiPlan())]);
+    const { handle, calls } = fakeAi([
+      { text: "Sure! Here is your plan:" },
+      jsonReply(geminiPlan()),
+    ]);
     const result = await generateAiPlan(sampleInput(), { ai: handle, cache: null });
     expect(result.attempts).toBe(2);
     expect(promptText(calls[1])).toContain("not valid JSON");
@@ -68,7 +81,10 @@ describe("generateAiPlan", () => {
     const cache = new TtlCache<AiPlan>(50, 3_600_000);
     const { handle, calls } = fakeAi([jsonReply(geminiPlan())]);
     await generateAiPlan(sampleInput(), { ai: handle, cache });
-    const again = await generateAiPlan(sampleInput({ city: "  jaipur ", vibe: "Rajasthani folk,   marigolds, family performances" }), { ai: handle, cache });
+    const again = await generateAiPlan(
+      sampleInput({ city: "  jaipur ", vibe: "Rajasthani folk,   marigolds, family performances" }),
+      { ai: handle, cache },
+    );
     expect(again).toMatchObject({ source: "gemini", attempts: 0 });
     expect(calls).toHaveLength(1);
   });
@@ -91,7 +107,13 @@ describe("parseAiPlan and sanitizeDependsOn", () => {
     const ids = plan.tasks.map((t) => t.id);
     const first = plan.tasks[0];
     if (!first) throw new Error("no tasks");
-    const raw = { ...plan, tasks: [{ ...first, dependsOn: ["ghost", first.id, ...ids.slice(1, 8), ids[1]] }, ...plan.tasks.slice(1)] };
+    const raw = {
+      ...plan,
+      tasks: [
+        { ...first, dependsOn: ["ghost", first.id, ...ids.slice(1, 8), ids[1]] },
+        ...plan.tasks.slice(1),
+      ],
+    };
     const parsed = parseAiPlan(JSON.stringify(raw));
     expect(parsed.ok).toBe(true);
     if (parsed.ok) expect(parsed.ai.tasks[0]?.dependsOn).toEqual(ids.slice(1, 6));
@@ -119,7 +141,9 @@ describe("helpers", () => {
 
   it("keys the cache on model and content", () => {
     const input = sampleInput();
-    expect(planCacheKey(input, "m")).toBe(planCacheKey({ ...input, constraints: ["Wheelchair access", "vegetarian"] }, "m"));
+    expect(planCacheKey(input, "m")).toBe(
+      planCacheKey({ ...input, constraints: ["Wheelchair access", "vegetarian"] }, "m"),
+    );
     expect(planCacheKey(input, "m")).not.toBe(planCacheKey(input, "other"));
     expect(planCacheKey(input, "m")).not.toBe(planCacheKey({ ...input, guests: 181 }, "m"));
   });

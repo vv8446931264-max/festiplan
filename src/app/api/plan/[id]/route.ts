@@ -1,6 +1,15 @@
 import { LIMITS, PlanPatchSchema } from "@/lib/contracts";
 import { readJson } from "@/lib/security/body";
-import { invalid, json, perIpLimit, problem, runGuards, sameOrigin, toIssues, withRoute } from "@/lib/server/http";
+import {
+  invalid,
+  json,
+  perIpLimit,
+  problem,
+  runGuards,
+  sameOrigin,
+  toIssues,
+  withRoute,
+} from "@/lib/server/http";
 import { PLAN_NOT_FOUND, getPublicPlan, isPlanId, patchPlan } from "@/lib/server/plan-service";
 import { todayIST } from "@/lib/time";
 
@@ -32,7 +41,11 @@ export const PATCH = withRoute("PATCH /api/plan/[id]", async (req: Request, ctx:
   const { id } = await ctx.params;
   if (!isPlanId(id)) return problem(404, PLAN_NOT_FOUND);
   const editKey = req.headers.get("x-edit-key");
-  if (!editKey) return problem(403, "Editing needs the plan's edit key. Open the plan on the device that created it.");
+  if (!editKey)
+    return problem(
+      403,
+      "Editing needs the plan's edit key. Open the plan on the device that created it.",
+    );
   const body = await readJson(req, LIMITS.patchBodyBytes);
   if (!body.ok) return problem(body.status, body.error);
   const parsed = PlanPatchSchema.safeParse(body.data);

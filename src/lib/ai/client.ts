@@ -2,17 +2,21 @@ import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import type { FinishReason, GenerateContentParameters, ThinkingConfig } from "@google/genai";
 
 /** Token counts Gemini reports for one call (numbers only — safe to log). */
-export type AiUsage = { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number };
+export type AiUsage = {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  thoughtsTokenCount?: number;
+};
 
 /** The slice of a Gemini response FestiPlan reads. `GenerateContentResponse` satisfies it. */
 export type AiResponse = {
   readonly text?: string | undefined;
-  candidates?: Array<{
+  candidates?: {
     finishReason?: FinishReason;
     groundingMetadata?: {
-      groundingChunks?: Array<{ maps?: { title?: string; uri?: string } }>;
+      groundingChunks?: { maps?: { title?: string; uri?: string } }[];
     };
-  }>;
+  }[];
   usageMetadata?: AiUsage;
 };
 

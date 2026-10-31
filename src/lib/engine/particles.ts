@@ -16,7 +16,15 @@ export type ParticleAssignment = { column: Int16Array; slot: Int32Array; counts:
  * Stack geometry (scene units): column `spacing` on x, layer disc `radius`, `layerHeight`,
  * `perLayer` particles per layer, floor `baseY`, parked height `parkY`, peak-to-peak `jitter`.
  */
-export type ColumnLayout = { spacing: number; radius: number; layerHeight: number; perLayer: number; baseY: number; parkY: number; jitter: number };
+export type ColumnLayout = {
+  spacing: number;
+  radius: number;
+  layerHeight: number;
+  perLayer: number;
+  baseY: number;
+  parkY: number;
+  jitter: number;
+};
 
 /**
  * Spring options: `stiffness` (unit mass, default 60), `damping` (default 2·√stiffness = critical),
@@ -25,7 +33,15 @@ export type ColumnLayout = { spacing: number; radius: number; layerHeight: numbe
 export type SpringOptions = { stiffness?: number; damping?: number; lift?: number };
 
 /** Defaults sized for ~600 particles across ten columns. */
-export const DEFAULT_COLUMN_LAYOUT: ColumnLayout = { spacing: 1.15, radius: 0.34, layerHeight: 0.13, perLayer: 7, baseY: 0, parkY: -2, jitter: 0.05 };
+export const DEFAULT_COLUMN_LAYOUT: ColumnLayout = {
+  spacing: 1.15,
+  radius: 0.34,
+  layerHeight: 0.13,
+  perLayer: 7,
+  baseY: 0,
+  parkY: -2,
+  jitter: 0.05,
+};
 
 /** Largest simulation step; longer frames (tab switches, jank) are clamped to it. */
 export const MAX_DT = 1 / 30;
@@ -84,10 +100,17 @@ export function emptyAssignment(n: number): ParticleAssignment {
  * column order. When one slider moves, exactly the delta changes column. `prev`
  * carries the previous counts; `nextCounts` usually comes from {@link layoutParticles}.
  */
-export function assignParticles(prev: ParticleAssignment, nextCounts: readonly number[]): ParticleAssignment {
+export function assignParticles(
+  prev: ParticleAssignment,
+  nextCounts: readonly number[],
+): ParticleAssignment {
   const n = prev.column.length;
   const taken = nextCounts.map((c) => new Uint8Array(Math.floor(sanitize(c))));
-  const out: ParticleAssignment = { column: new Int16Array(n).fill(-1), slot: new Int32Array(n), counts: taken.map(() => 0) };
+  const out: ParticleAssignment = {
+    column: new Int16Array(n).fill(-1),
+    slot: new Int32Array(n),
+    counts: taken.map(() => 0),
+  };
   const free: number[] = [];
   for (let i = 0; i < n; i++) {
     const c = prev.column[i];
@@ -129,7 +152,11 @@ export function columnX(c: number, columns: number, layout: ColumnLayout): numbe
  * from `baseY`, plus deterministic jitter hashed from (column, slot). Parked
  * particles wait on `parkY` under the columns. Reuses `out` when its size fits.
  */
-export function targetsFor(assignment: ParticleAssignment, layout: ColumnLayout, out?: Float32Array): Float32Array {
+export function targetsFor(
+  assignment: ParticleAssignment,
+  layout: ColumnLayout,
+  out?: Float32Array,
+): Float32Array {
   const n = assignment.column.length;
   const t = out?.length === n * 3 ? out : new Float32Array(n * 3);
   const columns = assignment.counts.length;
@@ -149,7 +176,8 @@ export function targetsFor(assignment: ParticleAssignment, layout: ColumnLayout,
     const r = radius * Math.sqrt((k + 0.5) / perLayer);
     const seed = c * 65536 + s;
     t[o] = columnX(c, columns, layout) + Math.cos(angle) * r + (hash01(seed) - 0.5) * j;
-    t[o + 1] = layout.baseY + (layer + 0.5) * layout.layerHeight + (hash01(seed + 7) - 0.5) * j * 0.5;
+    t[o + 1] =
+      layout.baseY + (layer + 0.5) * layout.layerHeight + (hash01(seed + 7) - 0.5) * j * 0.5;
     t[o + 2] = Math.sin(angle) * r + (hash01(seed + 13) - 0.5) * j;
   }
   return t;
@@ -168,7 +196,12 @@ export function createParticleState(n: number, init?: Float32Array): ParticleSta
  * semi-implicit Euler, `dt` clamped to [0, {@link MAX_DT}] so a long frame cannot blow up.
  * Mutates and returns `state`.
  */
-export function stepParticles(state: ParticleState, targets: Float32Array, dt: number, opts: SpringOptions = {}): ParticleState {
+export function stepParticles(
+  state: ParticleState,
+  targets: Float32Array,
+  dt: number,
+  opts: SpringOptions = {},
+): ParticleState {
   const [h, k] = [Math.min(sanitize(dt), MAX_DT), opts.stiffness ?? 60];
   const [c, lift] = [opts.damping ?? 2 * Math.sqrt(k), opts.lift ?? 0];
   const { pos, vel } = state;
@@ -177,7 +210,8 @@ export function stepParticles(state: ParticleState, targets: Float32Array, dt: n
     const dx = targets[o] - pos[o];
     const dz = targets[o + 2] - pos[o + 2];
     vel[o] += (k * dx - c * vel[o]) * h;
-    vel[o + 1] += (k * (targets[o + 1] - pos[o + 1]) - c * vel[o + 1] + lift * Math.hypot(dx, dz)) * h;
+    vel[o + 1] +=
+      (k * (targets[o + 1] - pos[o + 1]) - c * vel[o + 1] + lift * Math.hypot(dx, dz)) * h;
     vel[o + 2] += (k * dz - c * vel[o + 2]) * h;
     pos[o] += vel[o] * h;
     pos[o + 1] += vel[o + 1] * h;

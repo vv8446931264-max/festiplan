@@ -2,7 +2,7 @@ import type { AiTask, Phase, ScheduledTask } from "@/lib/contracts";
 import { compressedLeadDays, scheduleCompression } from "./compression";
 import { addDays, diffDays, maxDate, minDate } from "./dates";
 
-const PHASE_LIMITS: ReadonlyArray<readonly [number, Phase]> = [
+const PHASE_LIMITS: readonly (readonly [number, Phase])[] = [
   [0, "day-of"],
   [7, "final-week"],
   [28, "2-4w"],
@@ -27,7 +27,10 @@ export function isOverdue(done: boolean, due: string, today: string): boolean {
  * @param a First task (or any object with `due` and `start`).
  * @param b Second task.
  */
-export function compareByDue(a: { due: string; start: string }, b: { due: string; start: string }): number {
+export function compareByDue(
+  a: { due: string; start: string },
+  b: { due: string; start: string },
+): number {
   return cmp(a.due, b.due) || cmp(a.start, b.start);
 }
 
@@ -125,10 +128,18 @@ function placeTask(task: AiTask, deps: number[], dues: string[], frame: Frame): 
  * @param eventDate ISO event date.
  * @param today ISO "today" (injected).
  */
-export function scheduleTimeline(tasks: AiTask[], eventDate: string, today: string): ScheduledTask[] {
+export function scheduleTimeline(
+  tasks: AiTask[],
+  eventDate: string,
+  today: string,
+): ScheduledTask[] {
   const order = topoOrder(tasks);
   const index = firstIndexById(tasks);
-  const frame: Frame = { eventDate, today, factor: scheduleCompression(tasks, eventDate, today).factor };
+  const frame: Frame = {
+    eventDate,
+    today,
+    factor: scheduleCompression(tasks, eventDate, today).factor,
+  };
   const dues: string[] = [];
   const slots: Slot[] = [];
   for (const i of order ?? tasks.map((_, k) => k)) {

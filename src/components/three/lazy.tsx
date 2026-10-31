@@ -25,10 +25,13 @@ function FlowPlaceholder() {
 }
 
 /** Fixed dusk backdrop with the lantern scene; place once, first in <body>. No props. */
-export const LazySceneBackdrop = dynamic(() => import("./SceneBackdrop").then((m) => m.SceneBackdrop), {
-  ssr: false,
-  loading: () => <DuskSky />,
-});
+export const LazySceneBackdrop = dynamic(
+  () => import("./SceneBackdrop").then((m) => m.SceneBackdrop),
+  {
+    ssr: false,
+    loading: () => <DuskSky />,
+  },
+);
 
 /** Budget Flow simulation; see {@link BudgetFlowProps}. */
 export const LazyBudgetFlow = dynamic(() => import("./BudgetFlow").then((m) => m.BudgetFlow), {

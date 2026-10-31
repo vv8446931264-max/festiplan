@@ -12,5 +12,9 @@ export function useToday(): string {
 
 /** `window.location.origin`, or "" during server render and hydration. */
 export function useOrigin(): string {
-  return useSyncExternalStore(never, () => window.location.origin, () => "");
+  return useSyncExternalStore(
+    never,
+    () => window.location.origin,
+    () => "",
+  );
 }

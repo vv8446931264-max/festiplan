@@ -1,18 +1,40 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import { BUDGET_CATEGORIES, type BudgetCategory } from "@/lib/contracts";
-import { DEFAULT_COLUMN_LAYOUT, MAX_DT, assignParticles, columnX, createParticleState, emptyAssignment, hash01 } from "@/lib/engine/particles";
-import { isSettled, layoutParticles, stackHeight, stepParticles, targetsFor, type ParticleAllocation, type ParticleAssignment } from "@/lib/engine/particles";
+import {
+  DEFAULT_COLUMN_LAYOUT,
+  MAX_DT,
+  assignParticles,
+  columnX,
+  createParticleState,
+  emptyAssignment,
+  hash01,
+} from "@/lib/engine/particles";
+import {
+  isSettled,
+  layoutParticles,
+  stackHeight,
+  stepParticles,
+  targetsFor,
+  type ParticleAllocation,
+  type ParticleAssignment,
+} from "@/lib/engine/particles";
 
 const lines = (amounts: number[]): ParticleAllocation[] =>
-  amounts.map((amountINR, i) => ({ category: BUDGET_CATEGORIES[i % BUDGET_CATEGORIES.length] as BudgetCategory, amountINR }));
+  amounts.map((amountINR, i) => ({
+    category: BUDGET_CATEGORIES[i % BUDGET_CATEGORIES.length],
+    amountINR,
+  }));
 
 const sum = (xs: ArrayLike<number>) => Array.from(xs).reduce((s, x) => s + x, 0);
 
 /** Every column's slots are exactly 0..count-1, once each. */
 function expectContiguous(a: ParticleAssignment) {
   a.counts.forEach((count, c) => {
-    const slots = Array.from(a.column.keys()).filter((i) => a.column[i] === c).map((i) => a.slot[i]).sort((x, y) => x - y);
+    const slots = Array.from(a.column.keys())
+      .filter((i) => a.column[i] === c)
+      .map((i) => a.slot[i])
+      .sort((x, y) => x - y);
     expect(slots).toEqual(Array.from({ length: count }, (_, k) => k));
   });
 }
@@ -32,11 +54,15 @@ describe("hash01", () => {
 describe("layoutParticles", () => {
   it("sums to exactly n for many budgets", () => {
     for (let t = 0; t < 200; t++) {
-      const amounts = Array.from({ length: 1 + (t % 10) }, (_, i) => Math.floor(hash01(t * 31 + i) * 1_000_000));
+      const amounts = Array.from({ length: 1 + (t % 10) }, (_, i) =>
+        Math.floor(hash01(t * 31 + i) * 1_000_000),
+      );
       const n = 1 + Math.floor(hash01(t) * 700);
       const counts = layoutParticles(lines(amounts), n);
       if (sum(amounts) > 0) expect(sum(counts)).toBe(n);
-      counts.forEach((c, i) => expect(Math.abs(c - (amounts[i] * n) / Math.max(sum(amounts), 1))).toBeLessThan(1));
+      counts.forEach((c, i) =>
+        expect(Math.abs(c - (amounts[i] * n) / Math.max(sum(amounts), 1))).toBeLessThan(1),
+      );
     }
   });
 
@@ -54,7 +80,9 @@ describe("layoutParticles", () => {
   });
 
   it("treats negative and non-finite amounts as zero and floors n", () => {
-    expect(layoutParticles(lines([-5, Number.POSITIVE_INFINITY, 10, Number.NaN]), 7.9)).toEqual([0, 0, 7, 0]);
+    expect(layoutParticles(lines([-5, Number.POSITIVE_INFINITY, 10, Number.NaN]), 7.9)).toEqual([
+      0, 0, 7, 0,
+    ]);
   });
 });
 
@@ -85,7 +113,10 @@ describe("assignParticles", () => {
   it("is a no-op when counts do not change", () => {
     const a = assignParticles(emptyAssignment(50), [20, 30]);
     const b = assignParticles(a, [20, 30]);
-    expect([Array.from(b.column), Array.from(b.slot)]).toEqual([Array.from(a.column), Array.from(a.slot)]);
+    expect([Array.from(b.column), Array.from(b.slot)]).toEqual([
+      Array.from(a.column),
+      Array.from(a.slot),
+    ]);
   });
 
   it("frees particles of dropped columns and parks the surplus", () => {
@@ -102,7 +133,11 @@ describe("assignParticles", () => {
   });
 
   it("repairs malformed input (negative and duplicate slots)", () => {
-    const prev: ParticleAssignment = { column: Int16Array.from([0, 0, 0, 1]), slot: Int32Array.from([0, 0, -1, 9]), counts: [3, 1] };
+    const prev: ParticleAssignment = {
+      column: Int16Array.from([0, 0, 0, 1]),
+      slot: Int32Array.from([0, 0, -1, 9]),
+      counts: [3, 1],
+    };
     const next = assignParticles(prev, [3, 1.7, -2]);
     expect(next.counts).toEqual([3, 1, 0]);
     expect(next.column[0]).toBe(0);
@@ -128,9 +163,13 @@ describe("layout geometry", () => {
     expect(t.length).toBe(120);
     for (let i = 0; i < 40; i++) {
       const [c, x, y] = [a.column[i], t[i * 3], t[i * 3 + 1]];
-      expect(Math.abs(x - columnX(c, 2, layout))).toBeLessThanOrEqual(layout.radius + layout.jitter);
+      expect(Math.abs(x - columnX(c, 2, layout))).toBeLessThanOrEqual(
+        layout.radius + layout.jitter,
+      );
       expect(y).toBeGreaterThanOrEqual(layout.baseY - layout.jitter);
-      expect(y).toBeLessThanOrEqual(layout.baseY + stackHeight(a.counts[c], layout) + layout.jitter);
+      expect(y).toBeLessThanOrEqual(
+        layout.baseY + stackHeight(a.counts[c], layout) + layout.jitter,
+      );
     }
     expect(Array.from(targetsFor(a, layout))).toEqual(Array.from(t));
   });
@@ -170,14 +209,22 @@ describe("stepParticles", () => {
     const b = stepParticles(createParticleState(1), target, MAX_DT);
     expect(Array.from(a.pos)).toEqual(Array.from(b.pos));
     expect(Array.from(stepParticles(createParticleState(1), target, -1).pos)).toEqual([0, 0, 0]);
-    expect(Array.from(stepParticles(createParticleState(1), target, Number.NaN).pos)).toEqual([0, 0, 0]);
+    expect(Array.from(stepParticles(createParticleState(1), target, Number.NaN).pos)).toEqual([
+      0, 0, 0,
+    ]);
   });
 
   it("honours custom stiffness, damping and lift", () => {
-    const soft = stepParticles(createParticleState(1), target, 1 / 60, { stiffness: 5, damping: 1 });
+    const soft = stepParticles(createParticleState(1), target, 1 / 60, {
+      stiffness: 5,
+      damping: 1,
+    });
     const stiff = stepParticles(createParticleState(1), target, 1 / 60, { stiffness: 200 });
     expect(Math.abs(stiff.pos[0])).toBeGreaterThan(Math.abs(soft.pos[0]));
-    expect(stepParticles(createParticleState(1), Float32Array.from([4, 0, 0]), 1 / 60, { lift: 20 }).pos[1]).toBeGreaterThan(0);
+    expect(
+      stepParticles(createParticleState(1), Float32Array.from([4, 0, 0]), 1 / 60, { lift: 20 })
+        .pos[1],
+    ).toBeGreaterThan(0);
   });
 
   it("reports unsettled on position or velocity", () => {

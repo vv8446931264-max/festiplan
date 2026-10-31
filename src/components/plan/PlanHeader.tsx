@@ -20,7 +20,8 @@ type Props = {
   plan: PublicPlan;
   saveState: SaveState;
   editable: boolean;
-  autoFocus?: boolean;
+  /** Move focus to the title once mounted, so a just-generated plan is announced. */
+  focusOnMount?: boolean;
   /** h1 on the standalone share page, h2 when the plan unfolds inside the landing page. */
   titleAs?: "h1" | "h2";
 };
@@ -34,24 +35,32 @@ export function countdownLabel(days: number): string {
 }
 
 /** Title, the brief's key facts, the AI-source label and the summary. */
-export function PlanHeader({ plan, saveState, editable, autoFocus, titleAs: Title = "h2" }: Props) {
+export function PlanHeader({
+  plan,
+  saveState,
+  editable,
+  focusOnMount,
+  titleAs: Title = "h2",
+}: Props) {
   const ref = useRef<HTMLHeadingElement>(null);
   const { input } = plan;
   const today = useToday() || plan.today;
   const lang = aiLang(plan);
 
   useEffect(() => {
-    if (!autoFocus) return;
+    if (!focusOnMount) return;
     ref.current?.focus({ preventScroll: true });
     ref.current?.scrollIntoView({ block: "start" });
-  }, [autoFocus]);
+  }, [focusOnMount]);
 
   return (
     <header className="legible flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-3">
         <span className="eyebrow">Plan Nº {plan.id.slice(0, 6).toUpperCase()}</span>
         <SourceBadge source={plan.source} model={plan.model} />
-        {!editable && <span className="eyebrow rounded-full border border-line px-3 py-1">Read-only</span>}
+        {!editable && (
+          <span className="eyebrow rounded-full border border-line px-3 py-1">Read-only</span>
+        )}
       </div>
       <Title ref={ref} id="plan-title" tabIndex={-1} className="h2 scroll-mt-24 outline-none">
         {planTitle(input)}

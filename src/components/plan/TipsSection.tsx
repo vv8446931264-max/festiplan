@@ -9,7 +9,13 @@ const KIND_LABELS: Record<TipKind, string> = {
 };
 
 /** Practical tips grouped by kind. */
-export const TipsSection = memo(function TipsSection({ tips, lang }: { tips: Tip[]; lang?: string }) {
+export const TipsSection = memo(function TipsSection({
+  tips,
+  lang,
+}: {
+  tips: Tip[];
+  lang?: string;
+}) {
   return (
     <section aria-labelledby="tips-title" className="reveal">
       <h3 id="tips-title" className="eyebrow mb-6 border-t border-line pt-6">

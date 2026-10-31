@@ -10,7 +10,10 @@ export type DocRefLike = {
 /** One transactional read-modify-write of a raw document (`write` null = no write). */
 export type Transact = <T>(
   id: string,
-  fn: (data: Record<string, unknown> | undefined) => { write: Record<string, unknown> | null; result: T },
+  fn: (data: Record<string, unknown> | undefined) => {
+    write: Record<string, unknown> | null;
+    result: T;
+  },
 ) => Promise<T>;
 
 /** What the adapter needs from the Firestore SDK: the `plans` collection, transactions and Date → Timestamp. */
@@ -26,7 +29,9 @@ export const PLANS_COLLECTION = "plans";
  * Loads `@google-cloud/firestore` lazily (memory mode never imports it) and binds the
  * `plans` collection of the named Native-mode database (`FIRESTORE_DATABASE`, default "festiplan").
  */
-export async function loadFirestore(env: Record<string, string | undefined> = process.env): Promise<FirestoreBinding> {
+export async function loadFirestore(
+  env: Record<string, string | undefined> = process.env,
+): Promise<FirestoreBinding> {
   const { Firestore, Timestamp } = await import("@google-cloud/firestore");
   const db = new Firestore({
     databaseId: env.FIRESTORE_DATABASE?.trim() || "festiplan",

@@ -28,12 +28,12 @@ export const BRAND_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="
 export function brandIconResponse(px: number): ImageResponse {
   const src = `data:image/svg+xml;base64,${Buffer.from(BRAND_ICON_SVG).toString("base64")}`;
   return new ImageResponse(
-    (
-      <div style={{ display: "flex", width: "100%", height: "100%", background: BRAND_COLORS.espresso }}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- rendered by next/og, not the browser */}
-        <img src={src} width={px} height={px} alt="" />
-      </div>
-    ),
+    <div
+      style={{ display: "flex", width: "100%", height: "100%", background: BRAND_COLORS.espresso }}
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element -- rendered by next/og, not the browser */}
+      <img src={src} width={px} height={px} alt="" />
+    </div>,
     { width: px, height: px },
   );
 }

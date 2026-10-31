@@ -20,7 +20,11 @@ const PRINCIPLES = [
 /** Chapter 1: what FestiPlan believes, in four lines. */
 export function Manifesto() {
   return (
-    <section id="manifesto" aria-labelledby="manifesto-title" className="shell scroll-mt-8 py-24 sm:py-36">
+    <section
+      id="manifesto"
+      aria-labelledby="manifesto-title"
+      className="shell scroll-mt-8 py-24 sm:py-36"
+    >
       <div className="legible grid gap-10 lg:grid-cols-[1fr_2fr]">
         <p className="eyebrow">Nº 01 — Manifesto</p>
         <div className="reveal flex flex-col gap-8">

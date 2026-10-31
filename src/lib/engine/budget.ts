@@ -46,7 +46,11 @@ export function largestRemainder(total: number, weights: number[]): number[] {
  * @param totalINR Total budget, contingency included.
  * @param guests Guest count (at least 1 is assumed).
  */
-export function withDerived(allocations: Allocation[], totalINR: number, guests: number): Allocation[] {
+export function withDerived(
+  allocations: Allocation[],
+  totalINR: number,
+  guests: number,
+): Allocation[] {
   return allocations.map((a) => ({
     ...a,
     percent: Math.round((a.amountINR / Math.max(1, totalINR)) * 1000) / 10,
@@ -81,8 +85,14 @@ export function allocateBudget(args: {
 }): { contingencyINR: number; allocations: Allocation[] } {
   const { totalINR, guests, contingencyPercent = CONTINGENCY_PERCENT } = args;
   const weights = firstPerCategory(args.weights);
-  const contingencyINR = Math.min(totalINR, Math.max(0, Math.round((totalINR * contingencyPercent) / 100)));
-  const amounts = largestRemainder(totalINR - contingencyINR, weights.map((w) => w.weight));
+  const contingencyINR = Math.min(
+    totalINR,
+    Math.max(0, Math.round((totalINR * contingencyPercent) / 100)),
+  );
+  const amounts = largestRemainder(
+    totalINR - contingencyINR,
+    weights.map((w) => w.weight),
+  );
   const lines: Allocation[] = weights.map((w, i) => ({
     category: w.category,
     amountINR: amounts[i],
@@ -92,7 +102,10 @@ export function allocateBudget(args: {
     locked: false,
     actualINR: null,
   }));
-  return { contingencyINR, allocations: withDerived(lines.sort(byAmountThenCategory), totalINR, guests) };
+  return {
+    contingencyINR,
+    allocations: withDerived(lines.sort(byAmountThenCategory), totalINR, guests),
+  };
 }
 
 const clampAmount = (value: number, max: number): number => {
@@ -119,9 +132,14 @@ export function rebalance(
   if (!allocations.some((a) => a.category === category)) return [...allocations];
   const others = allocations.filter((a) => a.category !== category);
   const free = others.filter((a) => !a.locked);
-  const room = sum(allocations.map((a) => a.amountINR)) - sum(others.filter((a) => a.locked).map((a) => a.amountINR));
+  const room =
+    sum(allocations.map((a) => a.amountINR)) -
+    sum(others.filter((a) => a.locked).map((a) => a.amountINR));
   const target = free.length === 0 ? room : clampAmount(amountINR, room);
-  const shares = largestRemainder(room - target, free.map((a) => a.amountINR));
+  const shares = largestRemainder(
+    room - target,
+    free.map((a) => a.amountINR),
+  );
   const next = new Map<BudgetCategory, number>(free.map((a, i) => [a.category, shares[i]]));
   next.set(category, target);
   return withDerived(
@@ -137,7 +155,11 @@ export function rebalance(
  * @param category Line to change.
  * @param locked New lock state.
  */
-export function setLocked(allocations: Allocation[], category: BudgetCategory, locked: boolean): Allocation[] {
+export function setLocked(
+  allocations: Allocation[],
+  category: BudgetCategory,
+  locked: boolean,
+): Allocation[] {
   return allocations.map((a) => (a.category === category ? { ...a, locked } : a));
 }
 
@@ -147,7 +169,11 @@ export function setLocked(allocations: Allocation[], category: BudgetCategory, l
  * @param category Line to change.
  * @param actualINR Actual rupees spent, or `null` to clear.
  */
-export function setActual(allocations: Allocation[], category: BudgetCategory, actualINR: number | null): Allocation[] {
+export function setActual(
+  allocations: Allocation[],
+  category: BudgetCategory,
+  actualINR: number | null,
+): Allocation[] {
   return allocations.map((a) => (a.category === category ? { ...a, actualINR } : a));
 }
 
@@ -161,7 +187,11 @@ const isWholeRupees = (n: number): boolean => Number.isInteger(n) && n >= 0;
  * @param edits One edit per category.
  * @param ctx Total budget and guests, for the derived fields.
  */
-export function applyEdits(current: Allocation[], edits: AllocationEdit[], ctx: BudgetContext): Allocation[] | null {
+export function applyEdits(
+  current: Allocation[],
+  edits: AllocationEdit[],
+  ctx: BudgetContext,
+): Allocation[] | null {
   if (edits.length !== current.length) return null;
   if (!edits.every((e) => isWholeRupees(e.amountINR))) return null;
   if (sum(edits.map((e) => e.amountINR)) !== sum(current.map((a) => a.amountINR))) return null;

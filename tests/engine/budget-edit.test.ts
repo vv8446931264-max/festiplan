@@ -4,7 +4,11 @@ import type { Allocation, BudgetCategory } from "@/lib/contracts";
 import { applyEdits, rebalance, setActual, setLocked } from "@/lib/engine/budget";
 
 const ctx = { totalINR: 1_000, guests: 10 };
-const line = (category: BudgetCategory, amountINR: number, extra: Partial<Allocation> = {}): Allocation => ({
+const line = (
+  category: BudgetCategory,
+  amountINR: number,
+  extra: Partial<Allocation> = {},
+): Allocation => ({
   category,
   amountINR,
   percent: 0,
@@ -14,7 +18,12 @@ const line = (category: BudgetCategory, amountINR: number, extra: Partial<Alloca
   actualINR: null,
   ...extra,
 });
-const base = (): Allocation[] => [line("venue", 400), line("catering", 300), line("decor", 200), line("misc", 100)];
+const base = (): Allocation[] => [
+  line("venue", 400),
+  line("catering", 300),
+  line("decor", 200),
+  line("misc", 100),
+];
 const amounts = (l: Allocation[]): number[] => l.map((a) => a.amountINR);
 
 describe("rebalance", () => {
@@ -30,7 +39,9 @@ describe("rebalance", () => {
   });
 
   it("keeps locked lines fixed", () => {
-    expect(amounts(rebalance(setLocked(base(), "catering", true), "venue", 500, ctx))).toEqual([500, 300, 133, 67]);
+    expect(amounts(rebalance(setLocked(base(), "catering", true), "venue", 500, ctx))).toEqual([
+      500, 300, 133, 67,
+    ]);
   });
 
   it("clamps the target to what the locked lines leave", () => {
@@ -46,9 +57,11 @@ describe("rebalance", () => {
   });
 
   it("splits evenly when the unlocked others are all zero", () => {
-    expect(amounts(rebalance([line("venue", 1_000), line("catering", 0), line("decor", 0)], "venue", 400, ctx))).toEqual([
-      400, 300, 300,
-    ]);
+    expect(
+      amounts(
+        rebalance([line("venue", 1_000), line("catering", 0), line("decor", 0)], "venue", 400, ctx),
+      ),
+    ).toEqual([400, 300, 300]);
   });
 
   it("rounds fractions and treats NaN as zero or infinity as the maximum", () => {
@@ -97,8 +110,17 @@ describe("setLocked / setActual", () => {
 
 describe("applyEdits", () => {
   const current = base().map((a) => ({ ...a, actualINR: a.category === "misc" ? 90 : null }));
-  const edit = (category: BudgetCategory, amountINR: number, locked = false) => ({ category, amountINR, locked });
-  const valid = [edit("misc", 50), edit("venue", 450, true), edit("catering", 300), edit("decor", 200)];
+  const edit = (category: BudgetCategory, amountINR: number, locked = false) => ({
+    category,
+    amountINR,
+    locked,
+  });
+  const valid = [
+    edit("misc", 50),
+    edit("venue", 450, true),
+    edit("catering", 300),
+    edit("decor", 200),
+  ];
 
   it("applies amounts and locks, keeping rationale and actuals", () => {
     const out = applyEdits(current, valid, ctx);
@@ -108,7 +130,12 @@ describe("applyEdits", () => {
       ["decor", 200, false],
       ["misc", 50, false],
     ]);
-    expect(out?.[3]).toMatchObject({ actualINR: 90, rationale: "why misc", percent: 5, perGuestINR: 5 });
+    expect(out?.[3]).toMatchObject({
+      actualINR: 90,
+      rationale: "why misc",
+      percent: 5,
+      perGuestINR: 5,
+    });
   });
 
   it("rejects a different number of edits", () => {
@@ -122,12 +149,36 @@ describe("applyEdits", () => {
   });
 
   it("rejects negative or fractional amounts even when the sum matches", () => {
-    expect(applyEdits(current, [edit("venue", 500), edit("catering", 300), edit("decor", 300), edit("misc", -100)], ctx)).toBeNull();
-    expect(applyEdits(current, [edit("venue", 400.5), edit("catering", 299.5), edit("decor", 200), edit("misc", 100)], ctx)).toBeNull();
+    expect(
+      applyEdits(
+        current,
+        [edit("venue", 500), edit("catering", 300), edit("decor", 300), edit("misc", -100)],
+        ctx,
+      ),
+    ).toBeNull();
+    expect(
+      applyEdits(
+        current,
+        [edit("venue", 400.5), edit("catering", 299.5), edit("decor", 200), edit("misc", 100)],
+        ctx,
+      ),
+    ).toBeNull();
   });
 
   it("rejects a different or duplicated category set", () => {
-    expect(applyEdits(current, [edit("venue", 400), edit("catering", 300), edit("decor", 200), edit("gifts", 100)], ctx)).toBeNull();
-    expect(applyEdits(current, [edit("venue", 400), edit("venue", 300), edit("decor", 200), edit("misc", 100)], ctx)).toBeNull();
+    expect(
+      applyEdits(
+        current,
+        [edit("venue", 400), edit("catering", 300), edit("decor", 200), edit("gifts", 100)],
+        ctx,
+      ),
+    ).toBeNull();
+    expect(
+      applyEdits(
+        current,
+        [edit("venue", 400), edit("venue", 300), edit("decor", 200), edit("misc", 100)],
+        ctx,
+      ),
+    ).toBeNull();
   });
 });

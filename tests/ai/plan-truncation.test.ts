@@ -3,7 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FinishReason } from "@google/genai";
 import type { AiResponse } from "@/lib/ai/client";
 import { generateAiPlan } from "@/lib/ai/plan";
-import { CONCISE_NOTE, MAX_PLAN_TOKENS, addUsage, isTruncated, planTokenBudget, raisedBudget } from "@/lib/ai/plan-model";
+import {
+  CONCISE_NOTE,
+  MAX_PLAN_TOKENS,
+  addUsage,
+  isTruncated,
+  planTokenBudget,
+  raisedBudget,
+} from "@/lib/ai/plan-model";
 import { templatePlan } from "@/lib/ai/templates";
 import { logEvent } from "@/lib/server/log";
 import { fakeAi, jsonReply, promptText, sampleInput } from "../server/fixtures";
@@ -12,10 +19,22 @@ vi.mock("@/lib/server/log", () => ({ logEvent: vi.fn() }));
 
 const logged = vi.mocked(logEvent);
 const geminiPlan = () => ({ ...templatePlan(sampleInput()), summary: "Straight from Gemini." });
-const usage = (p: number, c: number, t?: number) => ({ promptTokenCount: p, candidatesTokenCount: c, thoughtsTokenCount: t });
+const usage = (p: number, c: number, t?: number) => ({
+  promptTokenCount: p,
+  candidatesTokenCount: c,
+  thoughtsTokenCount: t,
+});
 const CUT_TEXT = '{"summary":"A sangeet under marigolds","ideas":[{"name":"Rang';
-const truncated = (): AiResponse => ({ text: CUT_TEXT, candidates: [{ finishReason: FinishReason.MAX_TOKENS }], usageMetadata: usage(900, 8192, 40) });
-const ok = (): AiResponse => ({ ...jsonReply(geminiPlan()), candidates: [{ finishReason: FinishReason.STOP }], usageMetadata: usage(950, 5000, 30) });
+const truncated = (): AiResponse => ({
+  text: CUT_TEXT,
+  candidates: [{ finishReason: FinishReason.MAX_TOKENS }],
+  usageMetadata: usage(900, 8192, 40),
+});
+const ok = (): AiResponse => ({
+  ...jsonReply(geminiPlan()),
+  candidates: [{ finishReason: FinishReason.STOP }],
+  usageMetadata: usage(950, 5000, 30),
+});
 
 beforeEach(() => logged.mockClear());
 
@@ -39,7 +58,11 @@ describe("output budgets", () => {
 
   it("sums token counts, treating missing ones as zero", () => {
     const zero = { promptTokenCount: 0, candidatesTokenCount: 0, thoughtsTokenCount: 0 };
-    expect(addUsage(addUsage(zero, usage(1, 2, 3)), undefined)).toEqual({ promptTokenCount: 1, candidatesTokenCount: 2, thoughtsTokenCount: 3 });
+    expect(addUsage(addUsage(zero, usage(1, 2, 3)), undefined)).toEqual({
+      promptTokenCount: 1,
+      candidatesTokenCount: 2,
+      thoughtsTokenCount: 3,
+    });
     expect(addUsage(zero, { promptTokenCount: 5 })).toEqual({ ...zero, promptTokenCount: 5 });
   });
 });
@@ -70,12 +93,23 @@ describe("a reply cut off at the token limit", () => {
     expect(result).toMatchObject({ source: "template", model: "template", attempts: 2 });
     expect(calls).toHaveLength(2);
     expect(logged).toHaveBeenCalledWith(
-      expect.objectContaining({ severity: "WARNING", message: "ai_plan_fallback", reason: "max_tokens", attempts: 2, promptTokenCount: 1800, candidatesTokenCount: 16_384, thoughtsTokenCount: 80 }),
+      expect.objectContaining({
+        severity: "WARNING",
+        message: "ai_plan_fallback",
+        reason: "max_tokens",
+        attempts: 2,
+        promptTokenCount: 1800,
+        candidatesTokenCount: 16_384,
+        thoughtsTokenCount: 80,
+      }),
     );
   });
 
   it("still gets the validation-error retry when an uncut reply is invalid", async () => {
-    const { handle, calls } = fakeAi([{ text: "{}", candidates: [{ finishReason: FinishReason.STOP }] }, ok()]);
+    const { handle, calls } = fakeAi([
+      { text: "{}", candidates: [{ finishReason: FinishReason.STOP }] },
+      ok(),
+    ]);
     await generateAiPlan(sampleInput(), { ai: handle, cache: null });
     expect(calls.map((c) => c.config?.maxOutputTokens)).toEqual([8192, 8192]);
     expect(promptText(calls[1])).toContain("failed validation");
@@ -104,7 +138,13 @@ describe("token logging", () => {
     const { handle } = fakeAi([new DOMException("timed out", "TimeoutError")]);
     await generateAiPlan(sampleInput(), { ai: handle, cache: null });
     expect(logged).toHaveBeenCalledWith(
-      expect.objectContaining({ reason: "TimeoutError", attempts: 1, promptTokenCount: 0, candidatesTokenCount: 0, thoughtsTokenCount: 0 }),
+      expect.objectContaining({
+        reason: "TimeoutError",
+        attempts: 1,
+        promptTokenCount: 0,
+        candidatesTokenCount: 0,
+        thoughtsTokenCount: 0,
+      }),
     );
   });
 });

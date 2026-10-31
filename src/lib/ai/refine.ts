@@ -35,7 +35,12 @@ export function compactPlan(plan: PublicPlan) {
       actualINR: a.actualINR,
     })),
     ideas: plan.ai.ideas.map((i) => ({ name: i.name, concept: i.concept })),
-    openTasks: nextActions(plan.timeline, 15).map((t) => ({ title: t.title, due: t.due, phase: t.phase, overdue: t.overdue })),
+    openTasks: nextActions(plan.timeline, 15).map((t) => ({
+      title: t.title,
+      due: t.due,
+      phase: t.phase,
+      overdue: t.overdue,
+    })),
     tasksDone: plan.timeline.filter((t) => t.done).length,
     vendors: plan.vendors.map((v) => ({ category: v.category, bookBy: v.bookBy, done: v.done })),
   };
@@ -66,7 +71,11 @@ export function templateAnswer(plan: PublicPlan): string {
   ].join("\n");
 }
 
-async function* modelChunks(handle: AiHandle, prompt: string, signal: AbortSignal): AsyncGenerator<string> {
+async function* modelChunks(
+  handle: AiHandle,
+  prompt: string,
+  signal: AbortSignal,
+): AsyncGenerator<string> {
   const stream = await handle.client.models.generateContentStream({
     model: handle.model,
     contents: prompt,
@@ -110,10 +119,17 @@ async function* answerChunks(
  * With no backend, an empty reply or an error (even mid-stream) it emits a deterministic
  * template answer prefixed "Template answer — AI unavailable.".
  */
-export function refineStream(plan: PublicPlan, question: string, deps: RefineDeps = {}): ReadableStream<Uint8Array> {
+export function refineStream(
+  plan: PublicPlan,
+  question: string,
+  deps: RefineDeps = {},
+): ReadableStream<Uint8Array> {
   const handle = deps.ai === undefined ? getAi() : deps.ai;
   const abort = new AbortController();
-  const signal = AbortSignal.any([abort.signal, AbortSignal.timeout(deps.timeoutMs ?? REFINE_TIMEOUT_MS)]);
+  const signal = AbortSignal.any([
+    abort.signal,
+    AbortSignal.timeout(deps.timeoutMs ?? REFINE_TIMEOUT_MS),
+  ]);
   const chunks = answerChunks(plan, question, handle, signal);
   const encoder = new TextEncoder();
   return new ReadableStream<Uint8Array>({

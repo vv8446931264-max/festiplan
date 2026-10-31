@@ -77,7 +77,11 @@ function addInnerGlow(material: MeshStandardMaterial, glow: GlowUniform): void {
  * thin-wall thickness, warm attenuation) that refracts the sky and the cores.
  * Low tier: a cheaper translucent standard material with the same inner glow.
  */
-export function createBodyMaterial(tier: Exclude<Tier, "off">, envMap: Texture, glow: GlowUniform): MeshStandardMaterial {
+export function createBodyMaterial(
+  tier: Exclude<Tier, "off">,
+  envMap: Texture,
+  glow: GlowUniform,
+): MeshStandardMaterial {
   const shared = {
     color: 0xffffff,
     envMap,

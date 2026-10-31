@@ -14,7 +14,8 @@ export function Faq() {
             Fair questions, <span className="accent text-gold">straight answers</span>.
           </h2>
           <p className="lead max-w-2xl text-muted">
-            The short version: Gemini has the ideas, code does the maths, and Google Maps names the vendors.
+            The short version: Gemini has the ideas, code does the maths, and Google Maps names the
+            vendors.
           </p>
         </div>
       </div>
@@ -32,10 +33,16 @@ export function Faq() {
 
 function FaqEntry({ item }: { item: FaqItem }) {
   return (
-    <details id={`faq-${item.id}`} className="group border-b border-line px-6 last:border-b-0 sm:px-8">
+    <details
+      id={`faq-${item.id}`}
+      className="group border-b border-line px-6 last:border-b-0 sm:px-8"
+    >
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-6 py-6 text-xl font-bold tracking-tight sm:text-2xl [&::-webkit-details-marker]:hidden">
         <span>{item.question}</span>
-        <span aria-hidden="true" className="accent shrink-0 text-3xl leading-none text-gold transition-transform duration-200 group-open:rotate-45">
+        <span
+          aria-hidden="true"
+          className="accent shrink-0 text-3xl leading-none text-gold transition-transform duration-200 group-open:rotate-45"
+        >
           +
         </span>
       </summary>

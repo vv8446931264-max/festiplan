@@ -5,17 +5,26 @@ export function SiteHeader() {
   return (
     <header className="shell relative z-10 flex items-center justify-between gap-4 py-5">
       <Link href="/" className="text-xl font-extrabold tracking-tight text-cream no-underline">
-        FestiPlan<span className="text-gold" aria-hidden="true">.</span>
+        FestiPlan
+        <span className="text-gold" aria-hidden="true">
+          .
+        </span>
       </Link>
       <nav aria-label="Main">
         <ul className="flex items-center gap-1 sm:gap-3">
           <li className="hidden sm:block">
-            <Link href="/#manifesto" className="eyebrow inline-flex min-h-11 items-center px-3 text-cream no-underline hover:text-gold">
+            <Link
+              href="/#manifesto"
+              className="eyebrow inline-flex min-h-11 items-center px-3 text-cream no-underline hover:text-gold"
+            >
               How it works
             </Link>
           </li>
           <li className="hidden sm:block">
-            <Link href="/#faq" className="eyebrow inline-flex min-h-11 items-center px-3 text-cream no-underline hover:text-gold">
+            <Link
+              href="/#faq"
+              className="eyebrow inline-flex min-h-11 items-center px-3 text-cream no-underline hover:text-gold"
+            >
               FAQ
             </Link>
           </li>

@@ -23,6 +23,11 @@ export function SectionHead({ id, number, kicker, title, children }: Props) {
  * The `lang` for AI-written text: the plan language for Gemini plans, undefined for
  * English. Template plans are always English whatever language was requested.
  */
-export function aiLang(plan: { source: "gemini" | "template"; input: { language: string } }): string | undefined {
-  return plan.source === "template" || plan.input.language === "en" ? undefined : plan.input.language;
+export function aiLang(plan: {
+  source: "gemini" | "template";
+  input: { language: string };
+}): string | undefined {
+  return plan.source === "template" || plan.input.language === "en"
+    ? undefined
+    : plan.input.language;
 }

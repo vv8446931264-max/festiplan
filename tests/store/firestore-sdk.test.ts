@@ -25,7 +25,10 @@ vi.mock("@google-cloud/firestore", () => {
       return new Date(this.millis);
     }
   }
-  const snapshot = (path: string) => ({ exists: sdk.docs.has(path), data: () => sdk.docs.get(path) });
+  const snapshot = (path: string) => ({
+    exists: sdk.docs.has(path),
+    data: () => sdk.docs.get(path),
+  });
   class DocumentReference {
     constructor(readonly path: string) {}
     async create(data: Data): Promise<void> {
@@ -94,7 +97,9 @@ describe("FirestoreStore.mutate inside runTransaction", () => {
     const { plan, editKey } = await createPlan(sampleInput(), TODAY, { store, ai: null });
     const task = plan.timeline[0];
     if (!task) throw new Error("fixture plan has no tasks");
-    const res = await patchPlan(plan.id, editKey, { tasks: [{ id: task.id, done: true }] }, TODAY, { store });
+    const res = await patchPlan(plan.id, editKey, { tasks: [{ id: task.id, done: true }] }, TODAY, {
+      store,
+    });
     expect(res.ok).toBe(true);
     expect(sdk.transactions).toBe(1);
     expect(sdk.txReads).toEqual([`plans/${plan.id}`]);
@@ -109,9 +114,16 @@ describe("FirestoreStore.mutate inside runTransaction", () => {
     const { plan, editKey } = await createPlan(sampleInput(), TODAY, { store, ai: null });
     const before = structuredClone(sdk.docs.get(`plans/${plan.id}`));
     const tick = { tasks: [{ id: plan.timeline[0]?.id ?? "x", done: true }] };
-    expect(await patchPlan(plan.id, "wrong-key", tick, TODAY, { store })).toMatchObject({ ok: false, status: 403 });
-    expect(await patchPlan(plan.id, editKey, { tasks: [{ id: "ghost", done: true }] }, TODAY, { store })).toMatchObject({ status: 422 });
-    expect(await patchPlan("missing-plan", editKey, tick, TODAY, { store })).toMatchObject({ status: 404 });
+    expect(await patchPlan(plan.id, "wrong-key", tick, TODAY, { store })).toMatchObject({
+      ok: false,
+      status: 403,
+    });
+    expect(
+      await patchPlan(plan.id, editKey, { tasks: [{ id: "ghost", done: true }] }, TODAY, { store }),
+    ).toMatchObject({ status: 422 });
+    expect(await patchPlan("missing-plan", editKey, tick, TODAY, { store })).toMatchObject({
+      status: 404,
+    });
     expect(sdk.transactions).toBe(3);
     expect(sdk.txReads).toHaveLength(3);
     expect(sdk.txWrites).toEqual([]);

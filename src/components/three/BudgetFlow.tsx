@@ -55,7 +55,12 @@ export function BudgetFlow({ allocations, highlight, onHighlight, className }: B
       className={className}
       style={{ position: "relative", aspectRatio: aspect, overflow: "hidden" }}
     >
-      <BudgetFlowFallback allocations={allocations} highlight={highlight} hidden={ready && tier !== "off"} onHighlight={onHighlight} />
+      <BudgetFlowFallback
+        allocations={allocations}
+        highlight={highlight}
+        hidden={ready && tier !== "off"}
+        onHighlight={onHighlight}
+      />
     </div>
   );
 }

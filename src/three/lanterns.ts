@@ -1,13 +1,32 @@
-import { Color, DynamicDrawUsage, Euler, InstancedMesh, Matrix4, Quaternion, Vector3, type MeshBasicMaterial, type Texture } from "three";
+import {
+  Color,
+  DynamicDrawUsage,
+  Euler,
+  InstancedMesh,
+  Matrix4,
+  Quaternion,
+  Vector3,
+  type MeshBasicMaterial,
+  type Texture,
+} from "three";
 import type { Mood } from "./bus";
 import { createGlowSprites, type GlowSprites } from "./glow";
-import { createBodyMaterial, createCoreGeometry, createCoreMaterial, createLanternGeometry, type GlowUniform } from "./lantern-assets";
+import {
+  createBodyMaterial,
+  createCoreGeometry,
+  createCoreMaterial,
+  createLanternGeometry,
+  type GlowUniform,
+} from "./lantern-assets";
 import { emptyPose, placeLights, poseFor, type FrameInput, type Light } from "./lantern-layout";
 import { damp, smoothstep } from "./math";
 import type { Tier } from "./tier";
 
 /** Instance counts per tier: lanterns (body + core + glow) and glow-only bokeh orbs. */
-export const LANTERN_COUNTS = { high: { lanterns: 120, orbs: 22 }, low: { lanterns: 50, orbs: 8 } } as const;
+export const LANTERN_COUNTS = {
+  high: { lanterns: 120, orbs: 22 },
+  low: { lanterns: 50, orbs: 8 },
+} as const;
 
 /** Speed, light level and rise rate per mood (docs/DESIGN.md §5). */
 const MOODS: Record<Mood, { speed: number; glow: number; rise: number }> = {
@@ -51,12 +70,28 @@ function toneTargets(lights: Light[], palette: readonly string[] | null, out: Ti
 }
 
 function makeTints(n: number): Tints {
-  return { body: new Float32Array(n * 3), core: new Float32Array(n * 3), glow: new Float32Array(n * 3) };
+  return {
+    body: new Float32Array(n * 3),
+    core: new Float32Array(n * 3),
+    glow: new Float32Array(n * 3),
+  };
 }
 
-type Systems = { bodies: InstancedMesh; cores: InstancedMesh; glow: GlowSprites; coreMaterial: MeshBasicMaterial; owned: { dispose(): void }[] };
+type Systems = {
+  bodies: InstancedMesh;
+  cores: InstancedMesh;
+  glow: GlowSprites;
+  coreMaterial: MeshBasicMaterial;
+  owned: { dispose(): void }[];
+};
 
-function buildSystems(tier: Exclude<Tier, "off">, envMap: Texture, lights: number, lanterns: number, glowUniform: GlowUniform): Systems {
+function buildSystems(
+  tier: Exclude<Tier, "off">,
+  envMap: Texture,
+  lights: number,
+  lanterns: number,
+  glowUniform: GlowUniform,
+): Systems {
   const bodyGeometry = createLanternGeometry(tier);
   const coreGeometry = createCoreGeometry();
   const bodyMaterial = createBodyMaterial(tier, envMap, glowUniform);
@@ -68,10 +103,23 @@ function buildSystems(tier: Exclude<Tier, "off">, envMap: Texture, lights: numbe
     mesh.frustumCulled = false;
   }
   const glow = createGlowSprites(lights);
-  return { bodies, cores, glow, coreMaterial, owned: [bodyGeometry, coreGeometry, bodyMaterial, coreMaterial, bodies, cores, glow] };
+  return {
+    bodies,
+    cores,
+    glow,
+    coreMaterial,
+    owned: [bodyGeometry, coreGeometry, bodyMaterial, coreMaterial, bodies, cores, glow],
+  };
 }
 
-type Pace = { mood: (typeof MOODS)[Mood]; speed: number; glow: number; rise: number; time: number; lift: number };
+type Pace = {
+  mood: (typeof MOODS)[Mood];
+  speed: number;
+  glow: number;
+  rise: number;
+  time: number;
+  lift: number;
+};
 
 /** Ease speed, light level and rise toward the mood, then advance time and lift. */
 function advancePace(p: Pace, dt: number): void {
@@ -99,8 +147,19 @@ export function createLanternField(tier: Exclude<Tier, "off">, envMap: Texture):
   const sys = buildSystems(tier, envMap, lights.length, lanterns, glowUniform);
   const target = makeTints(lights.length);
   toneTargets(lights, null, target);
-  const current: Tints = { body: target.body.slice(), core: target.core.slice(), glow: target.glow.slice() };
-  const pace: Pace = { mood: MOODS.hero, speed: 1, glow: 1, rise: MOODS.hero.rise, time: 0, lift: 0 };
+  const current: Tints = {
+    body: target.body.slice(),
+    core: target.core.slice(),
+    glow: target.glow.slice(),
+  };
+  const pace: Pace = {
+    mood: MOODS.hero,
+    speed: 1,
+    glow: 1,
+    rise: MOODS.hero.rise,
+    time: 0,
+    lift: 0,
+  };
   return {
     meshes: [sys.cores, sys.bodies, sys.glow.mesh],
     update(dt, frame) {
@@ -122,14 +181,32 @@ export function createLanternField(tier: Exclude<Tier, "off">, envMap: Texture):
   };
 }
 
-const tmp = { pose: emptyPose(), m: new Matrix4(), pos: new Vector3(), quat: new Quaternion(), euler: new Euler(), scale: new Vector3(), color: new Color() };
+const tmp = {
+  pose: emptyPose(),
+  m: new Matrix4(),
+  pos: new Vector3(),
+  quat: new Quaternion(),
+  euler: new Euler(),
+  scale: new Vector3(),
+  color: new Color(),
+};
 
 /** Pose one light: body + core instances (lanterns only) and its glow sprite. */
-function drawLight(light: Light, i: number, frame: FrameInput, level: number, s: Systems, tints: Tints): void {
+function drawLight(
+  light: Light,
+  i: number,
+  frame: FrameInput,
+  level: number,
+  s: Systems,
+  tints: Tints,
+): void {
   const { pose, m, pos, quat, euler, scale, color } = tmp;
   poseFor(light, frame, pose);
   pos.set(pose.x, pose.y, pose.z);
-  const flicker = 1 + 0.07 * Math.sin(frame.time * 7.3 + light.phase * 5) + 0.04 * Math.sin(frame.time * 12.9 + light.phase);
+  const flicker =
+    1 +
+    0.07 * Math.sin(frame.time * 7.3 + light.phase * 5) +
+    0.04 * Math.sin(frame.time * 12.9 + light.phase);
   // Glow diameter in screen space: the light's own halo plus its circle of
   // confusion; the wider the disc, the dimmer (energy spreads out), and once
   // the disc outgrows the lantern the sharp body fades — bokeh, not a target.

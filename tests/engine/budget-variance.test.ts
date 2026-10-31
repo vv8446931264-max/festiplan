@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import type { Allocation, BudgetCategory } from "@/lib/contracts";
 import { budgetVariance, overspendAlerts } from "@/lib/engine/budget";
 
-const line = (category: BudgetCategory, amountINR: number, actualINR: number | null): Allocation => ({
+const line = (
+  category: BudgetCategory,
+  amountINR: number,
+  actualINR: number | null,
+): Allocation => ({
   category,
   amountINR,
   percent: 0,
@@ -25,9 +29,21 @@ describe("budgetVariance", () => {
   it("compares planned and actual per row", () => {
     expect(budgetVariance(lines).rows).toEqual([
       { category: "venue", plannedINR: 400, actualINR: 450, varianceINR: 50, overspent: true },
-      { category: "catering", plannedINR: 300, actualINR: null, varianceINR: null, overspent: false },
+      {
+        category: "catering",
+        plannedINR: 300,
+        actualINR: null,
+        varianceINR: null,
+        overspent: false,
+      },
       { category: "decor", plannedINR: 200, actualINR: 150, varianceINR: -50, overspent: false },
-      { category: "photography", plannedINR: 100, actualINR: 100, varianceINR: 0, overspent: false },
+      {
+        category: "photography",
+        plannedINR: 100,
+        actualINR: 100,
+        varianceINR: 0,
+        overspent: false,
+      },
       { category: "misc", plannedINR: 50, actualINR: 90, varianceINR: 40, overspent: true },
     ]);
   });
@@ -40,7 +56,11 @@ describe("budgetVariance", () => {
   });
 
   it("is all zero with no actuals or no lines", () => {
-    expect(budgetVariance([line("venue", 100, null)])).toMatchObject({ plannedINR: 100, actualINR: 0, varianceINR: 0 });
+    expect(budgetVariance([line("venue", 100, null)])).toMatchObject({
+      plannedINR: 100,
+      actualINR: 0,
+      varianceINR: 0,
+    });
     expect(budgetVariance([])).toEqual({ rows: [], plannedINR: 0, actualINR: 0, varianceINR: 0 });
   });
 });

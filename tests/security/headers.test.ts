@@ -4,7 +4,8 @@ import { unstable_getResponseFromNextConfig } from "next/experimental/testing/se
 import nextConfig from "../../next.config";
 
 const headersFor = async (url: string) =>
-  (await unstable_getResponseFromNextConfig({ url: `https://festiplan.example${url}`, nextConfig })).headers;
+  (await unstable_getResponseFromNextConfig({ url: `https://festiplan.example${url}`, nextConfig }))
+    .headers;
 
 describe("next.config.ts hardening headers", () => {
   it("sends the browser hardening headers on every path", async () => {
@@ -21,7 +22,9 @@ describe("next.config.ts hardening headers", () => {
 
   it("leaves page CSP to the proxy and locks API responses down completely", async () => {
     expect((await headersFor("/")).get("content-security-policy")).toBeNull();
-    expect((await headersFor("/api/plan")).get("content-security-policy")).toBe("default-src 'none'; frame-ancestors 'none'");
+    expect((await headersFor("/api/plan")).get("content-security-policy")).toBe(
+      "default-src 'none'; frame-ancestors 'none'",
+    );
   });
 
   it("marks shared plans noindex", async () => {

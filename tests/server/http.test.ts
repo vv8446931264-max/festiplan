@@ -1,14 +1,27 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetRateLimits } from "@/lib/security/rate-limit";
-import { invalid, json, perIpLimit, problem, requestId, runGuards, sameOrigin, toIssues, withRoute } from "@/lib/server/http";
+import {
+  invalid,
+  json,
+  perIpLimit,
+  problem,
+  requestId,
+  runGuards,
+  sameOrigin,
+  toIssues,
+  withRoute,
+} from "@/lib/server/http";
 import { PlanInputSchema } from "@/lib/contracts";
 
 beforeEach(() => resetRateLimits());
 afterEach(() => vi.unstubAllEnvs());
 
 const post = (headers: Record<string, string> = {}) =>
-  new Request("http://localhost/api/x", { method: "POST", headers: { origin: "http://localhost", ...headers } });
+  new Request("http://localhost/api/x", {
+    method: "POST",
+    headers: { origin: "http://localhost", ...headers },
+  });
 
 describe("responses", () => {
   it("never caches JSON and wraps errors as { error }", async () => {
@@ -79,12 +92,18 @@ describe("withRoute", () => {
   });
 
   it("tolerates responses with immutable headers", async () => {
-    const handler = withRoute("GET /t", async () => Response.redirect("http://localhost/elsewhere", 303));
+    const handler = withRoute("GET /t", async () =>
+      Response.redirect("http://localhost/elsewhere", 303),
+    );
     expect((await handler(new Request("http://localhost/t"), {})).status).toBe(303);
   });
 
   it("reuses the Cloud Trace id when present", () => {
     const trace = "105445aa7843bc8bf206b12000100000";
-    expect(requestId(new Request("http://x/", { headers: { "x-cloud-trace-context": `${trace}/1;o=1` } }))).toBe(trace);
+    expect(
+      requestId(
+        new Request("http://x/", { headers: { "x-cloud-trace-context": `${trace}/1;o=1` } }),
+      ),
+    ).toBe(trace);
   });
 });

@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { allocationKey, planReducer } from "@/components/plan/plan-reducer";
 import { FIXTURE_TODAY, fixturePlan } from "../fixtures/plan";
 
-const total = (p: ReturnType<typeof fixturePlan>) => p.budget.reduce((s, a) => s + a.amountINR, 0) + p.contingencyINR;
+const total = (p: ReturnType<typeof fixturePlan>) =>
+  p.budget.reduce((s, a) => s + a.amountINR, 0) + p.contingencyINR;
 
 describe("planReducer", () => {
   it("moves a budget line and keeps the total exact", () => {
@@ -32,7 +33,12 @@ describe("planReducer", () => {
     const later = planReducer(ticked, { type: "task", id, done: false, today: "2027-03-22" });
     expect(later.timeline.find((t) => t.id === id)?.overdue).toBe(true);
     const category = plan.vendors[0]?.category ?? "venue";
-    const booked = planReducer(plan, { type: "vendor", category, done: true, today: FIXTURE_TODAY });
+    const booked = planReducer(plan, {
+      type: "vendor",
+      category,
+      done: true,
+      today: FIXTURE_TODAY,
+    });
     expect(booked.vendors.find((v) => v.category === category)?.done).toBe(true);
   });
 });

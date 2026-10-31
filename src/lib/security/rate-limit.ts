@@ -23,7 +23,12 @@ function prune(now: number): void {
  * Fixed-window, in-process rate limiter: at most `limit` hits per `key` per `windowMs`.
  * Cloud Run instances each keep their own window, which is fine for abuse damping.
  */
-export function rateLimit(key: string, limit: number, windowMs: number, now: number = Date.now()): RateLimitResult {
+export function rateLimit(
+  key: string,
+  limit: number,
+  windowMs: number,
+  now: number = Date.now(),
+): RateLimitResult {
   prune(now);
   const bucket = buckets.get(key);
   if (!bucket || bucket.resetAt <= now) {
@@ -50,7 +55,10 @@ export function rateLimitScale(env: Record<string, string | undefined> = process
 }
 
 /** A route's base limit multiplied by `rateLimitScale()`. */
-export function scaledLimit(base: number, env: Record<string, string | undefined> = process.env): number {
+export function scaledLimit(
+  base: number,
+  env: Record<string, string | undefined> = process.env,
+): number {
   return base * rateLimitScale(env);
 }
 

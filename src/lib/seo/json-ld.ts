@@ -1,10 +1,17 @@
 import type { FaqItem } from "./faq";
 
 /** One schema.org node; values are plain JSON. */
-export type JsonLdNode = { readonly "@type": string; readonly "@id": string; readonly [key: string]: unknown };
+export type JsonLdNode = {
+  readonly "@type": string;
+  readonly "@id": string;
+  readonly [key: string]: unknown;
+};
 
 /** A JSON-LD document with every node in one `@graph`, cross-referenced by `@id`. */
-export type JsonLdGraph = { readonly "@context": "https://schema.org"; readonly "@graph": readonly JsonLdNode[] };
+export type JsonLdGraph = {
+  readonly "@context": "https://schema.org";
+  readonly "@graph": readonly JsonLdNode[];
+};
 
 /** Everything the landing-page graph needs; passed in so the builder stays pure. */
 export type LandingJsonLdInput = {
@@ -89,7 +96,12 @@ export function faqPageNode(siteUrl: string, faq: readonly FaqItem[]): JsonLdNod
 export function buildLandingJsonLd(input: LandingJsonLdInput): JsonLdGraph {
   return {
     "@context": "https://schema.org",
-    "@graph": [websiteNode(input), organizationNode(input), applicationNode(input), faqPageNode(input.siteUrl, input.faq)],
+    "@graph": [
+      websiteNode(input),
+      organizationNode(input),
+      applicationNode(input),
+      faqPageNode(input.siteUrl, input.faq),
+    ],
   };
 }
 

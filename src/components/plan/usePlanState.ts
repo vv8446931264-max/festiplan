@@ -16,7 +16,11 @@ export type { SaveState } from "./useAutosave";
  */
 export function usePlanState(initial: PublicPlan, initialKey: string | null) {
   const [plan, dispatch] = useReducer(planReducer, initial);
-  const storedKey = useSyncExternalStore(subscribeEditKeys, () => loadEditKey(initial.id), () => null);
+  const storedKey = useSyncExternalStore(
+    subscribeEditKeys,
+    () => loadEditKey(initial.id),
+    () => null,
+  );
   const editKey = initialKey ?? storedKey;
   const { saveState, queue } = useAutosave(initial.id, editKey);
 
@@ -33,8 +37,10 @@ type Queue = (patch: PlanPatch) => void;
 /** Owner actions: dispatch the pure change, and queue the matching save where it is known up front. */
 function planActions(dispatch: React.Dispatch<PlanAction>, queue: Queue) {
   return {
-    moveBudget: (category: BudgetCategory, amountINR: number) => dispatch({ type: "move", category, amountINR }),
-    lockBudget: (category: BudgetCategory, locked: boolean) => dispatch({ type: "lock", category, locked }),
+    moveBudget: (category: BudgetCategory, amountINR: number) =>
+      dispatch({ type: "move", category, amountINR }),
+    lockBudget: (category: BudgetCategory, locked: boolean) =>
+      dispatch({ type: "lock", category, locked }),
     recordActual: (category: BudgetCategory, actualINR: number | null) => {
       dispatch({ type: "actual", category, actualINR });
       queue({ actuals: [{ category, actualINR }] });
@@ -57,6 +63,12 @@ function useBudgetSync(budget: PublicPlan["budget"], queue: Queue) {
     const key = allocationKey(budget);
     if (key === saved.current) return;
     saved.current = key;
-    queue({ allocations: budget.map(({ category, amountINR, locked }) => ({ category, amountINR, locked })) });
+    queue({
+      allocations: budget.map(({ category, amountINR, locked }) => ({
+        category,
+        amountINR,
+        locked,
+      })),
+    });
   }, [budget, queue]);
 }

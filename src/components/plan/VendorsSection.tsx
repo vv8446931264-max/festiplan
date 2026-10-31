@@ -17,18 +17,41 @@ type Props = {
 };
 
 /** Vendor checklist: book-by dates, questions, red flags and real nearby places. */
-export const VendorsSection = memo(function VendorsSection({ planId, input, vendors, editable, lang, onToggle }: Props) {
+export const VendorsSection = memo(function VendorsSection({
+  planId,
+  input,
+  vendors,
+  editable,
+  lang,
+  onToggle,
+}: Props) {
   const stats = progress(vendors);
   return (
     <section id="vendors" aria-labelledby="vendors-title" className="scroll-mt-20">
-      <SectionHead id="vendors" number="04" kicker="Vendors"
-        title={<>Who to book, <span className="accent">and what to ask</span>.</>}>
-        {stats.done} of {stats.total} booked. Real places come from Google Maps — FestiPlan never invents a vendor name.
+      <SectionHead
+        id="vendors"
+        number="04"
+        kicker="Vendors"
+        title={
+          <>
+            Who to book, <span className="accent">and what to ask</span>.
+          </>
+        }
+      >
+        {stats.done} of {stats.total} booked. Real places come from Google Maps — FestiPlan never
+        invents a vendor name.
       </SectionHead>
       <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {vendors.map((v) => (
           <li key={v.category} className="reveal">
-            <VendorCard item={v} planId={planId} city={input.city} editable={editable} lang={lang} onToggle={onToggle} />
+            <VendorCard
+              item={v}
+              planId={planId}
+              city={input.city}
+              editable={editable}
+              lang={lang}
+              onToggle={onToggle}
+            />
           </li>
         ))}
       </ul>
@@ -36,24 +59,44 @@ export const VendorsSection = memo(function VendorsSection({ planId, input, vend
   );
 });
 
-type CardProps = { item: VendorItem; planId: string; city: string; editable: boolean; lang?: string; onToggle: Props["onToggle"] };
+type CardProps = {
+  item: VendorItem;
+  planId: string;
+  city: string;
+  editable: boolean;
+  lang?: string;
+  onToggle: Props["onToggle"];
+};
 
 function VendorCard({ item: v, planId, city, editable, lang, onToggle }: CardProps) {
   const label = CATEGORY_LABELS[v.category];
   const id = `vendor-${v.category}`;
   return (
-    <article aria-labelledby={`${id}-title`} className={`panel flex h-full flex-col gap-4 p-5 sm:p-6 ${v.done ? "border-gold" : ""}`}>
+    <article
+      aria-labelledby={`${id}-title`}
+      className={`panel flex h-full flex-col gap-4 p-5 sm:p-6 ${v.done ? "border-gold" : ""}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h4 id={`${id}-title`} className="text-2xl font-bold tracking-tight">{label}</h4>
+          <h4 id={`${id}-title`} className="text-2xl font-bold tracking-tight">
+            {label}
+          </h4>
           <p className="tabular text-sm text-muted">
-            Book by <strong className={v.overdue && !v.done ? "text-ember-bright" : "text-gold"}>{formatDate(v.bookBy)}</strong>
+            Book by{" "}
+            <strong className={v.overdue && !v.done ? "text-ember-bright" : "text-gold"}>
+              {formatDate(v.bookBy)}
+            </strong>
           </p>
         </div>
         {editable ? (
           <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
-            <input type="checkbox" className="size-6 shrink-0" checked={v.done} onChange={(e) => onToggle(v.category, e.target.checked)} />
-            Booked{" "}<span className="sr-only">{label}</span>
+            <input
+              type="checkbox"
+              className="size-6 shrink-0"
+              checked={v.done}
+              onChange={(e) => onToggle(v.category, e.target.checked)}
+            />
+            Booked <span className="sr-only">{label}</span>
           </label>
         ) : (
           <span className="eyebrow">{v.done ? "Booked" : "Not booked"}</span>
@@ -72,18 +115,28 @@ function VendorBrief({ item: v, lang }: { item: VendorItem; lang?: string }) {
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-2 text-sm font-semibold [&::-webkit-details-marker]:hidden">
         <span>What to ask</span>
         <span className="text-muted">
-          {v.questions.length} questions · {v.redFlags.length} red {v.redFlags.length === 1 ? "flag" : "flags"}
-          <span aria-hidden="true" className="ml-2 inline-block text-gold transition-transform group-open:rotate-90">▸</span>
+          {v.questions.length} questions · {v.redFlags.length} red{" "}
+          {v.redFlags.length === 1 ? "flag" : "flags"}
+          <span
+            aria-hidden="true"
+            className="ml-2 inline-block text-gold transition-transform group-open:rotate-90"
+          >
+            ▸
+          </span>
         </span>
       </summary>
       <div className="flex flex-col gap-4 border-t border-line/60 px-4 py-4">
         <ul lang={lang} className="flex list-disc flex-col gap-1 pl-5">
-          {v.questions.map((q, i) => <li key={i}>{q}</li>)}
+          {v.questions.map((q, i) => (
+            <li key={i}>{q}</li>
+          ))}
         </ul>
         <div>
           <p className="eyebrow mb-2 text-ember-bright">Red flags</p>
           <ul lang={lang} className="flex list-disc flex-col gap-1 pl-5 text-muted">
-            {v.redFlags.map((r, i) => <li key={i}>{r}</li>)}
+            {v.redFlags.map((r, i) => (
+              <li key={i}>{r}</li>
+            ))}
           </ul>
         </div>
       </div>

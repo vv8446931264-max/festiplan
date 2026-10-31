@@ -1,6 +1,12 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import type { BudgetCategory, Phase, ScheduledTask, VendorGuide, VendorItem } from "@/lib/contracts";
+import type {
+  BudgetCategory,
+  Phase,
+  ScheduledTask,
+  VendorGuide,
+  VendorItem,
+} from "@/lib/contracts";
 import { addDays } from "@/lib/engine/dates";
 import {
   groupByPhase,
@@ -20,7 +26,11 @@ const guide = (category: BudgetCategory, bookByWeeks: number): VendorGuide => ({
   questions: ["Q1?", "Q2?"],
   redFlags: ["Flag"],
 });
-const item = (category: BudgetCategory, bookBy: string, extra: Partial<VendorItem> = {}): VendorItem => ({
+const item = (
+  category: BudgetCategory,
+  bookBy: string,
+  extra: Partial<VendorItem> = {},
+): VendorItem => ({
   category,
   bookBy,
   questions: [],
@@ -58,16 +68,31 @@ describe("scheduleVendors", () => {
   });
 
   it("never books before today", () => {
-    expect(scheduleVendors([guide("catering", 40)], EVENT, TODAY)[0]).toMatchObject({ bookBy: TODAY, overdue: false });
+    expect(scheduleVendors([guide("catering", 40)], EVENT, TODAY)[0]).toMatchObject({
+      bookBy: TODAY,
+      overdue: false,
+    });
   });
 
   it("sorts by book-by date, then budget-category order", () => {
     const out = scheduleVendors(
-      [guide("misc", 8), guide("catering", 12), guide("decor", 8), guide("venue", 8), guide("photography", 12)],
+      [
+        guide("misc", 8),
+        guide("catering", 12),
+        guide("decor", 8),
+        guide("venue", 8),
+        guide("photography", 12),
+      ],
       EVENT,
       TODAY,
     );
-    expect(out.map((v) => v.category)).toEqual(["catering", "photography", "venue", "decor", "misc"]);
+    expect(out.map((v) => v.category)).toEqual([
+      "catering",
+      "photography",
+      "venue",
+      "decor",
+      "misc",
+    ]);
     expect(scheduleVendors([], EVENT, TODAY)).toEqual([]);
   });
 
@@ -77,7 +102,11 @@ describe("scheduleVendors", () => {
       ["gifts", "2027-02-07"],
       ["misc", EVENT],
     ]);
-    const tomorrow = scheduleVendors([guide("misc", 0), guide("gifts", 30)], addDays(TODAY, 1), TODAY);
+    const tomorrow = scheduleVendors(
+      [guide("misc", 0), guide("gifts", 30)],
+      addDays(TODAY, 1),
+      TODAY,
+    );
     expect(tomorrow.map((v) => [v.category, v.bookBy])).toEqual([
       ["gifts", TODAY],
       ["misc", addDays(TODAY, 1)],
@@ -114,12 +143,16 @@ describe("scheduleVendors when the event is closer than the ideal lead times", (
 
   it("leaves a plan that fits exactly as before", () => {
     const out = scheduleVendors(WEDDING, addDays(TODAY, 280), TODAY);
-    expect(out.map((v) => v.bookBy)).toEqual(WEDDING.map((v) => addDays(TODAY, 280 - v.bookByWeeks * 7)).sort());
+    expect(out.map((v) => v.bookBy)).toEqual(
+      WEDDING.map((v) => addDays(TODAY, 280 - v.bookByWeeks * 7)).sort(),
+    );
   });
 
   it("books everything today when the event is today or already past", () => {
     for (const day of [TODAY, addDays(TODAY, -4)]) {
-      expect(scheduleVendors(WEDDING, day, TODAY).every((v) => v.bookBy === TODAY && !v.overdue)).toBe(true);
+      expect(
+        scheduleVendors(WEDDING, day, TODAY).every((v) => v.bookBy === TODAY && !v.overdue),
+      ).toBe(true);
     }
   });
 });
@@ -142,15 +175,27 @@ describe("setVendorDone / refreshVendorStatus", () => {
 
   it("recomputes overdue for a given today", () => {
     const done = item("catering", "2026-10-01", { done: true });
-    expect(refreshVendorStatus([...rows, done], "2026-11-01").map((v) => v.overdue)).toEqual([true, false, false]);
+    expect(refreshVendorStatus([...rows, done], "2026-11-01").map((v) => v.overdue)).toEqual([
+      true,
+      false,
+      false,
+    ]);
     expect(refreshVendorStatus(rows, "2026-09-01").map((v) => v.overdue)).toEqual([false, false]);
   });
 });
 
 describe("progress", () => {
   it("counts done items and rounds the percent", () => {
-    expect(progress([{ done: true }, { done: false }, { done: false }])).toEqual({ done: 1, total: 3, percent: 33 });
-    expect(progress([{ done: true }, { done: true }, { done: false }])).toEqual({ done: 2, total: 3, percent: 67 });
+    expect(progress([{ done: true }, { done: false }, { done: false }])).toEqual({
+      done: 1,
+      total: 3,
+      percent: 33,
+    });
+    expect(progress([{ done: true }, { done: true }, { done: false }])).toEqual({
+      done: 2,
+      total: 3,
+      percent: 67,
+    });
     expect(progress([{ done: true }])).toEqual({ done: 1, total: 1, percent: 100 });
   });
 
@@ -185,7 +230,12 @@ describe("nextActions", () => {
 describe("groupByPhase", () => {
   it("returns non-empty phases in PHASES order", () => {
     const phased = (id: string, phase: Phase) => st(id, "2026-11-01", { phase });
-    const out = groupByPhase([phased("p", "day-of"), phased("q", "6m+"), phased("r", "2-4w"), phased("s", "6m+")]);
+    const out = groupByPhase([
+      phased("p", "day-of"),
+      phased("q", "6m+"),
+      phased("r", "2-4w"),
+      phased("s", "6m+"),
+    ]);
     expect(out.map((g) => [g.phase, g.tasks.map((t) => t.id)])).toEqual([
       ["6m+", ["q", "s"]],
       ["2-4w", ["r"]],

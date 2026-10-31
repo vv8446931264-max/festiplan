@@ -22,7 +22,10 @@ function useAsk(planId: string) {
 
   async function ask(q: string) {
     const trimmed = q.trim();
-    if (trimmed.length < 2) return setError("Type a question first.");
+    if (trimmed.length < 2) {
+      setError("Type a question first.");
+      return;
+    }
     abort.current?.abort();
     abort.current = new AbortController();
     setQuestion(trimmed);
@@ -42,28 +45,65 @@ function useAsk(planId: string) {
 }
 
 /** "Ask FestiPlan": a streamed answer grounded in this plan. Suggestions only. */
-export const AskSection = memo(function AskSection({ planId, lang }: { planId: string; lang?: string }) {
+export const AskSection = memo(function AskSection({
+  planId,
+  lang,
+}: {
+  planId: string;
+  lang?: string;
+}) {
   const a = useAsk(planId);
   return (
     <section id="ask" aria-labelledby="ask-title" className="no-print scroll-mt-20">
-      <SectionHead id="ask" number="05" kicker="Ask FestiPlan" title={<>Second thoughts? <span className="accent">Ask.</span></>}>
-        Answers are grounded in this plan and are suggestions only — budget changes stay with you and the sliders.
+      <SectionHead
+        id="ask"
+        number="05"
+        kicker="Ask FestiPlan"
+        title={
+          <>
+            Second thoughts? <span className="accent">Ask.</span>
+          </>
+        }
+      >
+        Answers are grounded in this plan and are suggestions only — budget changes stay with you
+        and the sliders.
       </SectionHead>
       <div className="panel flex flex-col gap-5 p-6 sm:p-8">
         <ul className="flex flex-wrap gap-2" aria-label="Suggested questions">
           {SUGGESTIONS.map((s) => (
             <li key={s}>
-              <button type="button" className="btn btn-ghost min-h-11 px-4 py-2 text-sm" disabled={a.busy} onClick={() => void a.ask(s)}>
+              <button
+                type="button"
+                className="btn btn-ghost min-h-11 px-4 py-2 text-sm"
+                disabled={a.busy}
+                onClick={() => void a.ask(s)}
+              >
                 {s}
               </button>
             </li>
           ))}
         </ul>
-        <form className="flex flex-col gap-3 sm:flex-row" onSubmit={(e) => { e.preventDefault(); void a.ask(a.question); }}>
-          <label htmlFor="ask-input" className="sr-only">Your question about this plan</label>
-          <input id="ask-input" className="field flex-1" value={a.question} maxLength={LIMITS.questionMax}
-            placeholder="e.g. How do we keep the evening on schedule?" onChange={(e) => a.setQuestion(e.target.value)} />
-          <button type="submit" className="btn btn-primary" disabled={a.busy}>{a.busy ? "Thinking…" : "Ask"}</button>
+        <form
+          className="flex flex-col gap-3 sm:flex-row"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void a.ask(a.question);
+          }}
+        >
+          <label htmlFor="ask-input" className="sr-only">
+            Your question about this plan
+          </label>
+          <input
+            id="ask-input"
+            className="field flex-1"
+            value={a.question}
+            maxLength={LIMITS.questionMax}
+            placeholder="e.g. How do we keep the evening on schedule?"
+            onChange={(e) => a.setQuestion(e.target.value)}
+          />
+          <button type="submit" className="btn btn-primary" disabled={a.busy}>
+            {a.busy ? "Thinking…" : "Ask"}
+          </button>
         </form>
         <Answer answer={a.answer} error={a.error} busy={a.busy} lang={lang} />
       </div>
@@ -71,12 +111,25 @@ export const AskSection = memo(function AskSection({ planId, lang }: { planId: s
   );
 });
 
-function Answer({ answer, error, busy, lang }: { answer: string; error: string | null; busy: boolean; lang?: string }) {
+function Answer({
+  answer,
+  error,
+  busy,
+  lang,
+}: {
+  answer: string;
+  error: string | null;
+  busy: boolean;
+  lang?: string;
+}) {
   return (
     <div aria-live="polite" aria-busy={busy} className="min-h-12">
       {error && <p className="font-semibold text-ember-bright">{error}</p>}
       {answer && (
-        <div lang={lang} className="whitespace-pre-wrap rounded-2xl border border-line bg-espresso p-5 leading-relaxed">
+        <div
+          lang={lang}
+          className="rounded-2xl border border-line bg-espresso p-5 leading-relaxed whitespace-pre-wrap"
+        >
           {answer}
         </div>
       )}

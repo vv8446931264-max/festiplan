@@ -23,8 +23,12 @@ export function problem(status: number, message: string, extraHeaders: HeaderMap
 export type Issue = { path: string; message: string };
 
 /** Flattens Zod issues into `{ path, message }` pairs (dotted paths). */
-export function toIssues(error: { issues: ReadonlyArray<{ path: ReadonlyArray<PropertyKey>; message: string }> }): Issue[] {
-  return error.issues.slice(0, 20).map((i) => ({ path: i.path.map(String).join("."), message: i.message }));
+export function toIssues(error: {
+  issues: readonly { path: readonly PropertyKey[]; message: string }[];
+}): Issue[] {
+  return error.issues
+    .slice(0, 20)
+    .map((i) => ({ path: i.path.map(String).join("."), message: i.message }));
 }
 
 /** 400 with `{ error, issues }` for a body that failed schema validation. */
@@ -43,7 +47,9 @@ export type Guard = (req: Request) => Response | null;
 
 /** Refuses state-changing requests that don't come from this site (CSRF guard). */
 export const sameOrigin: Guard = (req) =>
-  isSameOrigin(req) ? null : problem(403, "This request has to come from the FestiPlan site itself.");
+  isSameOrigin(req)
+    ? null
+    : problem(403, "This request has to come from the FestiPlan site itself.");
 
 /**
  * Per-client fixed-window limit for one route, scaled by `RATE_LIMIT_SCALE`. The client is
@@ -54,9 +60,13 @@ export function perIpLimit(name: string, baseLimit: number, windowMs = 60_000): 
   return (req) => {
     const res = rateLimit(`${name}:${clientKey(req)}`, scaledLimit(baseLimit), windowMs);
     if (res.ok) return null;
-    return problem(429, `You're going a little fast — please wait ${res.retryAfterSec} seconds and try again.`, {
-      "Retry-After": String(res.retryAfterSec),
-    });
+    return problem(
+      429,
+      `You're going a little fast — please wait ${res.retryAfterSec} seconds and try again.`,
+      {
+        "Retry-After": String(res.retryAfterSec),
+      },
+    );
   };
 }
 
@@ -71,9 +81,13 @@ export const AI_GLOBAL_PER_MINUTE = 120;
 export const aiGlobalLimit: Guard = () => {
   const res = rateLimit("ai:global", scaledLimit(AI_GLOBAL_PER_MINUTE), 60_000);
   if (res.ok) return null;
-  return problem(503, `FestiPlan is very busy right now. Please try again in ${res.retryAfterSec} seconds.`, {
-    "Retry-After": String(res.retryAfterSec),
-  });
+  return problem(
+    503,
+    `FestiPlan is very busy right now. Please try again in ${res.retryAfterSec} seconds.`,
+    {
+      "Retry-After": String(res.retryAfterSec),
+    },
+  );
 };
 
 /** Runs guards in order; the first non-null response wins. */
@@ -110,7 +124,16 @@ export function withRoute<C>(
       // Immutable headers (e.g. Response.redirect) — the log still carries the id.
     }
     const severity = res.status >= 500 ? "ERROR" : res.status >= 400 ? "WARNING" : "INFO";
-    logEvent({ severity, message: "request", route, method: req.method, status: res.status, latencyMs: Math.round(performance.now() - started), requestId: id, errorName });
+    logEvent({
+      severity,
+      message: "request",
+      route,
+      method: req.method,
+      status: res.status,
+      latencyMs: Math.round(performance.now() - started),
+      requestId: id,
+      errorName,
+    });
     return res;
   };
 }

@@ -76,7 +76,11 @@ function step(stage: Stage, m: Motion, dt: number): boolean {
   stage.camera.position.set(m.now.px * 0.7, m.now.py * 0.45, 0);
   stage.camera.lookAt(m.now.px * 0.18, m.now.py * 0.1, -30);
   stage.sky.setFade(skyFade(m.now.scroll));
-  stage.field.update(dt, { travel: m.now.scroll * TRAVEL, tanHalf: TAN_HALF, aspect: stage.camera.aspect });
+  stage.field.update(dt, {
+    travel: m.now.scroll * TRAVEL,
+    tanHalf: TAN_HALF,
+    aspect: stage.camera.aspect,
+  });
   if (m.burst && !m.burst.update(dt)) m.burst = null;
   stage.renderer.render(stage.scene, stage.camera);
   return true;
@@ -103,10 +107,22 @@ function disposeStage(stage: Stage, m: Motion): void {
  * drifting in front of the CSS dusk sky (docs/DESIGN.md §6). Native scroll only
  * sets targets; every motion is damped in the render loop.
  */
-export function createLanternScene(canvas: HTMLCanvasElement, options: LanternSceneOptions): LanternScene {
+export function createLanternScene(
+  canvas: HTMLCanvasElement,
+  options: LanternSceneOptions,
+): LanternScene {
   const stage = buildStage(canvas, options.tier);
-  const m: Motion = { target: { scroll: 0, px: 0, py: 0 }, now: { scroll: 0, px: 0, py: 0 }, burst: null, palette: null };
-  const loop = createGatedLoop(canvas.ownerDocument.defaultView ?? window, (dt) => step(stage, m, dt), options.onFirstFrame);
+  const m: Motion = {
+    target: { scroll: 0, px: 0, py: 0 },
+    now: { scroll: 0, px: 0, py: 0 },
+    burst: null,
+    palette: null,
+  };
+  const loop = createGatedLoop(
+    canvas.ownerDocument.defaultView ?? window,
+    (dt) => step(stage, m, dt),
+    options.onFirstFrame,
+  );
   const unwatch = watchContextLoss(canvas, loop);
   stage.field.update(0, { travel: 0, tanHalf: TAN_HALF, aspect: stage.camera.aspect });
   compileThenStart(stage.renderer, stage.scene, stage.camera, loop);

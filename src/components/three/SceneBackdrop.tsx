@@ -22,5 +22,12 @@ export function SceneBackdrop() {
   const [failed, setFailed] = useState(false);
   useSkyScroll(skyRef, sceneRef);
   useLanternScene(tier, rootRef, sceneRef, () => setFailed(true));
-  return <DuskSky rootRef={rootRef} skyRef={skyRef} tier={tier ?? "pending"} poster={tier === "off" || failed} />;
+  return (
+    <DuskSky
+      rootRef={rootRef}
+      skyRef={skyRef}
+      tier={tier ?? "pending"}
+      poster={tier === "off" || failed}
+    />
+  );
 }

@@ -25,7 +25,10 @@ test.describe("plan", () => {
     await planFromPreset(page, /Priya's sangeet/);
     await expect(page.locator("#plan-title")).toHaveText("Riya's sangeet");
     await expect(page).toHaveURL(/\/plan\/[A-Za-z0-9_-]+/);
-    await expect(page.getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("tab", { name: "Overview" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
 
     await openTab(page, "Budget");
     await expect(page.getByRole("heading", { name: /12,00,000, accounted for/ })).toBeVisible();
@@ -59,12 +62,17 @@ test.describe("plan", () => {
     }
   });
 
-  test("a new plan keeps its URL, edit rights and chosen tab across a refresh", async ({ page }) => {
+  test("a new plan keeps its URL, edit rights and chosen tab across a refresh", async ({
+    page,
+  }) => {
     await planFromPreset(page, /Rahul's dino birthday/);
     await openTab(page, "Budget");
     await expect(page).toHaveURL(/\/plan\/[A-Za-z0-9_-]+#budget$/);
     await page.reload();
-    await expect(page.getByRole("tab", { name: "Budget" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByRole("tab", { name: "Budget" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     await expect(page.getByRole("slider").first()).toBeVisible();
   });
 

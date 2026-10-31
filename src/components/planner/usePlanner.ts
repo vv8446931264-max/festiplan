@@ -9,8 +9,13 @@ import { PRESETS, presetInput } from "@/lib/presets";
 import { todayIST } from "@/lib/time";
 import { celebrate, setMood, setPalette } from "@/three/bus";
 import {
-  EMPTY_FORM, fromPlanInput, issuesToErrors, toPlanInput, validateForm,
-  type FieldErrors, type FormValues,
+  EMPTY_FORM,
+  fromPlanInput,
+  issuesToErrors,
+  toPlanInput,
+  validateForm,
+  type FieldErrors,
+  type FormValues,
 } from "./form-model";
 
 export type PresetId = (typeof PRESETS)[number]["id"];
@@ -26,7 +31,8 @@ function useBrief(summaryRef: RefObject<HTMLDivElement | null>) {
   const report = (fieldErrors: FieldErrors, message: string | null) => {
     setErrors(fieldErrors);
     setServerError(message);
-    if (Object.keys(fieldErrors).length || message) requestAnimationFrame(() => summaryRef.current?.focus());
+    if (Object.keys(fieldErrors).length || message)
+      requestAnimationFrame(() => summaryRef.current?.focus());
   };
   const update = (patch: Partial<FormValues>) => setValues((v) => ({ ...v, ...patch }));
   return { today, values, setValues, errors, serverError, report, update };
@@ -74,7 +80,8 @@ export function usePlanner(summaryRef: RefObject<HTMLDivElement | null>) {
     setBusy(false);
     if (!res.ok) {
       resetScene();
-      return brief.report(res.issues ? issuesToErrors(res.issues) : {}, res.error);
+      brief.report(res.issues ? issuesToErrors(res.issues) : {}, res.error);
+      return;
     }
     unfold(res);
     setResult({ plan: res.plan, editKey: res.editKey });

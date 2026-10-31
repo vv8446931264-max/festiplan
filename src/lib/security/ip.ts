@@ -65,7 +65,10 @@ export function rateLimitSubject(ip: string): string {
     const [hi, lo] = [groups[6], groups[7]];
     return [hi >> 8, hi & 0xff, lo >> 8, lo & 0xff].join(".");
   }
-  return `${groups.slice(0, 4).map((g) => g.toString(16)).join(":")}::/64`;
+  return `${groups
+    .slice(0, 4)
+    .map((g) => g.toString(16))
+    .join(":")}::/64`;
 }
 
 /** The per-client rate-limit key for a request: `rateLimitSubject(clientIp(req))`. */

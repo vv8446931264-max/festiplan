@@ -1,6 +1,12 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it } from "vitest";
-import { rateLimit, rateLimitScale, rateLimitSize, resetRateLimits, scaledLimit } from "@/lib/security/rate-limit";
+import {
+  rateLimit,
+  rateLimitScale,
+  rateLimitSize,
+  resetRateLimits,
+  scaledLimit,
+} from "@/lib/security/rate-limit";
 
 beforeEach(() => resetRateLimits());
 

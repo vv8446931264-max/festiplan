@@ -7,7 +7,11 @@ const SIZES = [192, 512] as const;
  * a favicon for browsers without SVG favicon support. `icon.svg` stays the primary favicon.
  */
 export function generateImageMetadata() {
-  return SIZES.map((px) => ({ id: String(px), size: { width: px, height: px }, contentType: "image/png" }));
+  return SIZES.map((px) => ({
+    id: String(px),
+    size: { width: px, height: px },
+    contentType: "image/png",
+  }));
 }
 
 /** Renders the icon at the size its id names (192 or 512). */

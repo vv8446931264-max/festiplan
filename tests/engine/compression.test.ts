@@ -1,13 +1,22 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import type { AiTask, ScheduledTask } from "@/lib/contracts";
-import { compressedLeadDays, compressionFactor, scheduleCompression } from "@/lib/engine/compression";
+import {
+  compressedLeadDays,
+  compressionFactor,
+  scheduleCompression,
+} from "@/lib/engine/compression";
 import { addDays, diffDays } from "@/lib/engine/dates";
 import { scheduleTimeline } from "@/lib/engine/timeline";
 
 const TODAY = "2026-10-24";
 
-const task = (id: string, leadWeeks: number, durationDays: number, dependsOn: string[] = []): AiTask => ({
+const task = (
+  id: string,
+  leadWeeks: number,
+  durationDays: number,
+  dependsOn: string[] = [],
+): AiTask => ({
   id,
   title: `Task ${id}`,
   category: "admin",
@@ -65,7 +74,11 @@ describe("scheduleCompression", () => {
   });
 
   it("reports the proportional factor when it does not", () => {
-    const info = scheduleCompression([task("a", 26, 1), task("b", 4, 1)], addDays(TODAY, 12), TODAY);
+    const info = scheduleCompression(
+      [task("a", 26, 1), task("b", 4, 1)],
+      addDays(TODAY, 12),
+      TODAY,
+    );
     expect(info).toMatchObject({ compressed: true, availableDays: 12, idealDays: 182 });
     expect(info.factor).toBeCloseTo(12 / 182, 12);
   });
@@ -126,7 +139,10 @@ describe("scheduleTimeline when the event is closer than the ideal lead times", 
     if (!found) throw new Error(`missing ${id}`);
     return found;
   };
-  const offsets = (t: ScheduledTask): [number, number] => [diffDays(TODAY, t.start), diffDays(TODAY, t.due)];
+  const offsets = (t: ScheduledTask): [number, number] => [
+    diffDays(TODAY, t.start),
+    diffDays(TODAY, t.due),
+  ];
 
   it("spreads the steps over the days left instead of piling them on the event day", () => {
     expect(Object.fromEntries(out.map((t) => [t.id, offsets(t)]))).toEqual({
@@ -194,9 +210,15 @@ describe("scheduleTimeline when the event is closer than the ideal lead times", 
 
   it("degrades gracefully with one day left, an event today, and an event in the past", () => {
     const tomorrow = scheduleTimeline(WEDDING, addDays(TODAY, 1), TODAY);
-    expect(tomorrow.filter((t) => t.id !== "emergency-kit").every((t) => t.start === TODAY && t.due === TODAY)).toBe(true);
+    expect(
+      tomorrow
+        .filter((t) => t.id !== "emergency-kit")
+        .every((t) => t.start === TODAY && t.due === TODAY),
+    ).toBe(true);
     const sameDay = scheduleTimeline(WEDDING, TODAY, TODAY);
-    expect(sameDay.every((t) => t.start === TODAY && t.due === TODAY && t.phase === "day-of")).toBe(true);
+    expect(sameDay.every((t) => t.start === TODAY && t.due === TODAY && t.phase === "day-of")).toBe(
+      true,
+    );
     const past = scheduleTimeline(WEDDING, addDays(TODAY, -3), TODAY);
     expect(past.every((t) => t.start === TODAY && t.due === TODAY)).toBe(true);
   });

@@ -1,13 +1,22 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { TEMPLATE_ANSWER_PREFIX, compactPlan, refinePrompt, refineStream, templateAnswer } from "@/lib/ai/refine";
+import {
+  TEMPLATE_ANSWER_PREFIX,
+  compactPlan,
+  refinePrompt,
+  refineStream,
+  templateAnswer,
+} from "@/lib/ai/refine";
 import { createPlan } from "@/lib/server/plan-service";
 import { MemoryStore } from "@/lib/store";
 import type { PlanInput, PublicPlan } from "@/lib/contracts";
 import { TODAY, fakeAi, promptText, readText, sampleInput } from "../server/fixtures";
 
 async function plan(overrides: Partial<PlanInput> = {}): Promise<PublicPlan> {
-  const res = await createPlan(sampleInput(overrides), TODAY, { store: new MemoryStore(), ai: null });
+  const res = await createPlan(sampleInput(overrides), TODAY, {
+    store: new MemoryStore(),
+    ai: null,
+  });
   return res.plan;
 }
 
@@ -21,7 +30,9 @@ describe("refineStream", () => {
     expect(prompt).toContain(`"amountINR":${p.budget[0]?.amountINR}`);
     expect(prompt).toContain("Where can we cut 20%?");
     expect(prompt).toContain("Reply in தமிழ் (Tamil)");
-    expect(String(streamCalls[0]?.config?.systemInstruction)).toMatch(/Never claim you have changed/);
+    expect(String(streamCalls[0]?.config?.systemInstruction)).toMatch(
+      /Never claim you have changed/,
+    );
   });
 
   it("answers from the template when there is no backend", async () => {

@@ -42,31 +42,75 @@ export function BudgetSliders({ allocations, totalINR, ...shared }: Props) {
   );
 }
 
-type RowProps = Shared & { allocation: Allocation; max: number; distributable: number; step: number };
+type RowProps = Shared & {
+  allocation: Allocation;
+  max: number;
+  distributable: number;
+  step: number;
+};
 
-function SliderRow({ allocation: a, max, distributable, step, editable, highlight, onHighlight, onMove, onLock }: RowProps) {
+function SliderRow({
+  allocation: a,
+  max,
+  distributable,
+  step,
+  editable,
+  highlight,
+  onHighlight,
+  onMove,
+  onLock,
+}: RowProps) {
   const id = `slider-${a.category}`;
   const label = CATEGORY_LABELS[a.category];
   return (
-    <li data-category={a.category} data-amount={a.amountINR}
-      onPointerEnter={() => onHighlight(a.category)} onPointerLeave={() => onHighlight(null)}
-      className={`rounded-2xl px-4 py-2 transition-colors ${highlight === a.category ? "bg-brown" : ""}`}>
+    <li
+      data-category={a.category}
+      data-amount={a.amountINR}
+      onPointerEnter={() => onHighlight(a.category)}
+      onPointerLeave={() => onHighlight(null)}
+      className={`rounded-2xl px-4 py-2 transition-colors ${highlight === a.category ? "bg-brown" : ""}`}
+    >
       <div className="flex items-center gap-3">
-        <span aria-hidden="true" data-print-keep="" className="size-4 shrink-0 rounded-sm"
-          style={{ backgroundColor: CATEGORY_COLORS[a.category], backgroundImage: CATEGORY_PATTERNS[a.category] }} />
-        <label htmlFor={id} className="font-semibold">{label}</label>
+        <span
+          aria-hidden="true"
+          data-print-keep=""
+          className="size-4 shrink-0 rounded-sm"
+          style={{
+            backgroundColor: CATEGORY_COLORS[a.category],
+            backgroundImage: CATEGORY_PATTERNS[a.category],
+          }}
+        />
+        <label htmlFor={id} className="font-semibold">
+          {label}
+        </label>
         <span className="tabular ml-auto font-bold">{formatINR(a.amountINR)}</span>
-        <span className="tabular w-14 text-right text-sm text-muted">{formatPercent(a.percent)}</span>
+        <span className="tabular w-14 text-right text-sm text-muted">
+          {formatPercent(a.percent)}
+        </span>
       </div>
       {editable ? (
         <div className="flex items-center gap-3">
-          <input id={id} type="range" min={0} max={max} step={step} value={a.amountINR}
-            disabled={a.locked} aria-valuetext={formatINR(a.amountINR)}
-            onFocus={() => onHighlight(a.category)} onBlur={() => onHighlight(null)}
-            onChange={(e) => onMove(a.category, Number(e.target.value))} />
+          <input
+            id={id}
+            type="range"
+            min={0}
+            max={max}
+            step={step}
+            value={a.amountINR}
+            disabled={a.locked}
+            aria-valuetext={formatINR(a.amountINR)}
+            onFocus={() => onHighlight(a.category)}
+            onBlur={() => onHighlight(null)}
+            onChange={(e) => onMove(a.category, Number(e.target.value))}
+          />
           <label className="inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 text-sm">
-            <input type="checkbox" className="size-6 shrink-0" checked={a.locked} onChange={(e) => onLock(a.category, e.target.checked)} />
-            Lock{" "}<span className="sr-only">{label}</span>
+            <input
+              type="checkbox"
+              className="size-6 shrink-0"
+              checked={a.locked}
+              onChange={(e) => onLock(a.category, e.target.checked)}
+            />
+            Lock <span className="sr-only">{label}</span>
           </label>
         </div>
       ) : (

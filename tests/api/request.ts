@@ -17,10 +17,19 @@ export function offlineEnv(): void {
 }
 
 /** A same-origin JSON request to a route. */
-export function jsonRequest(path: string, body: unknown, init: { method?: string; headers?: Record<string, string> } = {}): Request {
+export function jsonRequest(
+  path: string,
+  body: unknown,
+  init: { method?: string; headers?: Record<string, string> } = {},
+): Request {
   return new Request(`${ORIGIN}${path}`, {
     method: init.method ?? "POST",
-    headers: { "content-type": "application/json", origin: ORIGIN, host: "localhost:3000", ...init.headers },
+    headers: {
+      "content-type": "application/json",
+      origin: ORIGIN,
+      host: "localhost:3000",
+      ...init.headers,
+    },
     body: typeof body === "string" ? body : JSON.stringify(body),
   });
 }

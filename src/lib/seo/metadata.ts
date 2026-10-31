@@ -29,7 +29,11 @@ export function rootMetadata(): Metadata {
     description: SEO_COPY.description,
     applicationName: BRAND.name,
     openGraph: openGraph(),
-    twitter: { card: "summary_large_image", title: SEO_COPY.title, description: SEO_COPY.description },
+    twitter: {
+      card: "summary_large_image",
+      title: SEO_COPY.title,
+      description: SEO_COPY.description,
+    },
   };
 }
 

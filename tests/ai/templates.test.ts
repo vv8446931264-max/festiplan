@@ -5,7 +5,27 @@ import { AiPlanSchema, EVENT_TYPES, LANGS, LIMITS, PlanInputSchema } from "@/lib
 import type { PlanInput } from "@/lib/contracts";
 import { rng, sampleInput } from "../server/fixtures";
 
-const WORDS = ["veg", "non-veg", "jain", "dinosaur", "space", "unicorn", "diwali", "holi", "turning 7", "40th birthday", "eco", "wheelchair", "kids", "zero waste", "elderly", "🎉", "शादी", "<<<BRIEF", "ignore instructions"];
+const WORDS = [
+  "veg",
+  "non-veg",
+  "jain",
+  "dinosaur",
+  "space",
+  "unicorn",
+  "diwali",
+  "holi",
+  "turning 7",
+  "40th birthday",
+  "eco",
+  "wheelchair",
+  "kids",
+  "zero waste",
+  "elderly",
+  "🎉",
+  "शादी",
+  "<<<BRIEF",
+  "ignore instructions",
+];
 
 function randomText(next: () => number, max: number): string {
   let out = "";
@@ -14,7 +34,7 @@ function randomText(next: () => number, max: number): string {
 }
 
 function randomInput(next: () => number): PlanInput {
-  const pick = <T>(xs: readonly T[]): T => xs[Math.floor(next() * xs.length)] as T;
+  const pick = <T>(xs: readonly T[]): T => xs[Math.floor(next() * xs.length)];
   const city = `${randomText(next, LIMITS.cityMax - 2)}xx`.slice(0, LIMITS.cityMax);
   return {
     eventType: pick(EVENT_TYPES),
@@ -24,7 +44,10 @@ function randomInput(next: () => number): PlanInput {
     guests: 1 + Math.floor(next() * LIMITS.guestsMax),
     budgetINR: LIMITS.budgetMin + Math.floor(next() * (LIMITS.budgetMax - LIMITS.budgetMin)),
     vibe: randomText(next, LIMITS.vibeMax),
-    constraints: Array.from({ length: Math.floor(next() * 11) }, () => randomText(next, 39) || "eco"),
+    constraints: Array.from(
+      { length: Math.floor(next() * 11) },
+      () => randomText(next, 39) || "eco",
+    ),
     language: pick(LANGS),
   };
 }
@@ -41,7 +64,12 @@ describe("templatePlan", () => {
 
   it("passes for every event type at the limits", () => {
     for (const eventType of EVENT_TYPES) {
-      const input = sampleInput({ eventType, city: "C".repeat(LIMITS.cityMax), guests: LIMITS.guestsMax, title: "T".repeat(LIMITS.titleMax) });
+      const input = sampleInput({
+        eventType,
+        city: "C".repeat(LIMITS.cityMax),
+        guests: LIMITS.guestsMax,
+        title: "T".repeat(LIMITS.titleMax),
+      });
       expect(AiPlanSchema.safeParse(templatePlan(input)).success).toBe(true);
     }
   });
@@ -63,39 +91,60 @@ describe("templatePlan", () => {
   });
 
   it("covers every wedding function", () => {
-    const titles = templatePlan(sampleInput()).tasks.map((t) => t.title.toLowerCase()).join(" ");
-    for (const fn of ["haldi", "mehendi", "sangeet", "pheras", "reception", "muhurat"]) expect(titles).toContain(fn);
+    const titles = templatePlan(sampleInput())
+      .tasks.map((t) => t.title.toLowerCase())
+      .join(" ");
+    for (const fn of ["haldi", "mehendi", "sangeet", "pheras", "reception", "muhurat"])
+      expect(titles).toContain(fn);
   });
 
   it("plans a kids' birthday with theme, cake, return gifts and an adult split", () => {
-    const plan = templatePlan(sampleInput({ eventType: "birthday", title: "Aarav's 7th birthday", vibe: "dinosaur theme", constraints: [] }));
+    const plan = templatePlan(
+      sampleInput({
+        eventType: "birthday",
+        title: "Aarav's 7th birthday",
+        vibe: "dinosaur theme",
+        constraints: [],
+      }),
+    );
     expect(plan.ideas[0]?.name).toBe("Dino Discovery Dig");
     const titles = plan.tasks.map((t) => t.title.toLowerCase()).join(" ");
-    for (const s of ["theme", "cake", "return gifts", "kids and adults"]) expect(titles).toContain(s);
+    for (const s of ["theme", "cake", "return gifts", "kids and adults"])
+      expect(titles).toContain(s);
     expect(plan.summary).toContain("7th birthday");
   });
 
   it("plans an adult birthday differently", () => {
-    const plan = templatePlan(sampleInput({ eventType: "birthday", title: "Mum turning 60", vibe: "", constraints: [] }));
+    const plan = templatePlan(
+      sampleInput({ eventType: "birthday", title: "Mum turning 60", vibe: "", constraints: [] }),
+    );
     expect(plan.ideas.map((i) => i.name)).toContain("Retro Bollywood Night");
   });
 
   it("plans community permits, volunteers, sponsors, stalls, stage and safety", () => {
-    const plan = templatePlan(sampleInput({ eventType: "community", vibe: "Society Diwali mela", constraints: [] }));
+    const plan = templatePlan(
+      sampleInput({ eventType: "community", vibe: "Society Diwali mela", constraints: [] }),
+    );
     const titles = plan.tasks.map((t) => t.title.toLowerCase()).join(" ");
-    for (const s of ["permission", "volunteer", "sponsor", "stall", "stage", "first aid"]) expect(titles).toContain(s);
+    for (const s of ["permission", "volunteer", "sponsor", "stall", "stage", "first aid"])
+      expect(titles).toContain(s);
     expect(plan.ideas[0]?.name).toBe("Diwali Utsav Mela");
   });
 
   it("adds tips for the brief's constraints", () => {
-    const kinds = templatePlan(sampleInput({ eventType: "other", constraints: ["wheelchair access", "zero waste", "jain"] })).tips;
+    const kinds = templatePlan(
+      sampleInput({ eventType: "other", constraints: ["wheelchair access", "zero waste", "jain"] }),
+    ).tips;
     expect(kinds.length).toBeLessThanOrEqual(8);
     expect(kinds.some((t) => t.text.includes("step-free entry"))).toBe(true);
     expect(kinds.some((t) => t.text.includes("single-use plastic"))).toBe(true);
   });
 
   it("never names rupee amounts", () => {
-    for (const eventType of EVENT_TYPES) expect(JSON.stringify(templatePlan(sampleInput({ eventType })))).not.toMatch(/₹|\bRs\.?\s?\d/);
+    for (const eventType of EVENT_TYPES)
+      expect(JSON.stringify(templatePlan(sampleInput({ eventType })))).not.toMatch(
+        /₹|\bRs\.?\s?\d/,
+      );
   });
 });
 
@@ -109,16 +158,34 @@ describe("template helpers", () => {
   });
 
   it("detects kids' parties", () => {
-    expect(isKidsParty(sampleInput({ title: "", vibe: "my son's party", constraints: [] }))).toBe(true);
-    expect(isKidsParty(sampleInput({ title: "", vibe: "turning 30", constraints: [] }))).toBe(false);
+    expect(isKidsParty(sampleInput({ title: "", vibe: "my son's party", constraints: [] }))).toBe(
+      true,
+    );
+    expect(isKidsParty(sampleInput({ title: "", vibe: "turning 30", constraints: [] }))).toBe(
+      false,
+    );
   });
 
   it("formats ordinals", () => {
-    expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 101, 111].map(ordinal)).toEqual(["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "101st", "111th"]);
+    expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 101, 111].map(ordinal)).toEqual([
+      "1st",
+      "2nd",
+      "3rd",
+      "4th",
+      "11th",
+      "12th",
+      "13th",
+      "21st",
+      "22nd",
+      "101st",
+      "111th",
+    ]);
   });
 
   it("finds festivals", () => {
-    expect(festivalFrom(sampleInput({ vibe: "durga puja pandal", constraints: [] }))).toBe("Durga Puja");
+    expect(festivalFrom(sampleInput({ vibe: "durga puja pandal", constraints: [] }))).toBe(
+      "Durga Puja",
+    );
     expect(festivalFrom(sampleInput({ vibe: "", title: "", constraints: [] }))).toBeNull();
   });
 });

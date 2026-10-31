@@ -54,7 +54,7 @@ export function groundedPlaces(res: AiResponse): Place[] {
   for (const chunk of chunks) {
     const title = chunk.maps?.title?.trim().replace(/\s+/g, " ").slice(0, 120);
     const uri = chunk.maps?.uri?.trim();
-    if (!title || !uri || !uri.startsWith("https://")) continue;
+    if (!title || !uri?.startsWith("https://")) continue;
     const keys = [`u:${uri}`, `t:${title.toLowerCase()}`];
     if (keys.some((k) => seen.has(k))) continue;
     keys.forEach((k) => seen.add(k));
@@ -100,7 +100,11 @@ export async function findVendors(q: VendorLookup, deps: VendorDeps = {}): Promi
     cache?.set(key, result);
     return result;
   } catch (err) {
-    logEvent({ severity: "WARNING", message: "vendor_lookup_failed", reason: err instanceof Error ? err.name : "error" });
+    logEvent({
+      severity: "WARNING",
+      message: "vendor_lookup_failed",
+      reason: err instanceof Error ? err.name : "error",
+    });
     return empty;
   }
 }

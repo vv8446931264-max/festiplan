@@ -68,7 +68,10 @@ describe("foldLine", () => {
     const alphabet = ["a", "Z", " ", ":", "é", "₹", "ह", "ं", "😀", "𝄞"];
     const rand = mulberry32(21);
     for (let n = 0; n < 500; n++) {
-      const line = Array.from({ length: Math.floor(rand() * 200) }, () => alphabet[Math.floor(rand() * alphabet.length)]).join("");
+      const line = Array.from(
+        { length: Math.floor(rand() * 200) },
+        () => alphabet[Math.floor(rand() * alphabet.length)],
+      ).join("");
       const parts = foldLine(line).split("\r\n");
       expect(parts.every((p) => octets(p) <= 75)).toBe(true);
       expect(parts.every((p) => new TextDecoder().decode(UTF8.encode(p)) === p)).toBe(true);
@@ -89,7 +92,10 @@ describe("buildIcs", () => {
     overdue: false,
     crunch: false,
   });
-  const tasks = [task("book-venue", "Book venue, confirm; pay", "2026-11-01", "2026-11-15"), task("send-cards", "Send cards", "2026-12-20", "2026-12-31")];
+  const tasks = [
+    task("book-venue", "Book venue, confirm; pay", "2026-11-01", "2026-11-15"),
+    task("send-cards", "Send cards", "2026-12-20", "2026-12-31"),
+  ];
   const input = {
     planId: "plan123",
     title: "Riya & Arjun's sangeet",
@@ -103,7 +109,11 @@ describe("buildIcs", () => {
   const lines = ics.split("\r\n");
 
   it("is a CRLF-terminated VCALENDAR with the header fields", () => {
-    expect(ics.startsWith("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//FestiPlan//Planner//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n")).toBe(true);
+    expect(
+      ics.startsWith(
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//FestiPlan//Planner//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n",
+      ),
+    ).toBe(true);
     expect(ics.endsWith("END:VCALENDAR\r\n")).toBe(true);
     expect(ics).not.toMatch(/(?<!\r)\n/);
     expect(lines).toContain("X-WR-CALNAME:Riya & Arjun's sangeet");
@@ -126,7 +136,9 @@ describe("buildIcs", () => {
     expect(lines).toContain("DTSTART;VALUE=DATE:20261115");
     expect(lines).toContain("DTEND;VALUE=DATE:20261116");
     expect(lines).toContain("SUMMARY:Book venue\\, confirm\\; pay");
-    expect(lines).toContain("DESCRIPTION:Start: 1 Nov 2026\\nhttps://festiplan.example/plan/plan123");
+    expect(lines).toContain(
+      "DESCRIPTION:Start: 1 Nov 2026\\nhttps://festiplan.example/plan/plan123",
+    );
   });
 
   it("rolls DTEND over a year end", () => {

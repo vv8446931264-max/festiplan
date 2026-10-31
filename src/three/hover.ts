@@ -8,7 +8,12 @@ export type HoverPicker<T> = { listen(cb: (item: T | null) => void): () => void;
  * item with `itemAt` (null for misses and pointer-leave). Only changes are
  * reported, so a highlight is set once per column, not once per mouse move.
  */
-export function createHoverPicker<T>(canvas: HTMLCanvasElement, camera: Camera, mesh: InstancedMesh, itemAt: (instance: number) => T | null): HoverPicker<T> {
+export function createHoverPicker<T>(
+  canvas: HTMLCanvasElement,
+  camera: Camera,
+  mesh: InstancedMesh,
+  itemAt: (instance: number) => T | null,
+): HoverPicker<T> {
   const raycaster = new Raycaster();
   const ndc = new Vector2();
   const listeners = new Set<(item: T | null) => void>();
@@ -21,7 +26,10 @@ export function createHoverPicker<T>(canvas: HTMLCanvasElement, camera: Camera, 
   const onMove = (e: PointerEvent) => {
     const rect = canvas.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
-    ndc.set(((e.clientX - rect.left) / rect.width) * 2 - 1, 1 - ((e.clientY - rect.top) / rect.height) * 2);
+    ndc.set(
+      ((e.clientX - rect.left) / rect.width) * 2 - 1,
+      1 - ((e.clientY - rect.top) / rect.height) * 2,
+    );
     raycaster.setFromCamera(ndc, camera);
     const hit = raycaster.intersectObject(mesh, false)[0];
     emit(hit?.instanceId === undefined ? null : itemAt(hit.instanceId));

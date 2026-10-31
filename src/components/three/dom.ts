@@ -40,7 +40,12 @@ export function scrollProgress(win: Window): number {
  * intersects the viewport. Calls `onChange` on every flip; returns a cleanup.
  * Without IntersectionObserver the element counts as visible.
  */
-export function observeActivity(el: Element, win: Window, onChange: (active: boolean) => void, rootMargin = "0px"): () => void {
+export function observeActivity(
+  el: Element,
+  win: Window,
+  onChange: (active: boolean) => void,
+  rootMargin = "0px",
+): () => void {
   const doc = win.document;
   const IO = (win as ObserverWindow).IntersectionObserver;
   let intersecting = typeof IO !== "function";
@@ -67,7 +72,11 @@ export function observeActivity(el: Element, win: Window, onChange: (active: boo
 }
 
 /** Call `onSize(width, height)` now and whenever `el` resizes; returns a cleanup. */
-export function observeSize(el: HTMLElement, win: Window, onSize: (w: number, h: number) => void): () => void {
+export function observeSize(
+  el: HTMLElement,
+  win: Window,
+  onSize: (w: number, h: number) => void,
+): () => void {
   const report = () => onSize(el.clientWidth, el.clientHeight);
   report();
   const RO = (win as ObserverWindow).ResizeObserver;

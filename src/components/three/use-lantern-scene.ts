@@ -3,7 +3,14 @@ import { getState, subscribe, type SceneEvent } from "@/three/bus";
 import { lanternFade, skyFade } from "@/three/dusk";
 import type { LanternScene, LanternSceneOptions } from "@/three/lantern-scene";
 import type { Tier } from "@/three/tier";
-import { createSceneCanvas, nextFrame, observeActivity, observeSize, scrollProgress, whenIdle } from "./dom";
+import {
+  createSceneCanvas,
+  nextFrame,
+  observeActivity,
+  observeSize,
+  scrollProgress,
+  whenIdle,
+} from "./dom";
 
 type Create = (canvas: HTMLCanvasElement, options: LanternSceneOptions) => LanternScene;
 
@@ -22,12 +29,21 @@ function followPointer(win: Window, scene: LanternScene): () => void {
 }
 
 /** Create the scene on a fresh canvas inside `root` and wire every input; returns teardown. */
-function mount(create: Create, root: HTMLElement, win: Window, tier: "high" | "low", sceneRef: RefObject<LanternScene | null>): () => void {
+function mount(
+  create: Create,
+  root: HTMLElement,
+  win: Window,
+  tier: "high" | "low",
+  sceneRef: RefObject<LanternScene | null>,
+): () => void {
   const canvas = createSceneCanvas(root.ownerDocument);
   root.appendChild(canvas);
   let scene: LanternScene;
   try {
-    scene = create(canvas, { tier, onFirstFrame: () => canvas.style.setProperty("--lantern-on", "1") });
+    scene = create(canvas, {
+      tier,
+      onFirstFrame: () => canvas.style.setProperty("--lantern-on", "1"),
+    });
   } catch (error) {
     canvas.remove();
     throw error;
@@ -93,7 +109,10 @@ export function useLanternScene(
  * Native scroll only (no hijacking): a passive, rAF-throttled listener that
  * fades the sky toward night and hands progress to the scene, which damps it.
  */
-export function useSkyScroll(skyRef: RefObject<HTMLDivElement | null>, sceneRef: RefObject<LanternScene | null>): void {
+export function useSkyScroll(
+  skyRef: RefObject<HTMLDivElement | null>,
+  sceneRef: RefObject<LanternScene | null>,
+): void {
   useEffect(() => {
     const sky = skyRef.current;
     if (!sky) return;
@@ -103,7 +122,10 @@ export function useSkyScroll(skyRef: RefObject<HTMLDivElement | null>, sceneRef:
       cancel = null;
       const p = scrollProgress(win);
       sky.style.opacity = String(skyFade(p));
-      sky.parentElement?.style.setProperty("--lantern-dim", lanternFade(win.scrollY, win.innerHeight).toFixed(3));
+      sky.parentElement?.style.setProperty(
+        "--lantern-dim",
+        lanternFade(win.scrollY, win.innerHeight).toFixed(3),
+      );
       sceneRef.current?.setScroll(p);
     };
     const onScroll = () => {

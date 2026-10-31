@@ -13,7 +13,10 @@ export function newNonce(): string {
  * @param nonce the value from `newNonce()` for this request
  * @param mode `NODE_ENV` (inlined at build time by Next.js)
  */
-export function contentSecurityPolicy(nonce: string, mode: string | undefined = process.env.NODE_ENV): string {
+export function contentSecurityPolicy(
+  nonce: string,
+  mode: string | undefined = process.env.NODE_ENV,
+): string {
   const directives = [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${mode === "development" ? " 'unsafe-eval'" : ""}`,

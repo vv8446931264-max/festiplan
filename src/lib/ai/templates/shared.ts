@@ -86,13 +86,28 @@ export function clip(text: string, max: number): string {
 export function constraintTips(input: PlanInput): Tip[] {
   const tips: Tip[] = [];
   if (mentions(input, "wheelchair", "accessib", "elderly", "senior", "mobility")) {
-    tips.push(tip("accessibility", "Ask every venue for step-free entry, an accessible toilet and reserved seating near the stage for guests with limited mobility."));
+    tips.push(
+      tip(
+        "accessibility",
+        "Ask every venue for step-free entry, an accessible toilet and reserved seating near the stage for guests with limited mobility.",
+      ),
+    );
   }
   if (mentions(input, "eco", "zero waste", "zero-waste", "plastic", "green", "sustainab")) {
-    tips.push(tip("sustainability", "Write 'no single-use plastic' into caterer and décor contracts, and arrange segregated bins with a local composting or recycling partner."));
+    tips.push(
+      tip(
+        "sustainability",
+        "Write 'no single-use plastic' into caterer and décor contracts, and arrange segregated bins with a local composting or recycling partner.",
+      ),
+    );
   }
   if (isVegetarian(input)) {
-    tips.push(tip("culture", "Confirm in writing that the kitchen keeps vegetarian and Jain preparation separate, and label every counter clearly."));
+    tips.push(
+      tip(
+        "culture",
+        "Confirm in writing that the kitchen keeps vegetarian and Jain preparation separate, and label every counter clearly.",
+      ),
+    );
   }
   return tips;
 }

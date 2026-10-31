@@ -1,4 +1,11 @@
-import { Color, DynamicDrawUsage, IcosahedronGeometry, InstancedMesh, MeshStandardMaterial, type Texture } from "three";
+import {
+  Color,
+  DynamicDrawUsage,
+  IcosahedronGeometry,
+  InstancedMesh,
+  MeshStandardMaterial,
+  type Texture,
+} from "three";
 import {
   assignParticles,
   createParticleState,
@@ -30,14 +37,23 @@ export type FlowParticles = {
 };
 
 /** Translate column indices when the category list changes order or length. */
-export function remapColumns(prev: ParticleAssignment, from: readonly string[], to: readonly string[]): ParticleAssignment {
+export function remapColumns(
+  prev: ParticleAssignment,
+  from: readonly string[],
+  to: readonly string[],
+): ParticleAssignment {
   const index = from.map((key) => to.indexOf(key));
   const column = prev.column.map((c) => (c >= 0 && c < index.length ? index[c] : -1));
   return { column: Int16Array.from(column), slot: prev.slot, counts: to.map(() => 0) };
 }
 
 function particleMaterial(envMap: Texture): MeshStandardMaterial {
-  const material = new MeshStandardMaterial({ roughness: 0.32, metalness: 0.2, envMap, envMapIntensity: 1.2 });
+  const material = new MeshStandardMaterial({
+    roughness: 0.32,
+    metalness: 0.2,
+    envMap,
+    envMapIntensity: 1.2,
+  });
   material.onBeforeCompile = (shader) => {
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <emissivemap_fragment>",
@@ -65,7 +81,10 @@ const tmp = new Color();
 function retint(rig: Rig): void {
   for (let i = 0; i < rig.n; i++) {
     const col = rig.assignment.column[i];
-    tmp.copy(rig.palette[col] ?? tmp.setRGB(0, 0, 0)).multiplyScalar(rig.levels[col] ?? 1).toArray(rig.tint.target, i * 3);
+    tmp
+      .copy(rig.palette[col] ?? tmp.setRGB(0, 0, 0))
+      .multiplyScalar(rig.levels[col] ?? 1)
+      .toArray(rig.tint.target, i * 3);
   }
 }
 
@@ -98,10 +117,22 @@ function createRig(n: number, envMap: Texture): Rig {
   mesh.frustumCulled = false;
   const state = createParticleState(n);
   for (let i = 0; i < n; i++) {
-    state.pos.set([(hash01(i) - 0.5) * 9, 7 + hash01(i + 5e4) * 4, (hash01(i + 9e4) - 0.5) * 2], i * 3);
+    state.pos.set(
+      [(hash01(i) - 0.5) * 9, 7 + hash01(i + 5e4) * 4, (hash01(i + 9e4) - 0.5) * 2],
+      i * 3,
+    );
   }
   const tint = { current: new Float32Array(n * 3), target: new Float32Array(n * 3) };
-  return { n, mesh, assignment: emptyAssignment(n), targets: new Float32Array(n * 3), state, tint, palette: [], levels: [] };
+  return {
+    n,
+    mesh,
+    assignment: emptyAssignment(n),
+    targets: new Float32Array(n * 3),
+    state,
+    tint,
+    palette: [],
+    levels: [],
+  };
 }
 
 /** Build `n` particles that start high above the columns and pour in. */

@@ -42,7 +42,7 @@ export function compressedLeadDays(leadWeeks: number, factor: number): number {
  * @param today ISO "today" (injected).
  */
 export function scheduleCompression(
-  tasks: ReadonlyArray<{ leadWeeks: number }>,
+  tasks: readonly { leadWeeks: number }[],
   eventDate: string,
   today: string,
 ): ScheduleCompression {

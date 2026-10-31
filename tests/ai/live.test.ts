@@ -21,7 +21,10 @@ describe.skipIf(!process.env.LIVE_AI_TOKEN)("live Gemini", () => {
   });
 
   it("finds grounded vendors with https Maps links", { timeout: 60_000 }, async () => {
-    const result = await findVendors({ city: "Jaipur", category: "catering", eventType: "wedding" }, { cache: null });
+    const result = await findVendors(
+      { city: "Jaipur", category: "catering", eventType: "wedding" },
+      { cache: null },
+    );
     expect(result.searchUrl).toMatch(/^https:\/\/www\.google\.com\/maps\/search\//);
     for (const p of result.places) expect(p.uri.startsWith("https://")).toBe(true);
   });

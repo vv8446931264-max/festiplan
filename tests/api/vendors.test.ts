@@ -13,7 +13,8 @@ async function planId(overrides: Partial<PlanInput> = {}): Promise<string> {
   return ((await res.json()) as { plan: PublicPlan }).plan.id;
 }
 
-const lookup = (body: unknown, headers: Record<string, string> = {}) => vendors(jsonRequest("/api/vendors", body, { headers }), noCtx);
+const lookup = (body: unknown, headers: Record<string, string> = {}) =>
+  vendors(jsonRequest("/api/vendors", body, { headers }), noCtx);
 
 describe("POST /api/vendors", () => {
   it("looks up vendors for the plan's own city and event type", async () => {
@@ -23,7 +24,8 @@ describe("POST /api/vendors", () => {
     expect(res.headers.get("cache-control")).toBe("no-store");
     expect(await res.json()).toEqual({
       places: [],
-      searchUrl: "https://www.google.com/maps/search/?api=1&query=Catering%20for%20birthday%20party%20in%20Kochi",
+      searchUrl:
+        "https://www.google.com/maps/search/?api=1&query=Catering%20for%20birthday%20party%20in%20Kochi",
       source: "search",
     });
   });
@@ -53,17 +55,26 @@ describe("POST /api/vendors", () => {
   it("enforces the 1 KB cap and same-origin", async () => {
     expect((await lookup({ planId: "x".repeat(2000), category: "venue" })).status).toBe(413);
     const id = await planId();
-    expect((await lookup({ planId: id, category: "venue" }, { origin: "https://evil.example" })).status).toBe(403);
+    expect(
+      (await lookup({ planId: id, category: "venue" }, { origin: "https://evil.example" })).status,
+    ).toBe(403);
   });
 
   it("allows 10 lookups per minute per client, then 429", async () => {
     const id = await planId();
     const headers = { "x-forwarded-for": "2001:db8:5:6::1" };
-    for (let i = 0; i < 10; i++) expect((await lookup({ planId: id, category: "venue" }, headers)).status).toBe(200);
+    for (let i = 0; i < 10; i++)
+      expect((await lookup({ planId: id, category: "venue" }, headers)).status).toBe(200);
     // Another address in the same IPv6 /64 shares the window.
-    const sameNetwork = await lookup({ planId: id, category: "venue" }, { "x-forwarded-for": "2001:db8:5:6:ffff::9" });
+    const sameNetwork = await lookup(
+      { planId: id, category: "venue" },
+      { "x-forwarded-for": "2001:db8:5:6:ffff::9" },
+    );
     expect(sameNetwork.status).toBe(429);
     expect(Number(sameNetwork.headers.get("retry-after"))).toBeGreaterThan(0);
-    expect((await lookup({ planId: id, category: "venue" }, { "x-forwarded-for": "2001:db8:5:7::1" })).status).toBe(200);
+    expect(
+      (await lookup({ planId: id, category: "venue" }, { "x-forwarded-for": "2001:db8:5:7::1" }))
+        .status,
+    ).toBe(200);
   });
 });

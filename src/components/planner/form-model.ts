@@ -59,13 +59,22 @@ function numberError(n: number, min: number, max: number, what: string): string 
 export function validateForm(v: FormValues, today: string): FieldErrors {
   const errors: FieldErrors = {};
   if (!v.eventType) errors.eventType = "Choose what you're celebrating.";
-  errors.eventDate = v.eventDate ? (checkEventDate(v.eventDate, today) ?? undefined) : "Choose the date of the event.";
+  errors.eventDate = v.eventDate
+    ? (checkEventDate(v.eventDate, today) ?? undefined)
+    : "Choose the date of the event.";
   const city = v.city.trim();
-  if (city.length < LIMITS.cityMin || city.length > LIMITS.cityMax) errors.city = "Enter the city where it's happening.";
-  errors.guests = numberError(parseWhole(v.guests), LIMITS.guestsMin, LIMITS.guestsMax, "the number of guests") ?? undefined;
-  errors.budget = numberError(parseWhole(v.budget), LIMITS.budgetMin, LIMITS.budgetMax, "a budget in rupees") ?? undefined;
-  if (v.title.trim().length > LIMITS.titleMax) errors.title = `Keep the name under ${LIMITS.titleMax} characters.`;
-  if (v.vibe.trim().length > LIMITS.vibeMax) errors.vibe = `Keep the description under ${LIMITS.vibeMax} characters.`;
+  if (city.length < LIMITS.cityMin || city.length > LIMITS.cityMax)
+    errors.city = "Enter the city where it's happening.";
+  errors.guests =
+    numberError(parseWhole(v.guests), LIMITS.guestsMin, LIMITS.guestsMax, "the number of guests") ??
+    undefined;
+  errors.budget =
+    numberError(parseWhole(v.budget), LIMITS.budgetMin, LIMITS.budgetMax, "a budget in rupees") ??
+    undefined;
+  if (v.title.trim().length > LIMITS.titleMax)
+    errors.title = `Keep the name under ${LIMITS.titleMax} characters.`;
+  if (v.vibe.trim().length > LIMITS.vibeMax)
+    errors.vibe = `Keep the description under ${LIMITS.vibeMax} characters.`;
   for (const key of FIELD_ORDER) if (errors[key] === undefined) delete errors[key];
   return errors;
 }
@@ -107,7 +116,7 @@ export function issuesToErrors(issues: { path: string; message: string }[]): Fie
   const errors: FieldErrors = {};
   for (const issue of issues) {
     const head = issue.path.split(".")[0] ?? "";
-    const field = (map[head] ?? head) as FieldName;
+    const field = map[head] ?? head;
     if (FIELD_ORDER.includes(field) && !errors[field]) errors[field] = issue.message;
   }
   return errors;

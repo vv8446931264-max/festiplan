@@ -20,7 +20,11 @@ export type BudgetVariance = {
 };
 
 /** A category whose actual spend exceeds its plan. */
-export type OverspendAlert = { category: BudgetCategory; overByINR: number; coveredByContingency: boolean };
+export type OverspendAlert = {
+  category: BudgetCategory;
+  overByINR: number;
+  coveredByContingency: boolean;
+};
 
 /**
  * Planned versus actual per category. `actualINR` sums the recorded actuals; `varianceINR`
@@ -35,7 +39,9 @@ export function budgetVariance(allocations: Allocation[]): BudgetVariance {
     varianceINR: a.actualINR === null ? null : a.actualINR - a.amountINR,
     overspent: a.actualINR !== null && a.actualINR > a.amountINR,
   }));
-  const tracked = allocations.filter((a): a is Allocation & { actualINR: number } => a.actualINR !== null);
+  const tracked = allocations.filter(
+    (a): a is Allocation & { actualINR: number } => a.actualINR !== null,
+  );
   return {
     rows,
     plannedINR: sum(allocations.map((a) => a.amountINR)),
@@ -50,14 +56,21 @@ export function budgetVariance(allocations: Allocation[]): BudgetVariance {
  * @param allocations Current lines.
  * @param contingencyINR Contingency reserve in rupees.
  */
-export function overspendAlerts(allocations: Allocation[], contingencyINR: number): OverspendAlert[] {
+export function overspendAlerts(
+  allocations: Allocation[],
+  contingencyINR: number,
+): OverspendAlert[] {
   let running = 0;
   const alerts: OverspendAlert[] = [];
   for (const a of allocations) {
     if (a.actualINR === null || a.actualINR <= a.amountINR) continue;
     const overByINR = a.actualINR - a.amountINR;
     running += overByINR;
-    alerts.push({ category: a.category, overByINR, coveredByContingency: running <= contingencyINR });
+    alerts.push({
+      category: a.category,
+      overByINR,
+      coveredByContingency: running <= contingencyINR,
+    });
   }
   return alerts;
 }

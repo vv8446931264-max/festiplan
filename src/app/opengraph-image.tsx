@@ -17,7 +17,9 @@ const LANTERNS = [
 function Sky() {
   return (
     // satori has no `inset`: the layer is pinned with explicit coordinates.
-    <div style={{ position: "absolute", left: 0, top: 0, width: 1200, height: 630, display: "flex" }}>
+    <div
+      style={{ position: "absolute", left: 0, top: 0, width: 1200, height: 630, display: "flex" }}
+    >
       <div
         style={{
           position: "absolute",
@@ -57,7 +59,15 @@ function Tagline() {
     </div>
   );
   return (
-    <div style={{ display: "flex", flexDirection: "column", fontSize: 54, lineHeight: 1.1, letterSpacing: -1 }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        fontSize: 54,
+        lineHeight: 1.1,
+        letterSpacing: -1,
+      }}
+    >
       {line("Made for", "moments")}
       {line("Built for", "budgets")}
     </div>
@@ -67,34 +77,34 @@ function Tagline() {
 /** The 1200 × 630 share card: dusk gradient, wordmark, tagline and what the product is. */
 export default function OpengraphImage() {
   return new ImageResponse(
-    (
-      <div
-        style={{
-          position: "relative",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-between",
-          width: "100%",
-          height: "100%",
-          padding: "64px 80px",
-          color: C.cream,
-          background: `linear-gradient(135deg, ${C.espresso} 0%, ${C.espresso} 40%, #2b0d1d 65%, #5c0868 86%, ${C.plum} 100%)`,
-        }}
-      >
-        <Sky />
-        <div style={{ display: "flex", fontSize: 22, letterSpacing: 4, color: C.muted }}>
-          {BRAND.category.toUpperCase()}
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
-          <div style={{ display: "flex", fontSize: 168, lineHeight: 0.9, letterSpacing: -7 }}>
-            <span>{BRAND.name}</span>
-            <span style={{ color: C.gold }}>.</span>
-          </div>
-          <Tagline />
-        </div>
-        <div style={{ display: "flex", fontSize: 30, color: C.cream, opacity: 0.85 }}>{BRAND.subtitle}</div>
+    <div
+      style={{
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        width: "100%",
+        height: "100%",
+        padding: "64px 80px",
+        color: C.cream,
+        background: `linear-gradient(135deg, ${C.espresso} 0%, ${C.espresso} 40%, #2b0d1d 65%, #5c0868 86%, ${C.plum} 100%)`,
+      }}
+    >
+      <Sky />
+      <div style={{ display: "flex", fontSize: 22, letterSpacing: 4, color: C.muted }}>
+        {BRAND.category.toUpperCase()}
       </div>
-    ),
+      <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+        <div style={{ display: "flex", fontSize: 168, lineHeight: 0.9, letterSpacing: -7 }}>
+          <span>{BRAND.name}</span>
+          <span style={{ color: C.gold }}>.</span>
+        </div>
+        <Tagline />
+      </div>
+      <div style={{ display: "flex", fontSize: 30, color: C.cream, opacity: 0.85 }}>
+        {BRAND.subtitle}
+      </div>
+    </div>,
     size,
   );
 }

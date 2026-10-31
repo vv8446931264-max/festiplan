@@ -7,7 +7,12 @@ import { phaseFor, scheduleTimeline, topoSort } from "@/lib/engine/timeline";
 const EVENT = "2027-02-14";
 const TODAY = "2026-10-24";
 
-const task = (id: string, leadWeeks: number, durationDays = 1, dependsOn: string[] = []): AiTask => ({
+const task = (
+  id: string,
+  leadWeeks: number,
+  durationDays = 1,
+  dependsOn: string[] = [],
+): AiTask => ({
   id,
   title: `Task ${id}`,
   category: "admin",
@@ -15,7 +20,8 @@ const task = (id: string, leadWeeks: number, durationDays = 1, dependsOn: string
   durationDays,
   dependsOn,
 });
-const ids = (tasks: { id: string }[] | null): string[] | null => (tasks === null ? null : tasks.map((t) => t.id));
+const ids = (tasks: { id: string }[] | null): string[] | null =>
+  tasks === null ? null : tasks.map((t) => t.id);
 const byId = (timeline: ScheduledTask[], id: string): ScheduledTask => {
   const found = timeline.find((t) => t.id === id);
   if (!found) throw new Error(`missing ${id}`);
@@ -36,12 +42,19 @@ describe("topoSort", () => {
   it("is stable: the lowest original index goes first among ready tasks", () => {
     const tasks = [task("a", 1, 1, ["d"]), task("b", 1), task("c", 1), task("d", 1)];
     expect(ids(topoSort(tasks))).toEqual(["b", "c", "d", "a"]);
-    const diamond = [task("d", 1, 1, ["b", "c"]), task("c", 1, 1, ["a"]), task("b", 1, 1, ["a"]), task("a", 1)];
+    const diamond = [
+      task("d", 1, 1, ["b", "c"]),
+      task("c", 1, 1, ["a"]),
+      task("b", 1, 1, ["a"]),
+      task("a", 1),
+    ];
     expect(ids(topoSort(diamond))).toEqual(["a", "c", "b", "d"]);
   });
 
   it("ignores unknown ids and repeated dependencies", () => {
-    expect(ids(topoSort([task("a", 1, 1, ["ghost"]), task("b", 1, 1, ["a", "a", "ghost"])]))).toEqual(["a", "b"]);
+    expect(
+      ids(topoSort([task("a", 1, 1, ["ghost"]), task("b", 1, 1, ["a", "a", "ghost"])])),
+    ).toEqual(["a", "b"]);
   });
 
   it("treats a duplicate id as the first one", () => {
@@ -51,7 +64,14 @@ describe("topoSort", () => {
   it("returns null for self-dependencies and cycles", () => {
     expect(topoSort([task("a", 1, 1, ["a"])])).toBeNull();
     expect(topoSort([task("a", 1, 1, ["b"]), task("b", 1, 1, ["a"])])).toBeNull();
-    expect(topoSort([task("ok", 1), task("a", 1, 1, ["c"]), task("b", 1, 1, ["a"]), task("c", 1, 1, ["b"])])).toBeNull();
+    expect(
+      topoSort([
+        task("ok", 1),
+        task("a", 1, 1, ["c"]),
+        task("b", 1, 1, ["a"]),
+        task("c", 1, 1, ["b"]),
+      ]),
+    ).toBeNull();
   });
 });
 
@@ -93,10 +113,22 @@ describe("scheduleTimeline", () => {
   it("scales every lead time and duration by the same factor", () => {
     // Longest lead 224 days vs 113 available: factor ~0.5. Crunch means the uncompressed ideal start
     // had passed, so "mid" (112 ideal days) is shortened but not flagged.
-    const out = scheduleTimeline([task("long", 32, 20), task("mid", 16, 10), task("short", 8, 4)], EVENT, TODAY);
+    const out = scheduleTimeline(
+      [task("long", 32, 20), task("mid", 16, 10), task("short", 8, 4)],
+      EVENT,
+      TODAY,
+    );
     expect(byId(out, "long")).toMatchObject({ start: TODAY, due: "2026-11-03", crunch: true });
-    expect(byId(out, "mid")).toMatchObject({ start: "2026-12-19", due: "2026-12-24", crunch: false });
-    expect(byId(out, "short")).toMatchObject({ start: "2027-01-17", due: "2027-01-19", crunch: false });
+    expect(byId(out, "mid")).toMatchObject({
+      start: "2026-12-19",
+      due: "2026-12-24",
+      crunch: false,
+    });
+    expect(byId(out, "short")).toMatchObject({
+      start: "2027-01-17",
+      due: "2027-01-19",
+      crunch: false,
+    });
   });
 
   it("starts a task after its prerequisites are due, wherever they sit in the list", () => {
@@ -116,7 +148,10 @@ describe("scheduleTimeline", () => {
       due: EVENT,
       phase: "day-of",
     });
-    expect(scheduleTimeline([task("kit", 0, 40)], EVENT, TODAY)[0]).toMatchObject({ start: EVENT, due: EVENT });
+    expect(scheduleTimeline([task("kit", 0, 40)], EVENT, TODAY)[0]).toMatchObject({
+      start: EVENT,
+      due: EVENT,
+    });
   });
 
   it("never schedules before today or before the start, even after the event", () => {
@@ -126,11 +161,18 @@ describe("scheduleTimeline", () => {
       crunch: true,
       phase: "day-of",
     });
-    expect(scheduleTimeline([task("today", 5, 3)], EVENT, EVENT)[0]).toMatchObject({ start: EVENT, due: EVENT });
+    expect(scheduleTimeline([task("today", 5, 3)], EVENT, EVENT)[0]).toMatchObject({
+      start: EVENT,
+      due: EVENT,
+    });
   });
 
   it("lets a prerequisite due on the event day pull its dependents there", () => {
-    const out = scheduleTimeline([task("kit", 0, 1), task("after-kit", 2, 1, ["kit"])], EVENT, TODAY);
+    const out = scheduleTimeline(
+      [task("kit", 0, 1), task("after-kit", 2, 1, ["kit"])],
+      EVENT,
+      TODAY,
+    );
     expect(byId(out, "after-kit")).toMatchObject({ start: EVENT, due: EVENT });
   });
 
@@ -146,9 +188,21 @@ describe("scheduleTimeline", () => {
   });
 
   it("sorts by due, then start, then input order", () => {
-    const tasks = [task("y", 0, 1), task("x", 2, 30), task("w", 1, 30), task("z", 0, 1), task("early", 8, 2)];
+    const tasks = [
+      task("y", 0, 1),
+      task("x", 2, 30),
+      task("w", 1, 30),
+      task("z", 0, 1),
+      task("early", 8, 2),
+    ];
     // x and w are both capped at the day before the event; x starts a week earlier. y and z tie fully.
-    expect(scheduleTimeline(tasks, EVENT, TODAY).map((t) => t.id)).toEqual(["early", "x", "w", "y", "z"]);
+    expect(scheduleTimeline(tasks, EVENT, TODAY).map((t) => t.id)).toEqual([
+      "early",
+      "x",
+      "w",
+      "y",
+      "z",
+    ]);
   });
 
   it("returns [] for no tasks and does not mutate its input", () => {

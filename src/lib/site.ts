@@ -2,14 +2,16 @@
  * Public origin used for metadata, sitemap, structured data and share links rendered on the
  * server. No trailing slash, so `${SITE_URL}/path` never doubles it.
  */
-export const SITE_URL = (process.env.SITE_URL ?? "https://festiplan-580541627338.us-central1.run.app").replace(/\/+$/, "");
+export const SITE_URL = (
+  process.env.SITE_URL ?? "https://festiplan-580541627338.us-central1.run.app"
+).replace(/\/+$/, "");
 
 /**
  * Absolute URL on the public origin. The root is the bare origin, exactly as Next.js renders
  * a canonical of `/`, so the sitemap, canonical link and JSON-LD all name the same URL.
  * @param path a root-relative path such as `/` or `/opengraph-image`
  */
-export function absoluteUrl(path: string = "/"): string {
+export function absoluteUrl(path = "/"): string {
   return path === "/" ? SITE_URL : `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
 

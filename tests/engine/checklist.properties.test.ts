@@ -10,11 +10,14 @@ import { int, mulberry32 } from "./prng";
 const TODAY = "2026-10-24";
 
 /** Mix of near events (heavy compression) and far ones (none), always at least a day away. */
-const eventAfter = (rand: () => number): string => addDays(TODAY, rand() < 0.6 ? int(rand, 1, 60) : int(rand, 1, 900));
+const eventAfter = (rand: () => number): string =>
+  addDays(TODAY, rand() < 0.6 ? int(rand, 1, 60) : int(rand, 1, 900));
 
 /** 1–10 vendors with distinct categories and book-by lead times of 0–104 weeks. */
 function randomVendors(rand: () => number): VendorGuide[] {
-  const categories = [...BUDGET_CATEGORIES].sort(() => rand() - 0.5).slice(0, int(rand, 1, BUDGET_CATEGORIES.length));
+  const categories = [...BUDGET_CATEGORIES]
+    .sort(() => rand() - 0.5)
+    .slice(0, int(rand, 1, BUDGET_CATEGORIES.length));
   return categories.map((category) => ({
     category,
     bookByWeeks: rand() < 0.1 ? 0 : int(rand, 1, 104),
@@ -43,7 +46,9 @@ describe("scheduleVendors (property)", () => {
       const rank = (c: string): number => BUDGET_CATEGORIES.findIndex((b) => b === c);
       for (let i = 1; i < out.length; i++) {
         const [a, b] = [out[i - 1], out[i]];
-        expect(a.bookBy < b.bookBy || (a.bookBy === b.bookBy && rank(a.category) <= rank(b.category))).toBe(true);
+        expect(
+          a.bookBy < b.bookBy || (a.bookBy === b.bookBy && rank(a.category) <= rank(b.category)),
+        ).toBe(true);
       }
     }
   });
@@ -55,7 +60,11 @@ describe("scheduleVendors (property)", () => {
     for (let run = 0; run < 500; run++) {
       const event = eventAfter(rand);
       const vendors = randomVendors(rand);
-      const info = scheduleCompression(vendors.map((v) => ({ leadWeeks: v.bookByWeeks })), event, TODAY);
+      const info = scheduleCompression(
+        vendors.map((v) => ({ leadWeeks: v.bookByWeeks })),
+        event,
+        TODAY,
+      );
       const out = scheduleVendors(vendors, event, TODAY);
       const by = new Map(out.map((v) => [v.category, v.bookBy]));
       const longest = vendors.reduce((a, b) => (b.bookByWeeks > a.bookByWeeks ? b : a));
@@ -71,7 +80,9 @@ describe("scheduleVendors (property)", () => {
       }
       const byLead = [...vendors].sort((a, b) => b.bookByWeeks - a.bookByWeeks);
       for (let i = 1; i < byLead.length; i++) {
-        expect((by.get(byLead[i - 1].category) ?? "") <= (by.get(byLead[i].category) ?? "")).toBe(true);
+        expect((by.get(byLead[i - 1].category) ?? "") <= (by.get(byLead[i].category) ?? "")).toBe(
+          true,
+        );
       }
     }
     expect(compressed).toBeGreaterThan(100);

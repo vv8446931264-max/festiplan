@@ -5,7 +5,10 @@ import { createBus, normalizePalette, type Mood, type SceneEvent } from "@/three
 
 describe("normalizePalette", () => {
   it("keeps lower-cased #rrggbb colours, at most eight", () => {
-    expect(normalizePalette(["#FFBF02", "red", "#12345", "#a1b2c3"])).toEqual(["#ffbf02", "#a1b2c3"]);
+    expect(normalizePalette(["#FFBF02", "red", "#12345", "#a1b2c3"])).toEqual([
+      "#ffbf02",
+      "#a1b2c3",
+    ]);
     expect(normalizePalette(Array.from({ length: 12 }, () => "#000000"))).toHaveLength(8);
   });
 
@@ -81,7 +84,11 @@ describe("module-level bus", () => {
     shared.setMood("plan");
     shared.setPalette(["#445231"]);
     shared.celebrate();
-    expect(shared.getState()).toMatchObject({ mood: "plan", palette: ["#445231"], celebrations: 1 });
+    expect(shared.getState()).toMatchObject({
+      mood: "plan",
+      palette: ["#445231"],
+      celebrations: 1,
+    });
     expect(listener).toHaveBeenCalledTimes(3);
     off();
     shared.setMood("hero");

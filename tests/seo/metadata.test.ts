@@ -37,7 +37,11 @@ describe("rootMetadata", () => {
   it("sets title template, description, Open Graph and a large Twitter card", () => {
     expect(meta.title).toEqual({ default: SEO_COPY.title, template: "%s · FestiPlan" });
     expect(meta.description).toBe(SEO_COPY.description);
-    expect(meta.openGraph).toMatchObject({ type: "website", siteName: "FestiPlan", locale: "en_IN" });
+    expect(meta.openGraph).toMatchObject({
+      type: "website",
+      siteName: "FestiPlan",
+      locale: "en_IN",
+    });
     expect(meta.twitter).toMatchObject({ card: "summary_large_image" });
   });
 
@@ -52,7 +56,12 @@ describe("homeMetadata", () => {
 
   it("declares the canonical URL and og:url for the landing page", () => {
     expect(meta.alternates?.canonical).toBe("/");
-    expect(meta.openGraph).toMatchObject({ url: "/", locale: "en_IN", siteName: "FestiPlan", type: "website" });
+    expect(meta.openGraph).toMatchObject({
+      url: "/",
+      locale: "en_IN",
+      siteName: "FestiPlan",
+      type: "website",
+    });
   });
 
   it("stays indexable and allows large image previews", () => {
@@ -83,13 +92,25 @@ describe("web app manifest", () => {
   it("offers SVG plus 192/512 PNG icons and a maskable icon", () => {
     const icons = m.icons ?? [];
     expect(icons).toContainEqual({ src: "/icon.svg", sizes: "any", type: "image/svg+xml" });
-    expect(icons).toContainEqual(expect.objectContaining({ src: IMAGE_ROUTES.icon192, sizes: "192x192", type: "image/png" }));
-    expect(icons).toContainEqual(expect.objectContaining({ src: IMAGE_ROUTES.icon512, sizes: "512x512", type: "image/png" }));
-    expect(icons).toContainEqual(expect.objectContaining({ src: IMAGE_ROUTES.icon512, purpose: "maskable" }));
+    expect(icons).toContainEqual(
+      expect.objectContaining({ src: IMAGE_ROUTES.icon192, sizes: "192x192", type: "image/png" }),
+    );
+    expect(icons).toContainEqual(
+      expect.objectContaining({ src: IMAGE_ROUTES.icon512, sizes: "512x512", type: "image/png" }),
+    );
+    expect(icons).toContainEqual(
+      expect.objectContaining({ src: IMAGE_ROUTES.icon512, purpose: "maskable" }),
+    );
   });
 
   it("describes the app in its own language and scope", () => {
-    expect(m).toMatchObject({ id: "/", start_url: "/", scope: "/", lang: "en-IN", display: "standalone" });
+    expect(m).toMatchObject({
+      id: "/",
+      start_url: "/",
+      scope: "/",
+      lang: "en-IN",
+      display: "standalone",
+    });
     expect(m.description).toBe(SEO_COPY.description);
   });
 });

@@ -8,9 +8,13 @@ import type { VendorResult } from "@/lib/contracts";
 import { fakeAi, promptText } from "../server/fixtures";
 
 const query: VendorLookup = { city: "Jaipur", category: "catering", eventType: "wedding" };
-const SEARCH = "https://www.google.com/maps/search/?api=1&query=Catering%20for%20wedding%20in%20Jaipur";
+const SEARCH =
+  "https://www.google.com/maps/search/?api=1&query=Catering%20for%20wedding%20in%20Jaipur";
 
-const grounded = (maps: Array<{ title?: string; uri?: string } | undefined>, text = "Try Vendor X (not grounded)"): AiResponse => ({
+const grounded = (
+  maps: ({ title?: string; uri?: string } | undefined)[],
+  text = "Try Vendor X (not grounded)",
+): AiResponse => ({
   text,
   candidates: [{ groundingMetadata: { groundingChunks: maps.map((m) => (m ? { maps: m } : {})) } }],
 });
@@ -27,14 +31,20 @@ describe("findVendors", () => {
       { title: "", uri: "https://maps.google.com/?cid=3" },
       { uri: "https://maps.google.com/?cid=4" },
       undefined,
-      ...Array.from({ length: 8 }, (_, i) => ({ title: `Place ${i}`, uri: `https://maps.google.com/?cid=${10 + i}` })),
+      ...Array.from({ length: 8 }, (_, i) => ({
+        title: `Place ${i}`,
+        uri: `https://maps.google.com/?cid=${10 + i}`,
+      })),
     ];
     const { handle, calls } = fakeAi([grounded(chunks)]);
     const result = await findVendors(query, { ai: handle, cache: null });
     expect(result.source).toBe("maps");
     expect(result.searchUrl).toBe(SEARCH);
     expect(result.places).toHaveLength(6);
-    expect(result.places[0]).toEqual({ title: "Shree Caterers", uri: "https://maps.google.com/?cid=1" });
+    expect(result.places[0]).toEqual({
+      title: "Shree Caterers",
+      uri: "https://maps.google.com/?cid=1",
+    });
     expect(result.places.every((p) => p.uri.startsWith("https://"))).toBe(true);
     expect(result.places.map((p) => p.title)).not.toContain("Vendor X");
     expect(calls[0]?.config?.tools).toEqual([{ googleMaps: {} }]);
@@ -51,15 +61,24 @@ describe("findVendors", () => {
   });
 
   it("falls back to a search link with no chunks, an error or no backend", async () => {
-    const none = await findVendors(query, { ai: fakeAi([{ text: "no grounding" }]).handle, cache: null });
-    const failed = await findVendors(query, { ai: fakeAi([new Error("boom")]).handle, cache: null });
+    const none = await findVendors(query, {
+      ai: fakeAi([{ text: "no grounding" }]).handle,
+      cache: null,
+    });
+    const failed = await findVendors(query, {
+      ai: fakeAi([new Error("boom")]).handle,
+      cache: null,
+    });
     const offline = await findVendors(query, { ai: null });
-    for (const r of [none, failed, offline]) expect(r).toEqual({ places: [], searchUrl: SEARCH, source: "search" });
+    for (const r of [none, failed, offline])
+      expect(r).toEqual({ places: [], searchUrl: SEARCH, source: "search" });
   });
 
   it("caches grounded results per city (case-insensitive), category and event type", async () => {
     const cache = new TtlCache<VendorResult>(10, 86_400_000);
-    const { handle, calls } = fakeAi([grounded([{ title: "A", uri: "https://maps.google.com/?cid=1" }])]);
+    const { handle, calls } = fakeAi([
+      grounded([{ title: "A", uri: "https://maps.google.com/?cid=1" }]),
+    ]);
     await findVendors(query, { ai: handle, cache });
     const again = await findVendors({ ...query, city: " JAIPUR " }, { ai: handle, cache });
     expect(again.places).toHaveLength(1);
@@ -71,8 +90,12 @@ describe("findVendors", () => {
 
 describe("helpers", () => {
   it("builds readable search queries", () => {
-    expect(vendorQueryText({ city: "Pune", category: "venue", eventType: "community" })).toBe("Venue for community event in Pune");
-    expect(vendorQueryText({ city: "Pune", category: "gifts", eventType: "birthday" })).toBe("Gifts & favours for birthday party in Pune");
+    expect(vendorQueryText({ city: "Pune", category: "venue", eventType: "community" })).toBe(
+      "Venue for community event in Pune",
+    );
+    expect(vendorQueryText({ city: "Pune", category: "gifts", eventType: "birthday" })).toBe(
+      "Gifts & favours for birthday party in Pune",
+    );
   });
 
   it("handles responses without candidates", () => {

@@ -1,7 +1,14 @@
 import { MathUtils, PerspectiveCamera, Scene, type WebGLRenderer } from "three";
 import { CATEGORY_COLORS } from "@/lib/category-style";
 import type { BudgetCategory } from "@/lib/contracts";
-import { DEFAULT_COLUMN_LAYOUT, columnX, layoutParticles, stackHeight, type ColumnLayout, type ParticleAllocation } from "@/lib/engine/particles";
+import {
+  DEFAULT_COLUMN_LAYOUT,
+  columnX,
+  layoutParticles,
+  stackHeight,
+  type ColumnLayout,
+  type ParticleAllocation,
+} from "@/lib/engine/particles";
 import { createGlassColumns, type GlassColumns } from "./columns";
 import { createDuskEnvironment, type Environment } from "./env";
 import { createFlowParticles, type FlowParticles } from "./flow-particles";
@@ -32,8 +39,21 @@ export type BudgetFlowScene = {
 const FIT_HEIGHT = 7;
 const FOV = 30;
 
-type Stage = { n: number; renderer: WebGLRenderer; env: Environment; scene: Scene; camera: PerspectiveCamera; columns: GlassColumns; particles: FlowParticles };
-type Flow = { categories: BudgetCategory[]; counts: number[]; highlight: BudgetCategory | null; size: number };
+type Stage = {
+  n: number;
+  renderer: WebGLRenderer;
+  env: Environment;
+  scene: Scene;
+  camera: PerspectiveCamera;
+  columns: GlassColumns;
+  particles: FlowParticles;
+};
+type Flow = {
+  categories: BudgetCategory[];
+  counts: number[];
+  highlight: BudgetCategory | null;
+  size: number;
+};
 
 function buildStage(canvas: HTMLCanvasElement, tier: Exclude<Tier, "off">): Stage {
   const n = FLOW_PARTICLES[tier];
@@ -52,7 +72,13 @@ function layoutFor(n: number, counts: readonly number[]): ColumnLayout {
   const perLayer = n >= 500 ? 7 : 4;
   const tallest = Math.max(0.3 * n, ...counts);
   const layerHeight = FIT_HEIGHT / Math.ceil(tallest / perLayer);
-  return { ...DEFAULT_COLUMN_LAYOUT, perLayer, radius: perLayer === 7 ? 0.34 : 0.26, spacing: 1.2, layerHeight };
+  return {
+    ...DEFAULT_COLUMN_LAYOUT,
+    perLayer,
+    radius: perLayer === 7 ? 0.34 : 0.26,
+    spacing: 1.2,
+    layerHeight,
+  };
 }
 
 /** Fit the row of columns to the viewport width and the stack to its height, looking down onto the lids. */
@@ -76,14 +102,21 @@ function applyHighlight(stage: Stage, f: Flow): void {
 function applyAllocations(stage: Stage, f: Flow, list: readonly ParticleAllocation[]): boolean {
   const categories = list.map((a) => a.category);
   const counts = layoutParticles(list, stage.n);
-  const sameCats = categories.length === f.categories.length && categories.every((c, i) => c === f.categories[i]);
+  const sameCats =
+    categories.length === f.categories.length && categories.every((c, i) => c === f.categories[i]);
   if (sameCats && counts.every((c, i) => c === f.counts[i])) return false;
   if (!sameCats) stage.particles.remap(f.categories, categories);
   const layout = layoutFor(stage.n, counts);
   const colors = categories.map((c) => CATEGORY_COLORS[c]);
   stage.particles.assign(counts, layout, colors);
-  stage.columns.configure(categories.map((_, i) => columnX(i, categories.length, layout)), layout.radius + 0.13, colors);
-  counts.forEach((c, i) => stage.columns.setHeight(i, c > 0 ? stackHeight(c, layout) + layout.layerHeight * 0.8 : 0));
+  stage.columns.configure(
+    categories.map((_, i) => columnX(i, categories.length, layout)),
+    layout.radius + 0.13,
+    colors,
+  );
+  counts.forEach((c, i) =>
+    stage.columns.setHeight(i, c > 0 ? stackHeight(c, layout) + layout.layerHeight * 0.8 : 0),
+  );
   Object.assign(f, { categories, counts, size: Math.min(0.1, layout.layerHeight * 0.62) });
   frameCamera(stage.camera, categories.length);
   applyHighlight(stage, f);
@@ -112,12 +145,24 @@ function disposeStage(stage: Stage): void {
  * delta particles (stable assignment from particles.ts), arcing between columns.
  * Renders on demand: the loop sleeps once everything has settled.
  */
-export function createBudgetFlowScene(canvas: HTMLCanvasElement, options: BudgetFlowOptions): BudgetFlowScene {
+export function createBudgetFlowScene(
+  canvas: HTMLCanvasElement,
+  options: BudgetFlowOptions,
+): BudgetFlowScene {
   const stage = buildStage(canvas, options.tier);
   const f: Flow = { categories: [], counts: [], highlight: null, size: 0.07 };
-  const loop = createGatedLoop(canvas.ownerDocument.defaultView ?? window, (dt) => draw(stage, f, dt), options.onFirstFrame);
+  const loop = createGatedLoop(
+    canvas.ownerDocument.defaultView ?? window,
+    (dt) => draw(stage, f, dt),
+    options.onFirstFrame,
+  );
   const unwatch = watchContextLoss(canvas, loop);
-  const picker = createHoverPicker(canvas, stage.camera, stage.columns.mesh, (i) => f.categories[i] ?? null);
+  const picker = createHoverPicker(
+    canvas,
+    stage.camera,
+    stage.columns.mesh,
+    (i) => f.categories[i] ?? null,
+  );
   frameCamera(stage.camera, 0);
   stage.particles.update(0, f.size);
   stage.columns.update(0);

@@ -3,7 +3,11 @@ import { describe, expect, it } from "vitest";
 import type { Allocation, BudgetCategory, BudgetWeight } from "@/lib/contracts";
 import { allocateBudget, largestRemainder, withDerived } from "@/lib/engine/budget";
 
-const line = (category: BudgetCategory, amountINR: number, extra: Partial<Allocation> = {}): Allocation => ({
+const line = (
+  category: BudgetCategory,
+  amountINR: number,
+  extra: Partial<Allocation> = {},
+): Allocation => ({
   category,
   amountINR,
   percent: 0,
@@ -13,7 +17,11 @@ const line = (category: BudgetCategory, amountINR: number, extra: Partial<Alloca
   actualINR: null,
   ...extra,
 });
-const weight = (category: BudgetCategory, w: number, rationale = `r-${category}`): BudgetWeight => ({
+const weight = (
+  category: BudgetCategory,
+  w: number,
+  rationale = `r-${category}`,
+): BudgetWeight => ({
   category,
   weight: w,
   rationale,
@@ -24,7 +32,9 @@ describe("largestRemainder", () => {
   it("returns [] for no weights", () => expect(largestRemainder(100, [])).toEqual([]));
 
   it("splits exactly proportional totals", () => {
-    expect(largestRemainder(900_000, [40, 30, 20, 10])).toEqual([360_000, 270_000, 180_000, 90_000]);
+    expect(largestRemainder(900_000, [40, 30, 20, 10])).toEqual([
+      360_000, 270_000, 180_000, 90_000,
+    ]);
   });
 
   it("hands leftover rupees to the largest fractions first", () => {
@@ -66,10 +76,19 @@ describe("largestRemainder", () => {
 });
 
 describe("allocateBudget", () => {
-  const weights = [weight("misc", 10), weight("venue", 40), weight("decor", 20), weight("catering", 30)];
+  const weights = [
+    weight("misc", 10),
+    weight("venue", 40),
+    weight("decor", 20),
+    weight("catering", 30),
+  ];
 
   it("reserves 10% contingency and splits the rest by weight, largest first", () => {
-    const { contingencyINR, allocations } = allocateBudget({ totalINR: 1_000_000, weights, guests: 200 });
+    const { contingencyINR, allocations } = allocateBudget({
+      totalINR: 1_000_000,
+      weights,
+      guests: 200,
+    });
     expect(contingencyINR).toBe(100_000);
     expect(allocations.map((a) => [a.category, a.amountINR, a.percent, a.perGuestINR])).toEqual([
       ["venue", 360_000, 36, 1800],
@@ -81,9 +100,10 @@ describe("allocateBudget", () => {
   });
 
   it("honours a custom contingency percent and rounds it", () => {
-    expect(allocateBudget({ totalINR: 1_000_003, weights, guests: 1, contingencyPercent: 5 }).contingencyINR).toBe(
-      50_000,
-    );
+    expect(
+      allocateBudget({ totalINR: 1_000_003, weights, guests: 1, contingencyPercent: 5 })
+        .contingencyINR,
+    ).toBe(50_000);
     expect(allocateBudget({ totalINR: 1_005, weights, guests: 1 }).contingencyINR).toBe(101);
   });
 
@@ -91,7 +111,10 @@ describe("allocateBudget", () => {
     const all = allocateBudget({ totalINR: 1_000, weights, guests: 1, contingencyPercent: 150 });
     expect(all.contingencyINR).toBe(1_000);
     expect(amounts(all.allocations)).toEqual([0, 0, 0, 0]);
-    expect(allocateBudget({ totalINR: 1_000, weights, guests: 1, contingencyPercent: -5 }).contingencyINR).toBe(0);
+    expect(
+      allocateBudget({ totalINR: 1_000, weights, guests: 1, contingencyPercent: -5 })
+        .contingencyINR,
+    ).toBe(0);
   });
 
   it("breaks equal amounts by budget-category order", () => {
@@ -107,7 +130,11 @@ describe("allocateBudget", () => {
   it("keeps the first of duplicate categories", () => {
     const { allocations } = allocateBudget({
       totalINR: 1_000,
-      weights: [weight("venue", 10, "first"), weight("venue", 90, "second"), weight("catering", 10)],
+      weights: [
+        weight("venue", 10, "first"),
+        weight("venue", 90, "second"),
+        weight("catering", 10),
+      ],
       guests: 1,
       contingencyPercent: 0,
     });
@@ -118,7 +145,10 @@ describe("allocateBudget", () => {
   });
 
   it("returns no lines when there are no weights", () => {
-    expect(allocateBudget({ totalINR: 1_000, weights: [], guests: 1 })).toEqual({ contingencyINR: 100, allocations: [] });
+    expect(allocateBudget({ totalINR: 1_000, weights: [], guests: 1 })).toEqual({
+      contingencyINR: 100,
+      allocations: [],
+    });
   });
 });
 

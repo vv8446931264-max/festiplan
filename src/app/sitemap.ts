@@ -6,5 +6,7 @@ import { absoluteUrl } from "@/lib/site";
  * prerendered at build time, so `lastModified` is the date of the deploy that built it.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
-  return [{ url: absoluteUrl("/"), lastModified: new Date(), changeFrequency: "monthly", priority: 1 }];
+  return [
+    { url: absoluteUrl("/"), lastModified: new Date(), changeFrequency: "monthly", priority: 1 },
+  ];
 }

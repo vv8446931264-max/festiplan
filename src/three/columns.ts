@@ -92,9 +92,18 @@ type ColumnState = { xs: number[]; radius: number; height: Float32Array; glow: F
 
 const scratch = new Matrix4();
 
-function writeColumns(mesh: InstancedMesh, glowAttr: InstancedBufferAttribute, state: ColumnState): void {
+function writeColumns(
+  mesh: InstancedMesh,
+  glowAttr: InstancedBufferAttribute,
+  state: ColumnState,
+): void {
   state.xs.forEach((x, i) => {
-    mesh.setMatrixAt(i, scratch.makeScale(state.radius, Math.max(state.height[i], MIN_HEIGHT), state.radius).setPosition(x, 0, 0));
+    mesh.setMatrixAt(
+      i,
+      scratch
+        .makeScale(state.radius, Math.max(state.height[i], MIN_HEIGHT), state.radius)
+        .setPosition(x, 0, 0),
+    );
     glowAttr.setX(i, state.glow[i]);
   });
   mesh.instanceMatrix.needsUpdate = true;
@@ -109,14 +118,22 @@ function writeColumns(mesh: InstancedMesh, glowAttr: InstancedBufferAttribute, s
  */
 export function createGlassColumns(): GlassColumns {
   const { mesh, glowAttr } = columnMesh();
-  const state: ColumnState = { xs: [], radius: 0.5, height: new Float32Array(MAX_COLUMNS), glow: new Float32Array(MAX_COLUMNS) };
+  const state: ColumnState = {
+    xs: [],
+    radius: 0.5,
+    height: new Float32Array(MAX_COLUMNS),
+    glow: new Float32Array(MAX_COLUMNS),
+  };
   const target = { height: new Float32Array(MAX_COLUMNS), glow: new Float32Array(MAX_COLUMNS) };
   const c = new Color();
   const write = () => writeColumns(mesh, glowAttr, state);
   const settle = (dt: number, i: number) => {
     state.height[i] = damp(state.height[i], target.height[i], 6, dt);
     state.glow[i] = damp(state.glow[i], target.glow[i], 9, dt);
-    return Math.abs(state.height[i] - target.height[i]) > 1e-3 || Math.abs(state.glow[i] - target.glow[i]) > 1e-3;
+    return (
+      Math.abs(state.height[i] - target.height[i]) > 1e-3 ||
+      Math.abs(state.glow[i] - target.glow[i]) > 1e-3
+    );
   };
   return {
     mesh,

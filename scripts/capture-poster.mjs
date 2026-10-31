@@ -22,7 +22,11 @@ const WIDTH = 1600;
 const HEIGHT = 1000;
 const MAX_BYTES = 80 * 1024;
 const QUALITIES = [0.8, 0.74, 0.68, 0.6, 0.52, 0.45];
-const GPU_ARGS = ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"];
+const GPU_ARGS = [
+  "--use-angle=swiftshader",
+  "--enable-unsafe-swiftshader",
+  "--ignore-gpu-blocklist",
+];
 
 function parseArgs(argv) {
   const out = { png: null, query: "", out: path.join(ROOT, "public/poster.webp") };
@@ -64,9 +68,13 @@ async function render(page, url, query) {
   page.on("pageerror", (error) => console.error("[page]", error.message));
   page.on("console", (msg) => msg.type() === "error" && console.error("[console]", msg.text()));
   await page.goto(`${url}?${query}`);
-  await page.waitForFunction(() => window.__posterReady === true || typeof window.__posterError === "string", null, {
-    timeout: 180_000,
-  });
+  await page.waitForFunction(
+    () => window.__posterReady === true || typeof window.__posterError === "string",
+    null,
+    {
+      timeout: 180_000,
+    },
+  );
   const failure = await page.evaluate(() => window.__posterError);
   if (failure) throw new Error(`harness failed: ${failure}`);
   return page.screenshot({ type: "png" });
@@ -100,13 +108,18 @@ async function main() {
   const { server, url } = await startServer();
   const browser = await launch();
   try {
-    const page = await browser.newPage({ viewport: { width: WIDTH, height: HEIGHT }, deviceScaleFactor: 1 });
+    const page = await browser.newPage({
+      viewport: { width: WIDTH, height: HEIGHT },
+      deviceScaleFactor: 1,
+    });
     const png = await render(page, url, args.query);
     if (args.png) await writeFile(args.png, png);
     const { bytes, quality } = await encodeWebp(page, png);
     await mkdir(path.dirname(args.out), { recursive: true });
     await writeFile(args.out, bytes);
-    console.log(`poster: ${path.relative(ROOT, args.out)} ${WIDTH}×${HEIGHT} ${bytes.length} bytes (webp q=${quality})`);
+    console.log(
+      `poster: ${path.relative(ROOT, args.out)} ${WIDTH}×${HEIGHT} ${bytes.length} bytes (webp q=${quality})`,
+    );
   } finally {
     await browser.close();
     await server.close();

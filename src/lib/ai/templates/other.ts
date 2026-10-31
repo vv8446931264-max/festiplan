@@ -8,8 +8,16 @@ function otherIdeas(input: PlanInput): Idea[] {
       "Warm Courtyard Gathering",
       "An easy, welcoming get-together in an open courtyard or terrace with fairy lights, floor seating and food that keeps coming.",
       ["#FFBF02", "#E9500E", "#FFEDD7", "#8FA36A"],
-      ["Fairy lights strung overhead", "Floor seating with rugs and bolsters", "Marigold and mango-leaf toran at the entrance"],
-      ["Live chaat counter", veg ? "Paneer and seasonal sabzi starters" : "Tandoori starters with veg options", "Kulfi and paan station"],
+      [
+        "Fairy lights strung overhead",
+        "Floor seating with rugs and bolsters",
+        "Marigold and mango-leaf toran at the entrance",
+      ],
+      [
+        "Live chaat counter",
+        veg ? "Paneer and seasonal sabzi starters" : "Tandoori starters with veg options",
+        "Kulfi and paan station",
+      ],
       "A curated playlist of old and new Hindi favourites with an antakshari round.",
       "A short toast where the hosts thank each guest group by name.",
     ),
@@ -17,8 +25,16 @@ function otherIdeas(input: PlanInput): Idea[] {
       "Elegant Evening Soirée",
       "A polished evening with a defined dress code, soft lighting and a seated dinner, suited to anniversaries, retirements and milestone celebrations.",
       ["#2F3A56", "#C9A227", "#F7F3EA", "#A23BC4"],
-      ["Low floral centrepieces", "Candle-lit long tables", "A photo wall with memories through the years"],
-      ["Plated regional tasting menu", "Mocktail bar with seasonal fruit", "Mithai platter to close"],
+      [
+        "Low floral centrepieces",
+        "Candle-lit long tables",
+        "A photo wall with memories through the years",
+      ],
+      [
+        "Plated regional tasting menu",
+        "Mocktail bar with seasonal fruit",
+        "Mithai platter to close",
+      ],
       "A live instrumental duo during dinner.",
       "A memory montage on a screen, followed by a cake or mithai moment.",
     ),
@@ -26,8 +42,16 @@ function otherIdeas(input: PlanInput): Idea[] {
       "Daytime Garden Brunch",
       "A relaxed daytime celebration in a garden or lawn, with shade, games for all ages and a long brunch table.",
       ["#8FA36A", "#C9D88F", "#F58A07", "#FFEDD7"],
-      ["Shaded seating under canopies", "Lawn games corner", "Potted-plant centrepieces guests can take home"],
-      ["Live dosa and appam counter", "Fresh juice and coconut-water bar", "Fruit and jaggery desserts"],
+      [
+        "Shaded seating under canopies",
+        "Lawn games corner",
+        "Potted-plant centrepieces guests can take home",
+      ],
+      [
+        "Live dosa and appam counter",
+        "Fresh juice and coconut-water bar",
+        "Fruit and jaggery desserts",
+      ],
       "Acoustic covers and a light quiz about the hosts.",
       "Guests plant a sapling or sign a keepsake board before leaving.",
     ),
@@ -54,26 +78,69 @@ const TASKS = [
   task("plan-decor", "Plan the décor and lighting with the venue", "decor", 6, 7, ["book-venue"]),
   task("book-entertainment", "Book music or a live act", "entertainment", 6, 5, ["book-venue"]),
   task("book-photographer", "Book a photographer", "photography", 6, 3),
-  task("send-invitations", "Send invitations with an RSVP date", "invitations", 4, 2, ["send-save-dates"]),
+  task("send-invitations", "Send invitations with an RSVP date", "invitations", 4, 2, [
+    "send-save-dates",
+  ]),
   task("order-favours", "Order favours or return gifts", "gifts", 3, 7),
-  task("plan-transport", "Arrange parking or transport for guests who need it", "transport", 2, 3, ["book-venue"]),
-  task("confirm-headcount", "Confirm the headcount with venue and caterer", "catering", 1, 2, ["send-invitations", "book-caterer"]),
-  task("run-sheet", "Write the run-sheet and share it with helpers", "admin", 1, 2, ["confirm-headcount"]),
+  task("plan-transport", "Arrange parking or transport for guests who need it", "transport", 2, 3, [
+    "book-venue",
+  ]),
+  task("confirm-headcount", "Confirm the headcount with venue and caterer", "catering", 1, 2, [
+    "send-invitations",
+    "book-caterer",
+  ]),
+  task("run-sheet", "Write the run-sheet and share it with helpers", "admin", 1, 2, [
+    "confirm-headcount",
+  ]),
   task("pack-kit", "Pack an event kit: tape, scissors, first aid, chargers", "misc", 0, 1),
-  task("thank-guests", "Send thank-you messages and share photos", "invitations", 0, 3, ["book-photographer"]),
+  task("thank-guests", "Send thank-you messages and share photos", "invitations", 0, 3, [
+    "book-photographer",
+  ]),
 ];
 
 const VENDORS = [
-  vendor("venue", 10, ["What is included in the hire — chairs, power backup, staff?", "What are the start and end times?"], ["No written cancellation terms"]),
-  vendor("catering", 8, ["Can we do a tasting?", "How do you handle extra guests on the day?"], ["No itemised quote"]),
-  vendor("photography", 6, ["Can we see a full event gallery?", "When will we receive the photos?"], ["No delivery date in writing"]),
-  vendor("entertainment", 6, ["What sound equipment do you bring?", "Can you share a recent performance video?"], ["Unclear who will actually perform"]),
+  vendor(
+    "venue",
+    10,
+    [
+      "What is included in the hire — chairs, power backup, staff?",
+      "What are the start and end times?",
+    ],
+    ["No written cancellation terms"],
+  ),
+  vendor(
+    "catering",
+    8,
+    ["Can we do a tasting?", "How do you handle extra guests on the day?"],
+    ["No itemised quote"],
+  ),
+  vendor(
+    "photography",
+    6,
+    ["Can we see a full event gallery?", "When will we receive the photos?"],
+    ["No delivery date in writing"],
+  ),
+  vendor(
+    "entertainment",
+    6,
+    ["What sound equipment do you bring?", "Can you share a recent performance video?"],
+    ["Unclear who will actually perform"],
+  ),
 ];
 
 const TIPS = [
-  tip("savings", "Weekday or off-season dates often cut venue hire significantly — ask venues for their quiet days."),
-  tip("sustainability", "Use digital invitations and ask the caterer for steel or areca-leaf plates instead of plastic."),
-  tip("accessibility", "Check step-free access and a nearby accessible toilet before you book the venue."),
+  tip(
+    "savings",
+    "Weekday or off-season dates often cut venue hire significantly — ask venues for their quiet days.",
+  ),
+  tip(
+    "sustainability",
+    "Use digital invitations and ask the caterer for steel or areca-leaf plates instead of plastic.",
+  ),
+  tip(
+    "accessibility",
+    "Check step-free access and a nearby accessible toilet before you book the venue.",
+  ),
 ];
 
 /** Deterministic template plan for any other celebration. */

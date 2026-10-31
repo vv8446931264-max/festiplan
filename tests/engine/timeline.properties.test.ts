@@ -9,7 +9,8 @@ import { int, mulberry32 } from "./prng";
 const TODAY = "2026-10-24";
 
 /** Mix of near events (heavy compression) and far ones (none), always at least a day away. */
-const eventAfter = (rand: () => number): string => addDays(TODAY, rand() < 0.6 ? int(rand, 1, 90) : int(rand, 1, 1_095));
+const eventAfter = (rand: () => number): string =>
+  addDays(TODAY, rand() < 0.6 ? int(rand, 1, 90) : int(rand, 1, 1_095));
 
 /** Random tasks; with `acyclic`, dependencies only point at lower-numbered tasks. */
 function randomTasks(rand: () => number, acyclic: boolean, withDeps = true): AiTask[] {
@@ -44,7 +45,8 @@ function dependsOnDayOf(tasks: AiTask[]): Set<string> {
     const cached = memo.get(id);
     if (cached !== undefined) return cached;
     const t = byId.get(id);
-    const hit = t !== undefined && t.dependsOn.some((d) => byId.get(d)?.leadWeeks === 0 || tainted(d));
+    const hit =
+      t !== undefined && t.dependsOn.some((d) => byId.get(d)?.leadWeeks === 0 || tainted(d));
     memo.set(id, hit);
     return hit;
   };
@@ -76,10 +78,12 @@ describe("scheduleTimeline (property)", () => {
         expect(s.overdue).toBe(false);
         expect(s.start >= addDays(event, -t.leadWeeks * 7)).toBe(true);
         for (const dep of t.dependsOn) expect(get(out, dep).due <= s.start).toBe(true);
-        if (t.leadWeeks >= 1 && availableDays >= 2 && !lateByDep.has(t.id)) expect(s.due < event).toBe(true);
+        if (t.leadWeeks >= 1 && availableDays >= 2 && !lateByDep.has(t.id))
+          expect(s.due < event).toBe(true);
         if (t.leadWeeks === 0) expect(s.due).toBe(event);
       }
-      for (let i = 1; i < out.length; i++) expect(compareByDue(out[i - 1], out[i])).toBeLessThanOrEqual(0);
+      for (let i = 1; i < out.length; i++)
+        expect(compareByDue(out[i - 1], out[i])).toBeLessThanOrEqual(0);
     }
   });
 
@@ -88,7 +92,9 @@ describe("scheduleTimeline (property)", () => {
     let fitted = 0;
     for (let run = 0; run < 500; run++) {
       const event = addDays(TODAY, int(rand, 150, 1_300));
-      const tasks = randomTasks(rand, true).filter((t) => t.leadWeeks * 7 <= diffDays(TODAY, event));
+      const tasks = randomTasks(rand, true).filter(
+        (t) => t.leadWeeks * 7 <= diffDays(TODAY, event),
+      );
       const info = scheduleCompression(tasks, event, TODAY);
       if (tasks.length === 0) continue;
       fitted += 1;

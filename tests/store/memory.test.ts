@@ -6,7 +6,11 @@ import type { Plan } from "@/lib/contracts";
 import { TODAY, sampleInput } from "../server/fixtures";
 
 async function storedPlan(store: MemoryStore): Promise<Plan> {
-  const { plan } = await createPlan(sampleInput(), TODAY, { store, ai: null, now: new Date("2026-10-24T06:00:00Z") });
+  const { plan } = await createPlan(sampleInput(), TODAY, {
+    store,
+    ai: null,
+    now: new Date("2026-10-24T06:00:00Z"),
+  });
   const found = await store.get(plan.id);
   if (!found) throw new Error("plan was not stored");
   return found;
@@ -19,7 +23,10 @@ describe("MemoryStore", () => {
     expect(plan.expireAt).toBeInstanceOf(Date);
     plan.input.city = "Mutated";
     expect((await store.get(plan.id))?.input.city).toBe("Jaipur");
-    const result = await store.mutate(plan.id, (p) => ({ next: p ? { ...p, model: "updated" } : null, result: "saved" }));
+    const result = await store.mutate(plan.id, (p) => ({
+      next: p ? { ...p, model: "updated" } : null,
+      result: "saved",
+    }));
     expect(result).toBe("saved");
     expect((await store.get(plan.id))?.model).toBe("updated");
   });

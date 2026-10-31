@@ -30,7 +30,11 @@ function fakeBinding() {
     if (write) docs.set(id, { ...write });
     return result;
   };
-  const binding: FirestoreBinding = { doc, transact, toTimestamp: (d) => new FakeTimestamp(d.getTime()) };
+  const binding: FirestoreBinding = {
+    doc,
+    transact,
+    toTimestamp: (d) => new FakeTimestamp(d.getTime()),
+  };
   return { binding, docs };
 }
 
@@ -46,7 +50,10 @@ describe("FirestoreStore", () => {
     expect(read?.expireAt).toBeInstanceOf(Date);
     expect(read?.expireAt.toISOString()).toBe(plan.expireAt);
     await expect(store.create(read ?? Object.create(null))).rejects.toThrow();
-    const seen = await store.mutate(plan.id, (p) => ({ next: p ? { ...p, model: "changed" } : null, result: p?.id }));
+    const seen = await store.mutate(plan.id, (p) => ({
+      next: p ? { ...p, model: "changed" } : null,
+      result: p?.id,
+    }));
     expect(seen).toBe(plan.id);
     expect((await store.get(plan.id))?.model).toBe("changed");
     expect(docs.get(plan.id)?.expireAt).toBeInstanceOf(FakeTimestamp);

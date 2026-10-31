@@ -26,7 +26,13 @@ const DRAG = 1.35;
 /** One burst. `update` returns false once it is over and everything is disposed. */
 export type ConfettiBurst = { mesh: InstancedMesh; update(dt: number): boolean; dispose(): void };
 
-type Sim = { pos: Float32Array; vel: Float32Array; axis: Float32Array; spin: Float32Array; age: number };
+type Sim = {
+  pos: Float32Array;
+  vel: Float32Array;
+  axis: Float32Array;
+  spin: Float32Array;
+  age: number;
+};
 
 function seedSim(n: number, origin: Vector3, salt: number): Sim {
   const sim: Sim = {
@@ -41,11 +47,17 @@ function seedSim(n: number, origin: Vector3, salt: number): Sim {
     const r = (k: number) => hash01(salt + i * 13 + k);
     const side = i % 2 === 0 ? -1 : 1;
     const o = i * 3;
-    sim.pos.set([origin.x + side * (3.4 + r(1) * 0.8), origin.y + r(2) * 0.6, origin.z + (r(3) - 0.5) * 2], o);
+    sim.pos.set(
+      [origin.x + side * (3.4 + r(1) * 0.8), origin.y + r(2) * 0.6, origin.z + (r(3) - 0.5) * 2],
+      o,
+    );
     const speed = 6 + r(4) * 9;
     const dir = new Vector3(-side * (0.15 + r(5) * 0.85), 1, (r(6) - 0.5) * 1.2).normalize();
     sim.vel.set([dir.x * speed, dir.y * speed, dir.z * speed], o);
-    axis.set(r(7) - 0.5, r(8) - 0.5, r(9) - 0.5).normalize().toArray(sim.axis, o);
+    axis
+      .set(r(7) - 0.5, r(8) - 0.5, r(9) - 0.5)
+      .normalize()
+      .toArray(sim.axis, o);
     sim.spin[i] = (r(10) - 0.5) * 22;
   }
   return sim;
@@ -61,7 +73,13 @@ function paint(mesh: InstancedMesh, palette: readonly string[] | null, salt: num
 
 /** Satin foil: env reflections flash as pieces turn, plus a per-piece self-glow so dark palette colours never go muddy. */
 function foilMaterial(envMap: Texture): MeshStandardMaterial {
-  const material = new MeshStandardMaterial({ side: DoubleSide, metalness: 0.35, roughness: 0.4, envMap, envMapIntensity: 1.4 });
+  const material = new MeshStandardMaterial({
+    side: DoubleSide,
+    metalness: 0.35,
+    roughness: 0.4,
+    envMap,
+    envMapIntensity: 1.4,
+  });
   material.onBeforeCompile = (shader) => {
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <emissivemap_fragment>",
@@ -72,7 +90,13 @@ function foilMaterial(envMap: Texture): MeshStandardMaterial {
   return material;
 }
 
-const tmp = { m: new Matrix4(), q: new Quaternion(), p: new Vector3(), a: new Vector3(), s: new Vector3() };
+const tmp = {
+  m: new Matrix4(),
+  q: new Quaternion(),
+  p: new Vector3(),
+  a: new Vector3(),
+  s: new Vector3(),
+};
 
 /** Integrate one step: flutter, gravity, exponential drag, spin; shrink out at the end. */
 function advance(sim: Sim, mesh: InstancedMesh, dt: number): void {
@@ -105,7 +129,8 @@ export function createConfetti(
   const n = CONFETTI_COUNT[tier];
   const salt = Math.floor(origin.x * 1000) ^ 0x5bd1;
   const geometry = new PlaneGeometry(0.11, 0.19);
-  const material = tier === "high" ? foilMaterial(envMap) : new MeshBasicMaterial({ side: DoubleSide });
+  const material =
+    tier === "high" ? foilMaterial(envMap) : new MeshBasicMaterial({ side: DoubleSide });
   const mesh = new InstancedMesh(geometry, material, n);
   mesh.instanceMatrix.setUsage(DynamicDrawUsage);
   mesh.frustumCulled = false;

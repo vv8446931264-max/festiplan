@@ -13,9 +13,20 @@ export type FlowInputs = {
 };
 
 type Create = (canvas: HTMLCanvasElement, options: BudgetFlowOptions) => BudgetFlowScene;
-type Refs = { host: RefObject<HTMLDivElement | null>; scene: RefObject<BudgetFlowScene | null>; inputs: RefObject<FlowInputs> };
+type Refs = {
+  host: RefObject<HTMLDivElement | null>;
+  scene: RefObject<BudgetFlowScene | null>;
+  inputs: RefObject<FlowInputs>;
+};
 
-function mount(create: Create, host: HTMLElement, win: Window, tier: "high" | "low", refs: Refs, onReady: () => void): () => void {
+function mount(
+  create: Create,
+  host: HTMLElement,
+  win: Window,
+  tier: "high" | "low",
+  refs: Refs,
+  onReady: () => void,
+): () => void {
   const canvas = createSceneCanvas(host.ownerDocument);
   host.appendChild(canvas);
   let scene: BudgetFlowScene;
@@ -68,12 +79,17 @@ export function useBudgetFlowScene(tier: Tier | null, refs: Refs, onReady: () =>
         })
         .catch(() => undefined);
     };
-    const stop = observeActivity(host, win, (next) => {
-      active = next;
-      if (next && !requested) load();
-      if (next) refs.scene.current?.resume();
-      else refs.scene.current?.pause();
-    }, "200px");
+    const stop = observeActivity(
+      host,
+      win,
+      (next) => {
+        active = next;
+        if (next && !requested) load();
+        if (next) refs.scene.current?.resume();
+        else refs.scene.current?.pause();
+      },
+      "200px",
+    );
     return () => {
       cancelled = true;
       stop();

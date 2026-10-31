@@ -24,7 +24,17 @@ export type Light = {
 };
 
 /** One light's pose this frame; `blur` is the circle of confusion in half-viewport-height units. */
-export type Pose = { x: number; y: number; z: number; scale: number; fade: number; blur: number; rx: number; ry: number; rz: number };
+export type Pose = {
+  x: number;
+  y: number;
+  z: number;
+  scale: number;
+  fade: number;
+  blur: number;
+  rx: number;
+  ry: number;
+  rz: number;
+};
 
 /** Nearest and farthest lantern distance; the field wraps between them. */
 export const DEPTH_RANGE = { near: 4.5, far: 58 } as const;
@@ -103,7 +113,8 @@ export function poseFor(light: Light, f: FrameInput, out: Pose): Pose {
   const d = light.body ? wrap(light.depth - f.travel, near, far) : light.depth;
   const halfH = d * f.tanHalf;
   const baseH = light.depth * f.tanHalf;
-  const sway = Math.sin(t * 0.23 * (0.7 + light.rise * 0.4) + p) * 0.22 + Math.sin(t * 0.61 + p * 1.7) * 0.07;
+  const sway =
+    Math.sin(t * 0.23 * (0.7 + light.rise * 0.4) + p) * 0.22 + Math.sin(t * 0.61 + p * 1.7) * 0.07;
   out.x = light.x * baseH * f.aspect + sway * (light.body ? 1 : 0.4);
   const lifted = light.y * baseH + f.lift * light.rise + Math.sin(t * 0.37 + p * 2.3) * 0.14;
   out.y = wrap(lifted, -halfH * 1.3, halfH * 1.3);

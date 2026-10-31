@@ -16,7 +16,12 @@ describe("getAi", () => {
   });
 
   it("prefers Vertex AI when GOOGLE_GENAI_USE_VERTEXAI=true", () => {
-    const env = { GOOGLE_GENAI_USE_VERTEXAI: "true", GOOGLE_CLOUD_PROJECT: "demo", GEMINI_API_KEY: "k", GEMINI_MODEL: "gemini-2.5-flash" };
+    const env = {
+      GOOGLE_GENAI_USE_VERTEXAI: "true",
+      GOOGLE_CLOUD_PROJECT: "demo",
+      GEMINI_API_KEY: "k",
+      GEMINI_MODEL: "gemini-2.5-flash",
+    };
     const ai = getAi(env);
     expect(ai?.backend).toBe("vertex");
     expect(ai?.model).toBe("gemini-2.5-flash");

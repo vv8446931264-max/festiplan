@@ -28,7 +28,8 @@ describe("FAQ data", () => {
   it("names every plan language by its English name", () => {
     expect(PLAN_LANGUAGES).toHaveLength(LANGS.length);
     expect(PLAN_LANGUAGES).toContain("Hindi");
-    for (const name of PLAN_LANGUAGES) expect(FAQ.find((f) => f.id === "languages")?.answer).toContain(name);
+    for (const name of PLAN_LANGUAGES)
+      expect(FAQ.find((f) => f.id === "languages")?.answer).toContain(name);
   });
 });
 
@@ -39,7 +40,9 @@ describe("<Faq />", () => {
     const details = container.querySelectorAll("details");
     expect(details).toHaveLength(FAQ.length);
     FAQ.forEach((item, i) => {
-      expect(normalise(details[i].querySelector("summary > span")?.textContent ?? null)).toBe(item.question);
+      expect(normalise(details[i].querySelector("summary > span")?.textContent ?? null)).toBe(
+        item.question,
+      );
       expect(within(section).getByText(item.answer)).toBeInTheDocument();
     });
   });
@@ -59,10 +62,12 @@ describe("<Faq />", () => {
       a: normalise(d.querySelector("p")?.textContent ?? null),
     }));
     const faqNode = landingJsonLd()["@graph"].find((n) => n["@type"] === "FAQPage");
-    const ld = (faqNode?.mainEntity as { name: string; acceptedAnswer: { text: string } }[]).map((e) => ({
-      q: e.name,
-      a: e.acceptedAnswer.text,
-    }));
+    const ld = (faqNode?.mainEntity as { name: string; acceptedAnswer: { text: string } }[]).map(
+      (e) => ({
+        q: e.name,
+        a: e.acceptedAnswer.text,
+      }),
+    );
     expect(visible).toEqual(ld);
   });
 

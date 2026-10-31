@@ -14,7 +14,13 @@ async function created(): Promise<{ plan: PublicPlan; editKey: string }> {
 }
 
 const patch = (id: string, body: unknown, key?: string, headers: Record<string, string> = {}) =>
-  PATCH(jsonRequest(`/api/plan/${id}`, body, { method: "PATCH", headers: { ...(key ? { "x-edit-key": key } : {}), ...headers } }), idCtx(id));
+  PATCH(
+    jsonRequest(`/api/plan/${id}`, body, {
+      method: "PATCH",
+      headers: { ...(key ? { "x-edit-key": key } : {}), ...headers },
+    }),
+    idCtx(id),
+  );
 
 describe("GET /api/plan/[id]", () => {
   it("returns the public plan", async () => {
@@ -55,7 +61,11 @@ describe("PATCH /api/plan/[id]", () => {
 
   it("422s for budget edits that don't add up", async () => {
     const { plan, editKey } = await created();
-    const allocations = plan.budget.map((a) => ({ category: a.category, amountINR: a.amountINR + 5, locked: false }));
+    const allocations = plan.budget.map((a) => ({
+      category: a.category,
+      amountINR: a.amountINR + 5,
+      locked: false,
+    }));
     const res = await patch(plan.id, { allocations }, editKey);
     expect(res.status).toBe(422);
     expect((await res.json()).error).toMatch(/don't add up/);
@@ -70,8 +80,15 @@ describe("PATCH /api/plan/[id]", () => {
 
   it("requires same-origin and caps the body at 16 KB", async () => {
     const { plan, editKey } = await created();
-    expect((await patch(plan.id, { tasks: [] }, editKey, { origin: "https://evil.example" })).status).toBe(403);
-    const huge = { tasks: Array.from({ length: 400 }, (_, i) => ({ id: `task-${i}-${"x".repeat(30)}`, done: true })) };
+    expect(
+      (await patch(plan.id, { tasks: [] }, editKey, { origin: "https://evil.example" })).status,
+    ).toBe(403);
+    const huge = {
+      tasks: Array.from({ length: 400 }, (_, i) => ({
+        id: `task-${i}-${"x".repeat(30)}`,
+        done: true,
+      })),
+    };
     expect((await patch(plan.id, huge, editKey)).status).toBe(413);
   });
 });

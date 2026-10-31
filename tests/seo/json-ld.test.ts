@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { FEATURES, SEO_COPY } from "@/lib/seo/copy";
 import { FAQ } from "@/lib/seo/faq";
-import { buildLandingJsonLd, faqPageNode, serializeJsonLd, type JsonLdNode } from "@/lib/seo/json-ld";
+import {
+  buildLandingJsonLd,
+  faqPageNode,
+  serializeJsonLd,
+  type JsonLdNode,
+} from "@/lib/seo/json-ld";
 import { landingJsonLd } from "@/lib/seo/metadata";
 import { SITE_URL } from "@/lib/site";
 
@@ -27,7 +32,8 @@ function refs(value: unknown, found: string[] = []): string[] {
   if (Array.isArray(value)) value.forEach((v) => refs(v, found));
   else if (value && typeof value === "object") {
     const keys = Object.keys(value);
-    if (keys.length === 1 && keys[0] === "@id") found.push(String((value as { "@id": unknown })["@id"]));
+    if (keys.length === 1 && keys[0] === "@id")
+      found.push(String((value as { "@id": unknown })["@id"]));
     else Object.values(value).forEach((v) => refs(v, found));
   }
   return found;
@@ -39,7 +45,12 @@ describe("buildLandingJsonLd", () => {
 
   it("is a schema.org graph of WebSite, Organization, WebApplication and FAQPage", () => {
     expect(graph["@context"]).toBe("https://schema.org");
-    expect(nodes.map((n) => n["@type"])).toEqual(["WebSite", "Organization", "WebApplication", "FAQPage"]);
+    expect(nodes.map((n) => n["@type"])).toEqual([
+      "WebSite",
+      "Organization",
+      "WebApplication",
+      "FAQPage",
+    ]);
     expect(new Set(nodes.map((n) => n["@id"])).size).toBe(nodes.length);
   });
 

@@ -2,7 +2,13 @@
 import { describe, expect, it } from "vitest";
 import { BUDGET_CATEGORIES } from "@/lib/contracts";
 import type { Allocation, BudgetWeight } from "@/lib/contracts";
-import { allocateBudget, applyEdits, largestRemainder, rebalance, withDerived } from "@/lib/engine/budget";
+import {
+  allocateBudget,
+  applyEdits,
+  largestRemainder,
+  rebalance,
+  withDerived,
+} from "@/lib/engine/budget";
 
 /** Tiny seeded PRNG so failures are reproducible. */
 function mulberry32(seed: number): () => number {
@@ -17,18 +23,31 @@ function mulberry32(seed: number): () => number {
 
 const CASES = 500;
 const sum = (xs: number[]): number => xs.reduce((a, b) => a + b, 0);
-const int = (rand: () => number, lo: number, hi: number): number => lo + Math.floor(rand() * (hi - lo + 1));
+const int = (rand: () => number, lo: number, hi: number): number =>
+  lo + Math.floor(rand() * (hi - lo + 1));
 const isWhole = (n: number): boolean => Number.isInteger(n) && n >= 0;
 
 function randomWeights(rand: () => number): BudgetWeight[] {
-  const cats = [...BUDGET_CATEGORIES].sort(() => rand() - 0.5).slice(0, int(rand, 4, BUDGET_CATEGORIES.length));
+  const cats = [...BUDGET_CATEGORIES]
+    .sort(() => rand() - 0.5)
+    .slice(0, int(rand, 4, BUDGET_CATEGORIES.length));
   return cats.map((category) => ({ category, weight: int(rand, 1, 100), rationale: category }));
 }
 
-function randomPlan(rand: () => number): { total: number; guests: number; contingency: number; lines: Allocation[] } {
+function randomPlan(rand: () => number): {
+  total: number;
+  guests: number;
+  contingency: number;
+  lines: Allocation[];
+} {
   const total = int(rand, 1_000, 500_000_000);
   const guests = int(rand, 1, 5_000);
-  const out = allocateBudget({ totalINR: total, weights: randomWeights(rand), guests, contingencyPercent: int(rand, 0, 30) });
+  const out = allocateBudget({
+    totalINR: total,
+    weights: randomWeights(rand),
+    guests,
+    contingencyPercent: int(rand, 0, 30),
+  });
   return { total, guests, contingency: out.contingencyINR, lines: out.allocations };
 }
 
@@ -62,7 +81,8 @@ describe("allocateBudget (property)", () => {
       expect(sum(lines.map((a) => a.amountINR)) + contingency).toBe(total);
       expect(lines.every((a) => isWhole(a.amountINR))).toBe(true);
       expect(new Set(lines.map((a) => a.category)).size).toBe(lines.length);
-      for (let i = 1; i < lines.length; i++) expect(lines[i - 1].amountINR).toBeGreaterThanOrEqual(lines[i].amountINR);
+      for (let i = 1; i < lines.length; i++)
+        expect(lines[i - 1].amountINR).toBeGreaterThanOrEqual(lines[i].amountINR);
     }
   });
 });
@@ -81,10 +101,13 @@ describe("rebalance (property)", () => {
       expect(out.every((a) => isWhole(a.amountINR))).toBe(true);
       expect(out.map((a) => a.category)).toEqual(locked.map((a) => a.category));
       locked.forEach((before, i) => {
-        if (before.locked && before.category !== target.category) expect(out[i].amountINR).toBe(before.amountINR);
+        if (before.locked && before.category !== target.category)
+          expect(out[i].amountINR).toBe(before.amountINR);
       });
 
-      const lockedOthers = sum(locked.filter((a) => a.locked && a.category !== target.category).map((a) => a.amountINR));
+      const lockedOthers = sum(
+        locked.filter((a) => a.locked && a.category !== target.category).map((a) => a.amountINR),
+      );
       const room = sum(locked.map((a) => a.amountINR)) - lockedOthers;
       const hasFree = locked.some((a) => !a.locked && a.category !== target.category);
       const result = out.find((a) => a.category === target.category)?.amountINR;
@@ -101,8 +124,15 @@ describe("applyEdits (property)", () => {
       const { total, guests, lines } = randomPlan(rand);
       const ctx = { totalINR: total, guests };
       const current = sum(lines.map((a) => a.amountINR));
-      const shares = largestRemainder(current, lines.map(() => int(rand, 0, 100)));
-      const edits = lines.map((a, i) => ({ category: a.category, amountINR: shares[i], locked: rand() < 0.5 }));
+      const shares = largestRemainder(
+        current,
+        lines.map(() => int(rand, 0, 100)),
+      );
+      const edits = lines.map((a, i) => ({
+        category: a.category,
+        amountINR: shares[i],
+        locked: rand() < 0.5,
+      }));
       const out = applyEdits(lines, edits, ctx);
       expect(out?.map((a) => a.amountINR)).toEqual(shares);
       expect(out?.map((a) => a.locked)).toEqual(edits.map((e) => e.locked));

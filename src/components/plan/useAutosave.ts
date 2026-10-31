@@ -92,7 +92,10 @@ function useRetry(failures: number, flush: () => void) {
 }
 
 /** Flush with keepalive when the page is hidden or left; clear the debounce on unmount. */
-function useFlushOnLeave(flush: (keepalive?: boolean) => void, timer: RefObject<number | undefined>) {
+function useFlushOnLeave(
+  flush: (keepalive?: boolean) => void,
+  timer: RefObject<number | undefined>,
+) {
   useEffect(() => {
     const debounce = timer;
     const now = () => flush(true);

@@ -67,14 +67,18 @@ export function weeksUntil(eventDate: string, today: string): number {
  */
 export async function generateAiPlan(input: PlanInput, deps: PlanDeps = {}): Promise<AiPlanResult> {
   const handle = deps.ai === undefined ? getAi() : deps.ai;
-  if (!handle) return { ai: templatePlan(input), source: "template", model: "template", attempts: 0 };
+  if (!handle)
+    return { ai: templatePlan(input), source: "template", model: "template", attempts: 0 };
   const weeks = deps.today ? weeksUntil(input.eventDate, deps.today) : undefined;
   const cache = deps.cache === undefined ? sharedCache : deps.cache;
   const key = planCacheKey(input, handle.model, weeks);
   const hit = cache?.get(key);
   if (hit) return { ai: hit, source: "gemini", model: handle.model, attempts: 0 };
   const timeoutMs = deps.timeoutMs ?? PLAN_TIMEOUT_MS;
-  const run = await runAttempts(handle, briefBlock(input, weeks), { lang: input.language, timeoutMs });
+  const run = await runAttempts(handle, briefBlock(input, weeks), {
+    lang: input.language,
+    timeoutMs,
+  });
   const fields = { attempts: run.attempts, model: handle.model, ...run.usage };
   if (run.ai) {
     cache?.set(key, run.ai);

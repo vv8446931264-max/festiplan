@@ -19,8 +19,22 @@ vi.mock("@/three/lantern-scene", () => ({ createLanternScene: scenes.lantern }))
 vi.mock("@/three/budget-flow-scene", () => ({ createBudgetFlowScene: scenes.flow }));
 
 type Options = { onFirstFrame?: () => void };
-const methods = ["setScroll", "setPointer", "setPalette", "setMood", "celebrate", "resize", "pause", "resume", "dispose"] as const;
-const fakeLantern = () => Object.fromEntries(methods.map((m) => [m, vi.fn()])) as Record<(typeof methods)[number], ReturnType<typeof vi.fn>>;
+const methods = [
+  "setScroll",
+  "setPointer",
+  "setPalette",
+  "setMood",
+  "celebrate",
+  "resize",
+  "pause",
+  "resume",
+  "dispose",
+] as const;
+const fakeLantern = () =>
+  Object.fromEntries(methods.map((m) => [m, vi.fn()])) as Record<
+    (typeof methods)[number],
+    ReturnType<typeof vi.fn>
+  >;
 
 function fakeFlow() {
   let hover: (c: BudgetCategory | null) => void = () => undefined;
@@ -40,8 +54,17 @@ function fakeFlow() {
 }
 
 function mockMatchMedia(matching: string[]) {
-  const impl = (query: string) => ({ matches: matching.includes(query), media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() });
-  Object.defineProperty(window, "matchMedia", { configurable: true, writable: true, value: vi.fn(impl) });
+  const impl = (query: string) => ({
+    matches: matching.includes(query),
+    media: query,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  });
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: vi.fn(impl),
+  });
 }
 
 const allocations = [
@@ -124,7 +147,9 @@ describe("SceneBackdrop", () => {
       throw new Error("no context");
     });
     const { container } = render(<SceneBackdrop />);
-    await waitFor(() => expect(container.querySelector("img")).toHaveAttribute("src", "/poster.webp"));
+    await waitFor(() =>
+      expect(container.querySelector("img")).toHaveAttribute("src", "/poster.webp"),
+    );
     expect(container.querySelector("canvas")).toBeNull();
   });
 });
@@ -133,7 +158,9 @@ describe("BudgetFlow", () => {
   it("renders an aria-hidden static fallback with one bar per category", () => {
     forced.tier = "off";
     const onHighlight = vi.fn();
-    const { container } = render(<BudgetFlow allocations={allocations} highlight="decor" onHighlight={onHighlight} />);
+    const { container } = render(
+      <BudgetFlow allocations={allocations} highlight="decor" onHighlight={onHighlight} />,
+    );
     const root = container.firstElementChild;
     expect(root).toHaveAttribute("aria-hidden", "true");
     expect(root).toHaveAttribute("data-budget-flow", "off");
@@ -141,9 +168,9 @@ describe("BudgetFlow", () => {
     expect(bars).toHaveLength(3);
     expect(bars[0]).toHaveAttribute("opacity", "0.38");
     expect(bars[2]).toHaveAttribute("opacity", "1");
-    fireEvent.pointerEnter(bars[1] as Element);
+    fireEvent.pointerEnter(bars[1]);
     expect(onHighlight).toHaveBeenLastCalledWith("catering");
-    fireEvent.pointerLeave(bars[1] as Element);
+    fireEvent.pointerLeave(bars[1]);
     expect(onHighlight).toHaveBeenLastCalledWith(null);
     expect(scenes.flow).not.toHaveBeenCalled();
   });
@@ -152,7 +179,9 @@ describe("BudgetFlow", () => {
     forced.tier = "off";
     const plain = render(<BudgetFlow allocations={[]} highlight={null} />);
     expect(plain.container.firstElementChild?.getAttribute("style")).toContain("aspect-ratio");
-    const sized = render(<BudgetFlow allocations={[]} highlight={null} className="aspect-[16/9] w-full" />);
+    const sized = render(
+      <BudgetFlow allocations={[]} highlight={null} className="aspect-[16/9] w-full" />,
+    );
     expect(sized.container.firstElementChild?.getAttribute("style")).not.toContain("aspect-ratio");
   });
 
@@ -166,22 +195,32 @@ describe("BudgetFlow", () => {
       observe() {}
       disconnect() {}
     }
-    Object.defineProperty(window, "IntersectionObserver", { configurable: true, writable: true, value: FakeIO });
+    Object.defineProperty(window, "IntersectionObserver", {
+      configurable: true,
+      writable: true,
+      value: FakeIO,
+    });
     const flow = fakeFlow();
     scenes.flow.mockImplementation((_canvas: HTMLCanvasElement, opts: Options) => {
       opts.onFirstFrame?.();
       return flow.api;
     });
     const onHighlight = vi.fn();
-    const view = render(<BudgetFlow allocations={allocations} highlight={null} onHighlight={onHighlight} />);
+    const view = render(
+      <BudgetFlow allocations={allocations} highlight={null} onHighlight={onHighlight} />,
+    );
     expect(scenes.flow).not.toHaveBeenCalled();
     act(() => observers.forEach((cb) => cb([{ isIntersecting: true }])));
     await waitFor(() => expect(scenes.flow).toHaveBeenCalledOnce());
     expect(flow.api.setAllocations).toHaveBeenCalledWith(allocations);
-    await waitFor(() => expect(view.container.querySelector("svg")?.getAttribute("style")).toContain("opacity: 0"));
+    await waitFor(() =>
+      expect(view.container.querySelector("svg")?.getAttribute("style")).toContain("opacity: 0"),
+    );
     act(() => flow.hover("venue"));
     expect(onHighlight).toHaveBeenLastCalledWith("venue");
-    const next = allocations.map((a) => (a.category === "decor" ? { ...a, amountINR: 250_000 } : a));
+    const next = allocations.map((a) =>
+      a.category === "decor" ? { ...a, amountINR: 250_000 } : a,
+    );
     view.rerender(<BudgetFlow allocations={next} highlight="decor" onHighlight={onHighlight} />);
     expect(flow.api.setAllocations).toHaveBeenLastCalledWith(next);
     expect(flow.api.setHighlight).toHaveBeenLastCalledWith("decor");

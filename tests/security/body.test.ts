@@ -17,29 +17,54 @@ function streamOf(chunks: string[], onPull?: () => void): ReadableStream<Uint8Ar
   });
 }
 
-const streamingRequest = (body: ReadableStream<Uint8Array>, headers: Record<string, string> = JSON_HEADERS) =>
-  new Request("http://localhost/api", { method: "POST", headers, body, duplex: "half" } as RequestInit);
+const streamingRequest = (
+  body: ReadableStream<Uint8Array>,
+  headers: Record<string, string> = JSON_HEADERS,
+) =>
+  new Request("http://localhost/api", {
+    method: "POST",
+    headers,
+    body,
+    duplex: "half",
+  } as RequestInit);
 
 describe("readJson", () => {
   it("parses a JSON body under the cap", async () => {
-    const req = new Request("http://localhost/api", { method: "POST", headers: JSON_HEADERS, body: '{"a":1}' });
+    const req = new Request("http://localhost/api", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: '{"a":1}',
+    });
     expect(await readJson(req, 100)).toEqual({ ok: true, data: { a: 1 } });
   });
 
   it("rejects the wrong content type with 415", async () => {
-    const req = new Request("http://localhost/api", { method: "POST", headers: { "content-type": "text/plain" }, body: "{}" });
+    const req = new Request("http://localhost/api", {
+      method: "POST",
+      headers: { "content-type": "text/plain" },
+      body: "{}",
+    });
     expect(await readJson(req, 100)).toMatchObject({ ok: false, status: 415 });
   });
 
   it("rejects a declared Content-Length over the cap with 413", async () => {
-    const req = new Request("http://localhost/api", { method: "POST", headers: { ...JSON_HEADERS, "content-length": "5000" }, body: "{}" });
+    const req = new Request("http://localhost/api", {
+      method: "POST",
+      headers: { ...JSON_HEADERS, "content-length": "5000" },
+      body: "{}",
+    });
     expect(await readJson(req, 100)).toMatchObject({ ok: false, status: 413 });
   });
 
   it("aborts an oversize stream without Content-Length after the cap", async () => {
     let pulls = 0;
     const chunk = "x".repeat(64);
-    const req = streamingRequest(streamOf(Array.from({ length: 1000 }, () => chunk), () => (pulls += 1)));
+    const req = streamingRequest(
+      streamOf(
+        Array.from({ length: 1000 }, () => chunk),
+        () => (pulls += 1),
+      ),
+    );
     expect(req.headers.get("content-length")).toBeNull();
     const result = await readJson(req, 256);
     expect(result).toMatchObject({ ok: false, status: 413 });
@@ -52,12 +77,29 @@ describe("readJson", () => {
   });
 
   it("rejects malformed, empty and non-UTF-8 bodies with 400", async () => {
-    const bad = new Request("http://localhost/api", { method: "POST", headers: JSON_HEADERS, body: "{nope" });
-    const empty = new Request("http://localhost/api", { method: "POST", headers: JSON_HEADERS, body: "  " });
+    const bad = new Request("http://localhost/api", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: "{nope",
+    });
+    const empty = new Request("http://localhost/api", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: "  ",
+    });
     const none = new Request("http://localhost/api", { method: "POST", headers: JSON_HEADERS });
-    const binary = new Request("http://localhost/api", { method: "POST", headers: JSON_HEADERS, body: new Uint8Array([0xff, 0xfe]) });
-    const badLength = new Request("http://localhost/api", { method: "POST", headers: { ...JSON_HEADERS, "content-length": "abc" }, body: "{}" });
-    for (const req of [bad, empty, none, binary, badLength]) expect(await readJson(req, 100)).toMatchObject({ ok: false, status: 400 });
+    const binary = new Request("http://localhost/api", {
+      method: "POST",
+      headers: JSON_HEADERS,
+      body: new Uint8Array([0xff, 0xfe]),
+    });
+    const badLength = new Request("http://localhost/api", {
+      method: "POST",
+      headers: { ...JSON_HEADERS, "content-length": "abc" },
+      body: "{}",
+    });
+    for (const req of [bad, empty, none, binary, badLength])
+      expect(await readJson(req, 100)).toMatchObject({ ok: false, status: 400 });
   });
 
   it("reports an unreadable stream as 400", async () => {

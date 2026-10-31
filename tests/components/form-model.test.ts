@@ -1,7 +1,13 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
 import {
-  EMPTY_FORM, fromPlanInput, issuesToErrors, parseWhole, toPlanInput, validateForm, type FormValues,
+  EMPTY_FORM,
+  fromPlanInput,
+  issuesToErrors,
+  parseWhole,
+  toPlanInput,
+  validateForm,
+  type FormValues,
 } from "@/components/planner/form-model";
 import { PlanInputSchema } from "@/lib/contracts";
 import { PRESETS, presetInput } from "@/lib/presets";
@@ -36,7 +42,13 @@ describe("validateForm", () => {
   });
   it("explains every missing required field in plain language", () => {
     const errors = validateForm(EMPTY_FORM, TODAY);
-    expect(Object.keys(errors).sort()).toEqual(["budget", "city", "eventDate", "eventType", "guests"]);
+    expect(Object.keys(errors).sort()).toEqual([
+      "budget",
+      "city",
+      "eventDate",
+      "eventType",
+      "guests",
+    ]);
     expect(errors.eventType).toMatch(/celebrating/);
   });
   it("rejects past dates and dates beyond three years", () => {

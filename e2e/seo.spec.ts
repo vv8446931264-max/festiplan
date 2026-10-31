@@ -22,7 +22,10 @@ async function landingGraph(page: Page): Promise<LdNode[]> {
 }
 
 test.describe("landing page SEO", () => {
-  test("one h1, snippet-length title and description, canonical and social tags", async ({ page, request }) => {
+  test("one h1, snippet-length title and description, canonical and social tags", async ({
+    page,
+    request,
+  }) => {
     await page.goto("/");
     await expect(page.locator("h1")).toHaveCount(1);
     expect((await page.title()).length).toBeGreaterThanOrEqual(50);
@@ -52,13 +55,20 @@ test.describe("landing page SEO", () => {
     await page.goto("/");
     const graph = await landingGraph(page);
     const types = graph.map((n) => n["@type"]);
-    expect(types).toEqual(expect.arrayContaining(["WebApplication", "FAQPage", "WebSite", "Organization"]));
+    expect(types).toEqual(
+      expect.arrayContaining(["WebApplication", "FAQPage", "WebSite", "Organization"]),
+    );
     const app = graph.find((n) => n["@type"] === "WebApplication");
-    expect(app).toMatchObject({ applicationCategory: "LifestyleApplication", offers: { price: "0", priceCurrency: "INR" } });
+    expect(app).toMatchObject({
+      applicationCategory: "LifestyleApplication",
+      offers: { price: "0", priceCurrency: "INR" },
+    });
     expect(app?.url).toBe(await page.locator('link[rel="canonical"]').getAttribute("href"));
 
     const faq = graph.find((n) => n["@type"] === "FAQPage")?.mainEntity as Question[];
-    const questions = await page.locator("#faq summary > span:not([aria-hidden])").allTextContents();
+    const questions = await page
+      .locator("#faq summary > span:not([aria-hidden])")
+      .allTextContents();
     const answers = await page.locator("#faq details > p").allTextContents();
     expect(questions).toEqual(faq.map((q) => q.name));
     expect(answers).toEqual(faq.map((q) => q.acceptedAnswer.text));
@@ -72,7 +82,9 @@ test.describe("landing page SEO", () => {
     const res = await request.get("/");
     const csp = res.headers()["content-security-policy"] ?? "";
     const html = await res.text();
-    const match = /<script type="application\/ld\+json" nonce="([^"]+)">([\s\S]*?)<\/script>/.exec(html);
+    const match = /<script type="application\/ld\+json" nonce="([^"]+)">([\s\S]*?)<\/script>/.exec(
+      html,
+    );
     expect(match).not.toBeNull();
     expect(csp).toContain(`'nonce-${match?.[1]}'`);
     expect(match?.[2]).not.toContain("<");
@@ -80,7 +92,10 @@ test.describe("landing page SEO", () => {
 });
 
 test.describe("crawl files", () => {
-  test("robots.txt, sitemap.xml and the manifest agree with the canonical URL", async ({ page, request }) => {
+  test("robots.txt, sitemap.xml and the manifest agree with the canonical URL", async ({
+    page,
+    request,
+  }) => {
     await page.goto("/");
     const canonical = await page.locator('link[rel="canonical"]').getAttribute("href");
 
@@ -100,7 +115,9 @@ test.describe("crawl files", () => {
     const manifest = (await (await request.get("/manifest.webmanifest")).json()) as {
       icons: { src: string; sizes: string; type: string; purpose?: string }[];
     };
-    expect(manifest.icons.map((i) => i.sizes)).toEqual(expect.arrayContaining(["192x192", "512x512"]));
+    expect(manifest.icons.map((i) => i.sizes)).toEqual(
+      expect.arrayContaining(["192x192", "512x512"]),
+    );
     expect(manifest.icons.some((i) => i.purpose === "maskable")).toBe(true);
     for (const icon of manifest.icons) {
       const res = await request.get(icon.src);
@@ -113,7 +130,16 @@ test.describe("crawl files", () => {
     const eventDate = new Date(Date.now() + 90 * 86_400_000).toISOString().slice(0, 10);
     const created = await request.post("/api/plan", {
       headers: { origin: baseURL ?? "" },
-      data: { eventType: "birthday", eventDate, city: "Pune", guests: 30, budgetINR: 40_000, vibe: "dinosaurs", constraints: [], language: "en" },
+      data: {
+        eventType: "birthday",
+        eventDate,
+        city: "Pune",
+        guests: 30,
+        budgetINR: 40_000,
+        vibe: "dinosaurs",
+        constraints: [],
+        language: "en",
+      },
     });
     expect(created.status()).toBe(201);
     const { plan } = (await created.json()) as { plan: { id: string } };

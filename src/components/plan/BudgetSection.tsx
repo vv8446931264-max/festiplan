@@ -27,14 +27,30 @@ export const BudgetSection = memo(function BudgetSection(props: Props) {
 
   return (
     <section id="budget" aria-labelledby="budget-title" className="scroll-mt-20">
-      <SectionHead id="budget" number="02" kicker="Budget"
-        title={<>{formatINR(total)}, accounted for <span className="accent">down to the last rupee</span>.</>}>
+      <SectionHead
+        id="budget"
+        number="02"
+        kicker="Budget"
+        title={
+          <>
+            {formatINR(total)}, accounted for <span className="accent">down to the last rupee</span>
+            .
+          </>
+        }
+      >
         Gemini suggests the weights; plain arithmetic does the split.{" "}
-        {editable ? "Drag a slider — the others re-balance instantly, locked lines stay put." : "Open the edit link to adjust it."}
+        {editable
+          ? "Drag a slider — the others re-balance instantly, locked lines stay put."
+          : "Open the edit link to adjust it."}
       </SectionHead>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
         <div className="panel self-start overflow-hidden p-3 lg:sticky lg:top-24">
-          <LazyBudgetFlow allocations={budget} highlight={highlight} onHighlight={setHighlight} className="aspect-[4/3] w-full" />
+          <LazyBudgetFlow
+            allocations={budget}
+            highlight={highlight}
+            onHighlight={setHighlight}
+            className="aspect-[4/3] w-full"
+          />
         </div>
         <BudgetSliders
           allocations={budget}
@@ -47,15 +63,27 @@ export const BudgetSection = memo(function BudgetSection(props: Props) {
         />
       </div>
       <p className="mt-6 flex flex-wrap items-center gap-3 text-sm">
-        <span data-contingency={contingencyINR} className="rounded-full border border-gold px-3 py-1 font-semibold text-gold">
+        <span
+          data-contingency={contingencyINR}
+          className="rounded-full border border-gold px-3 py-1 font-semibold text-gold"
+        >
           Contingency {formatINR(contingencyINR)} held back
         </span>
         <span className="text-muted">
-          {allocated === total ? `✓ Lines plus contingency add up to ${formatINR(total)} exactly.` : `Allocated ${formatINR(allocated)} of ${formatINR(total)}.`}
+          {allocated === total
+            ? `✓ Lines plus contingency add up to ${formatINR(total)} exactly.`
+            : `Allocated ${formatINR(allocated)} of ${formatINR(total)}.`}
         </span>
       </p>
-      <BudgetTable input={input} budget={budget} contingencyINR={contingencyINR} editable={editable}
-        highlight={highlight} onHighlight={setHighlight} onActual={onActual} />
+      <BudgetTable
+        input={input}
+        budget={budget}
+        contingencyINR={contingencyINR}
+        editable={editable}
+        highlight={highlight}
+        onHighlight={setHighlight}
+        onActual={onActual}
+      />
     </section>
   );
 });

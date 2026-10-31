@@ -45,6 +45,6 @@ describe("app icons", () => {
 
   it("draws the lantern on an opaque full-bleed square (needed for iOS and maskable)", () => {
     expect(BRAND_ICON_SVG).toMatch(/<rect width="64" height="64" fill="#100904"\/>/);
-    expect(BRAND_ICON_SVG).not.toContain("rx=\"14\"");
+    expect(BRAND_ICON_SVG).not.toContain('rx="14"');
   });
 });

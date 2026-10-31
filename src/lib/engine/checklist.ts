@@ -1,5 +1,11 @@
 import { BUDGET_CATEGORIES, PHASES } from "@/lib/contracts/constants";
-import type { BudgetCategory, Phase, ScheduledTask, VendorGuide, VendorItem } from "@/lib/contracts";
+import type {
+  BudgetCategory,
+  Phase,
+  ScheduledTask,
+  VendorGuide,
+  VendorItem,
+} from "@/lib/contracts";
 import { compressedLeadDays, scheduleCompression } from "./compression";
 import { addDays, maxDate } from "./dates";
 import { compareByDue, isOverdue } from "./timeline";
@@ -14,7 +20,11 @@ import { compareByDue, isOverdue } from "./timeline";
  * @param eventDate ISO event date.
  * @param today ISO "today" (injected).
  */
-export function scheduleVendors(vendors: VendorGuide[], eventDate: string, today: string): VendorItem[] {
+export function scheduleVendors(
+  vendors: VendorGuide[],
+  eventDate: string,
+  today: string,
+): VendorItem[] {
   const rank = (c: BudgetCategory): number => BUDGET_CATEGORIES.indexOf(c);
   const { factor } = scheduleCompression(
     vendors.map((v) => ({ leadWeeks: v.bookByWeeks })),
@@ -33,7 +43,9 @@ export function scheduleVendors(vendors: VendorGuide[], eventDate: string, today
         overdue: isOverdue(false, bookBy, today),
       };
     })
-    .sort((a, b) => (a.bookBy < b.bookBy ? -1 : a.bookBy > b.bookBy ? 1 : rank(a.category) - rank(b.category)));
+    .sort((a, b) =>
+      a.bookBy < b.bookBy ? -1 : a.bookBy > b.bookBy ? 1 : rank(a.category) - rank(b.category),
+    );
 }
 
 /**
@@ -52,8 +64,14 @@ export function refreshVendorStatus(items: VendorItem[], today: string): VendorI
  * @param category Row to change.
  * @param done New completion state.
  */
-export function setVendorDone(items: VendorItem[], category: BudgetCategory, done: boolean): VendorItem[] {
-  return items.map((v) => (v.category === category ? { ...v, done, overdue: !done && v.overdue } : v));
+export function setVendorDone(
+  items: VendorItem[],
+  category: BudgetCategory,
+  done: boolean,
+): VendorItem[] {
+  return items.map((v) =>
+    v.category === category ? { ...v, done, overdue: !done && v.overdue } : v,
+  );
 }
 
 /**
@@ -61,7 +79,11 @@ export function setVendorDone(items: VendorItem[], category: BudgetCategory, don
  * @param items Things with a `done` flag.
  * @returns Done count, total and a rounded percent (0 when the list is empty).
  */
-export function progress(items: { done: boolean }[]): { done: number; total: number; percent: number } {
+export function progress(items: { done: boolean }[]): {
+  done: number;
+  total: number;
+  percent: number;
+} {
   const done = items.filter((i) => i.done).length;
   const total = items.length;
   return { done, total, percent: total === 0 ? 0 : Math.round((done / total) * 100) };
@@ -83,8 +105,11 @@ export function nextActions(timeline: ScheduledTask[], n = 3): ScheduledTask[] {
  * Groups tasks by phase, in `PHASES` order (earliest first), skipping empty phases.
  * @param timeline Scheduled tasks.
  */
-export function groupByPhase(timeline: ScheduledTask[]): { phase: Phase; tasks: ScheduledTask[] }[] {
-  return PHASES.map((phase) => ({ phase, tasks: timeline.filter((t) => t.phase === phase) })).filter(
-    (g) => g.tasks.length > 0,
-  );
+export function groupByPhase(
+  timeline: ScheduledTask[],
+): { phase: Phase; tasks: ScheduledTask[] }[] {
+  return PHASES.map((phase) => ({
+    phase,
+    tasks: timeline.filter((t) => t.phase === phase),
+  })).filter((g) => g.tasks.length > 0);
 }

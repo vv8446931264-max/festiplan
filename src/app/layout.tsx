@@ -45,7 +45,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <body>
         <a
           href="#main"
-          className="btn btn-primary fixed left-4 top-4 z-50 -translate-y-24 focus-visible:translate-y-0"
+          className="btn btn-primary fixed top-4 left-4 z-50 -translate-y-24 focus-visible:translate-y-0"
         >
           Skip to content
         </a>

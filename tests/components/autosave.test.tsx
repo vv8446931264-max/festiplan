@@ -33,7 +33,12 @@ describe("useAutosave", () => {
     expect(result.current.saveState).toBe("saving");
     await act(async () => vi.advanceTimersByTime(700));
     expect(net.calls).toHaveLength(1);
-    expect(net.calls[0]?.body).toEqual({ tasks: [{ id: "a", done: true }, { id: "b", done: true }] });
+    expect(net.calls[0]?.body).toEqual({
+      tasks: [
+        { id: "a", done: true },
+        { id: "b", done: true },
+      ],
+    });
     expect(result.current.saveState).toBe("saving");
     net.release[0]?.();
     await settle();
@@ -66,7 +71,9 @@ describe("useAutosave", () => {
     act(() => result.current.queue({ vendors: [{ category: "venue", done: true }] }));
     act(() => void window.dispatchEvent(new Event("pagehide")));
     await settle();
-    expect(net.calls).toEqual([{ body: { vendors: [{ category: "venue", done: true }] }, keepalive: true }]);
+    expect(net.calls).toEqual([
+      { body: { vendors: [{ category: "venue", done: true }] }, keepalive: true },
+    ]);
   });
 
   it("does nothing without an edit key", async () => {
@@ -82,12 +89,17 @@ describe("useAutosave", () => {
 describe("useAutosave failures", () => {
   function scripted(statuses: number[]) {
     const bodies: unknown[] = [];
-    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
-      bodies.push(JSON.parse(String(init.body)));
-      const status = statuses.shift() ?? 200;
-      if (status === 0) throw new TypeError("network down");
-      return new Response(JSON.stringify(status < 300 ? { plan: {} } : { error: "nope" }), { status });
-    }));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: RequestInit) => {
+        bodies.push(JSON.parse(String(init.body)));
+        const status = statuses.shift() ?? 200;
+        if (status === 0) throw new TypeError("network down");
+        return new Response(JSON.stringify(status < 300 ? { plan: {} } : { error: "nope" }), {
+          status,
+        });
+      }),
+    );
     return bodies;
   }
 
@@ -104,7 +116,12 @@ describe("useAutosave failures", () => {
     await act(async () => vi.advanceTimersByTime(4000));
     await settle();
     expect(result.current.saveState).toBe("saved");
-    expect(bodies.at(-1)).toEqual({ tasks: [{ id: "a", done: true }, { id: "b", done: true }] });
+    expect(bodies.at(-1)).toEqual({
+      tasks: [
+        { id: "a", done: true },
+        { id: "b", done: true },
+      ],
+    });
   });
 
   it("reports a rejected change without retrying it", async () => {

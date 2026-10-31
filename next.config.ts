@@ -10,7 +10,12 @@ const nextConfig: NextConfig = {
   headers: async () => [
     // Pages get a per-request nonce CSP from src/proxy.ts. API responses are data, never
     // documents: they may load nothing and may not be framed.
-    { source: "/api/:path*", headers: [{ key: "Content-Security-Policy", value: "default-src 'none'; frame-ancestors 'none'" }] },
+    {
+      source: "/api/:path*",
+      headers: [
+        { key: "Content-Security-Policy", value: "default-src 'none'; frame-ancestors 'none'" },
+      ],
+    },
     // Shared plans are private links: never index them, never cache them publicly.
     { source: "/plan/:path*", headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }] },
     {

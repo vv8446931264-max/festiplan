@@ -38,7 +38,7 @@ export function stripDelimiters(text: string): string {
   const visible = Array.from(text, (ch) => (isControl(ch.charCodeAt(0)) ? " " : ch)).join("");
   let out = visible;
   // Repeat until stable so "<<<<<<" split by stripped characters cannot re-form a marker.
-  for (let prev = ""; prev !== out; ) {
+  for (let prev = ""; prev !== out;) {
     prev = out;
     out = out.replace(/<{3,}|>{3,}/g, "");
   }

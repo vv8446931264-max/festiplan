@@ -25,30 +25,61 @@ const prop = (node: Node | undefined, key: string): Node => {
 describe("AI_PLAN_JSON_SCHEMA", () => {
   it("requires every top-level AiPlan field", () => {
     expect(root.type).toBe("object");
-    expect(root.required).toEqual(["summary", "ideas", "budgetWeights", "tasks", "vendors", "tips"]);
+    expect(root.required).toEqual([
+      "summary",
+      "ideas",
+      "budgetWeights",
+      "tasks",
+      "vendors",
+      "tips",
+    ]);
   });
 
   it("mirrors array bounds from AiPlanSchema", () => {
     expect(prop(root, "ideas")).toMatchObject({ minItems: 3, maxItems: 3 });
     expect(prop(root, "tasks")).toMatchObject({ minItems: 12, maxItems: 30 });
-    expect(prop(root, "budgetWeights")).toMatchObject({ minItems: 4, maxItems: BUDGET_CATEGORIES.length });
-    expect(prop(root, "vendors")).toMatchObject({ minItems: 3, maxItems: BUDGET_CATEGORIES.length });
+    expect(prop(root, "budgetWeights")).toMatchObject({
+      minItems: 4,
+      maxItems: BUDGET_CATEGORIES.length,
+    });
+    expect(prop(root, "vendors")).toMatchObject({
+      minItems: 3,
+      maxItems: BUDGET_CATEGORIES.length,
+    });
     expect(prop(root, "tips")).toMatchObject({ minItems: 2, maxItems: 8 });
     expect(prop(prop(root, "ideas").items, "palette")).toMatchObject({ minItems: 3, maxItems: 5 });
-    expect(prop(prop(root, "tasks").items, "dependsOn")).toMatchObject({ minItems: 0, maxItems: 5 });
+    expect(prop(prop(root, "tasks").items, "dependsOn")).toMatchObject({
+      minItems: 0,
+      maxItems: 5,
+    });
   });
 
   it("uses the shared category and tip vocabularies as enums", () => {
-    expect(prop(prop(root, "budgetWeights").items, "category").enum).toEqual([...BUDGET_CATEGORIES]);
+    expect(prop(prop(root, "budgetWeights").items, "category").enum).toEqual([
+      ...BUDGET_CATEGORIES,
+    ]);
     expect(prop(prop(root, "tasks").items, "category").enum).toEqual([...TASK_CATEGORIES]);
     expect(prop(prop(root, "vendors").items, "category").enum).toEqual([...BUDGET_CATEGORIES]);
     expect(prop(prop(root, "tips").items, "kind").enum).toEqual([...TIP_KINDS]);
   });
 
   it("bounds weights and lead times as integers", () => {
-    expect(prop(prop(root, "budgetWeights").items, "weight")).toMatchObject({ type: "integer", minimum: 1, maximum: 100 });
-    expect(prop(prop(root, "tasks").items, "leadWeeks")).toMatchObject({ minimum: 0, maximum: 156 });
-    expect(prop(prop(root, "tasks").items, "durationDays")).toMatchObject({ minimum: 1, maximum: 90 });
-    expect(prop(prop(root, "vendors").items, "bookByWeeks")).toMatchObject({ minimum: 0, maximum: 104 });
+    expect(prop(prop(root, "budgetWeights").items, "weight")).toMatchObject({
+      type: "integer",
+      minimum: 1,
+      maximum: 100,
+    });
+    expect(prop(prop(root, "tasks").items, "leadWeeks")).toMatchObject({
+      minimum: 0,
+      maximum: 156,
+    });
+    expect(prop(prop(root, "tasks").items, "durationDays")).toMatchObject({
+      minimum: 1,
+      maximum: 90,
+    });
+    expect(prop(prop(root, "vendors").items, "bookByWeeks")).toMatchObject({
+      minimum: 0,
+      maximum: 104,
+    });
   });
 });

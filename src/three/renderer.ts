@@ -10,7 +10,10 @@ export const DPR_CAP: Record<Exclude<Tier, "off">, number> = { high: 1.75, low: 
  * MSAA only on the high tier; the transmission buffer renders at half resolution
  * (its roughness blur hides the difference and it quarters that pass's fill cost).
  */
-export function createRenderer(canvas: HTMLCanvasElement, tier: Exclude<Tier, "off">): WebGLRenderer {
+export function createRenderer(
+  canvas: HTMLCanvasElement,
+  tier: Exclude<Tier, "off">,
+): WebGLRenderer {
   const renderer = new WebGLRenderer({
     canvas,
     alpha: true,
@@ -84,13 +87,23 @@ export function createLoop(win: Window, frame: (dt: number, time: number) => boo
 }
 
 /** A {@link Loop} parked until shaders compile and whenever its owner pauses it. */
-export type GatedLoop = { ready(): void; pause(): void; resume(): void; wake(): void; dispose(): void };
+export type GatedLoop = {
+  ready(): void;
+  pause(): void;
+  resume(): void;
+  wake(): void;
+  dispose(): void;
+};
 
 /**
  * Wrap `frame` in a loop that only runs once `ready()` has been called (shaders
  * compiled) and the owner has not paused it; `onFirstFrame` fires once.
  */
-export function createGatedLoop(win: Window, frame: (dt: number) => boolean, onFirstFrame?: () => void): GatedLoop {
+export function createGatedLoop(
+  win: Window,
+  frame: (dt: number) => boolean,
+  onFirstFrame?: () => void,
+): GatedLoop {
   let first = true;
   const loop = createLoop(win, (dt) => {
     const keep = frame(dt);
@@ -125,7 +138,12 @@ export function createGatedLoop(win: Window, frame: (dt: number) => boolean, onF
  * Compile every program off the main thread where KHR_parallel_shader_compile
  * exists, then open the gate (also on failure — the first frame compiles then).
  */
-export function compileThenStart(renderer: WebGLRenderer, scene: Scene, camera: Camera, loop: GatedLoop): void {
+export function compileThenStart(
+  renderer: WebGLRenderer,
+  scene: Scene,
+  camera: Camera,
+  loop: GatedLoop,
+): void {
   void renderer.compileAsync(scene, camera).then(loop.ready, loop.ready);
 }
 

@@ -5,7 +5,14 @@ import { templatePlan } from "@/lib/ai/templates";
 import { EVENT_TYPES, PLAN_TTL_DAYS } from "@/lib/contracts";
 import type { Allocation } from "@/lib/contracts";
 import { hashEditKey } from "@/lib/security/edit-key";
-import { createPlan, getPublicPlan, isPlanId, newPlanId, patchPlan, toPublic } from "@/lib/server/plan-service";
+import {
+  createPlan,
+  getPublicPlan,
+  isPlanId,
+  newPlanId,
+  patchPlan,
+  toPublic,
+} from "@/lib/server/plan-service";
 import { MemoryStore } from "@/lib/store";
 import { TODAY, fakeAi, jsonReply, rng, sampleInput } from "./fixtures";
 
@@ -33,7 +40,11 @@ describe("createPlan", () => {
     for (let i = 0; i < 60; i++) {
       const budgetINR = 1_000 + Math.floor(next() * 499_999_000);
       const eventType = EVENT_TYPES[i % EVENT_TYPES.length] ?? "other";
-      const { plan } = await createPlan(sampleInput({ budgetINR, eventType, guests: 1 + i }), TODAY, { store, ai: null });
+      const { plan } = await createPlan(
+        sampleInput({ budgetINR, eventType, guests: 1 + i }),
+        TODAY,
+        { store, ai: null },
+      );
       expect(total(plan.budget) + plan.contingencyINR).toBe(budgetINR);
     }
   });
@@ -55,7 +66,10 @@ describe("createPlan", () => {
   it("records Gemini as the source when the model answers", async () => {
     clearPlanCache();
     const { handle } = fakeAi([jsonReply(templatePlan(sampleInput()))]);
-    const { plan } = await createPlan(sampleInput({ city: "Udaipur" }), TODAY, { store: new MemoryStore(), ai: handle });
+    const { plan } = await createPlan(sampleInput({ city: "Udaipur" }), TODAY, {
+      store: new MemoryStore(),
+      ai: handle,
+    });
     expect(plan.source).toBe("gemini");
     expect(plan.model).toBe("gemini-3.5-flash");
   });
@@ -81,29 +95,81 @@ describe("patchPlan", () => {
   it("refuses a wrong or missing key with 403 and unknown plans with 404", async () => {
     const { store, plan } = await setup();
     const patch = { tasks: [{ id: plan.timeline[0]?.id ?? "x", done: true }] };
-    expect(await patchPlan(plan.id, "wrong-key", patch, TODAY, { store })).toMatchObject({ ok: false, status: 403 });
-    expect(await patchPlan(plan.id, null, patch, TODAY, { store })).toMatchObject({ ok: false, status: 403 });
-    expect(await patchPlan("missing-plan", "k", patch, TODAY, { store })).toMatchObject({ ok: false, status: 404 });
-    expect(await patchPlan("bad id!", "k", patch, TODAY, { store })).toMatchObject({ ok: false, status: 404 });
+    expect(await patchPlan(plan.id, "wrong-key", patch, TODAY, { store })).toMatchObject({
+      ok: false,
+      status: 403,
+    });
+    expect(await patchPlan(plan.id, null, patch, TODAY, { store })).toMatchObject({
+      ok: false,
+      status: 403,
+    });
+    expect(await patchPlan("missing-plan", "k", patch, TODAY, { store })).toMatchObject({
+      ok: false,
+      status: 404,
+    });
+    expect(await patchPlan("bad id!", "k", patch, TODAY, { store })).toMatchObject({
+      ok: false,
+      status: 404,
+    });
   });
 
   it("rejects budget edits that don't add up with 422", async () => {
     const { store, plan, editKey } = await setup();
-    const edits = plan.budget.map((a) => ({ category: a.category, amountINR: a.amountINR + 1, locked: false }));
-    expect(await patchPlan(plan.id, editKey, { allocations: edits }, TODAY, { store })).toMatchObject({ ok: false, status: 422 });
+    const edits = plan.budget.map((a) => ({
+      category: a.category,
+      amountINR: a.amountINR + 1,
+      locked: false,
+    }));
+    expect(
+      await patchPlan(plan.id, editKey, { allocations: edits }, TODAY, { store }),
+    ).toMatchObject({ ok: false, status: 422 });
     const partial = edits.slice(1);
-    expect(await patchPlan(plan.id, editKey, { allocations: partial }, TODAY, { store })).toMatchObject({ ok: false, status: 422 });
+    expect(
+      await patchPlan(plan.id, editKey, { allocations: partial }, TODAY, { store }),
+    ).toMatchObject({ ok: false, status: 422 });
   });
 
   it("rejects unknown tasks, vendors and categories with 422", async () => {
     const { store, plan, editKey } = await setup();
-    const missingVendor = (["venue", "catering", "decor", "photography", "entertainment", "attire", "invitations", "gifts", "transport", "misc"] as const).find((c) => !plan.vendors.some((v) => v.category === c)) ?? "misc";
-    for (const patch of [{ tasks: [{ id: "ghost-task", done: true }] }, { vendors: [{ category: missingVendor, done: true }] }]) {
-      expect(await patchPlan(plan.id, editKey, patch, TODAY, { store })).toMatchObject({ ok: false, status: 422 });
+    const missingVendor =
+      (
+        [
+          "venue",
+          "catering",
+          "decor",
+          "photography",
+          "entertainment",
+          "attire",
+          "invitations",
+          "gifts",
+          "transport",
+          "misc",
+        ] as const
+      ).find((c) => !plan.vendors.some((v) => v.category === c)) ?? "misc";
+    for (const patch of [
+      { tasks: [{ id: "ghost-task", done: true }] },
+      { vendors: [{ category: missingVendor, done: true }] },
+    ]) {
+      expect(await patchPlan(plan.id, editKey, patch, TODAY, { store })).toMatchObject({
+        ok: false,
+        status: 422,
+      });
     }
-    const other = await createPlan(sampleInput({ eventType: "birthday" }), TODAY, { store, ai: null });
-    const absent = (["attire", "transport"] as const).find((c) => !other.plan.budget.some((a) => a.category === c)) ?? "attire";
-    const res = await patchPlan(other.plan.id, other.editKey, { actuals: [{ category: absent, actualINR: 5 }] }, TODAY, { store });
+    const other = await createPlan(sampleInput({ eventType: "birthday" }), TODAY, {
+      store,
+      ai: null,
+    });
+    const absent =
+      (["attire", "transport"] as const).find(
+        (c) => !other.plan.budget.some((a) => a.category === c),
+      ) ?? "attire";
+    const res = await patchPlan(
+      other.plan.id,
+      other.editKey,
+      { actuals: [{ category: absent, actualINR: 5 }] },
+      TODAY,
+      { store },
+    );
     expect(res).toMatchObject({ ok: false, status: 422 });
   });
 
@@ -122,7 +188,12 @@ describe("patchPlan", () => {
     const res = await patchPlan(
       plan.id,
       editKey,
-      { allocations: edits, actuals: [{ category: a.category, actualINR: 4321 }], tasks: [{ id: taskId, done: true }], vendors: [{ category: vendor, done: true }] },
+      {
+        allocations: edits,
+        actuals: [{ category: a.category, actualINR: 4321 }],
+        tasks: [{ id: taskId, done: true }],
+        vendors: [{ category: vendor, done: true }],
+      },
       TODAY,
       { store, now: later },
     );
@@ -134,7 +205,9 @@ describe("patchPlan", () => {
     expect(res.plan.timeline.find((t) => t.id === taskId)?.done).toBe(true);
     expect(res.plan.vendors.find((v) => v.category === vendor)?.done).toBe(true);
     expect(res.plan.updatedAt).toBe(later.toISOString());
-    expect((await getPublicPlan(plan.id, TODAY, { store }))?.timeline.find((t) => t.id === taskId)?.done).toBe(true);
+    expect(
+      (await getPublicPlan(plan.id, TODAY, { store }))?.timeline.find((t) => t.id === taskId)?.done,
+    ).toBe(true);
   });
 });
 

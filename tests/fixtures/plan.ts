@@ -17,7 +17,10 @@ export const FIXTURE_INPUT: PlanInput = {
 };
 
 /** A complete public plan built the same way the server builds one (template mode). */
-export function fixturePlan(overrides: Partial<PlanInput> = {}, source: PublicPlan["source"] = "gemini"): PublicPlan {
+export function fixturePlan(
+  overrides: Partial<PlanInput> = {},
+  source: PublicPlan["source"] = "gemini",
+): PublicPlan {
   const input = { ...FIXTURE_INPUT, ...overrides };
   const ai = templatePlan(input);
   const { contingencyINR, allocations } = allocateBudget({

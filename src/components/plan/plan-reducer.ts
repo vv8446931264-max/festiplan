@@ -1,6 +1,12 @@
 import type { BudgetCategory, PublicPlan } from "@/lib/contracts";
 import {
-  rebalance, refreshStatus, refreshVendorStatus, setActual, setLocked, setTaskDone, setVendorDone,
+  rebalance,
+  refreshStatus,
+  refreshVendorStatus,
+  setActual,
+  setLocked,
+  setTaskDone,
+  setVendorDone,
 } from "@/lib/engine";
 
 /** Every change an owner can make to a plan in the browser. */
@@ -25,11 +31,17 @@ export function planReducer(plan: PublicPlan, action: PlanAction): PublicPlan {
     case "actual":
       return { ...plan, budget: setActual(plan.budget, action.category, action.actualINR) };
     case "task":
-      return { ...plan, timeline: refreshStatus(setTaskDone(plan.timeline, action.id, action.done), action.today) };
+      return {
+        ...plan,
+        timeline: refreshStatus(setTaskDone(plan.timeline, action.id, action.done), action.today),
+      };
     case "vendor":
       return {
         ...plan,
-        vendors: refreshVendorStatus(setVendorDone(plan.vendors, action.category, action.done), action.today),
+        vendors: refreshVendorStatus(
+          setVendorDone(plan.vendors, action.category, action.done),
+          action.today,
+        ),
       };
   }
 }

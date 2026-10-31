@@ -39,13 +39,17 @@ describe("proxy (nonce CSP)", () => {
 
   it("hands the same policy and nonce to the renderer as request headers", () => {
     const res = run("/plan/abcdef123456");
-    expect(res.headers.get("x-middleware-request-content-security-policy")).toBe(res.headers.get("content-security-policy"));
+    expect(res.headers.get("x-middleware-request-content-security-policy")).toBe(
+      res.headers.get("content-security-policy"),
+    );
     expect(res.headers.get("x-middleware-override-headers")).toContain("x-nonce");
     expect(res.headers.get("x-middleware-next")).toBe("1");
   });
 
   it("mints a fresh nonce for every request", () => {
-    const nonces = new Set(Array.from({ length: 50 }, () => run().headers.get("x-middleware-request-x-nonce")));
+    const nonces = new Set(
+      Array.from({ length: 50 }, () => run().headers.get("x-middleware-request-x-nonce")),
+    );
     expect(nonces.size).toBe(50);
     expect(newNonce()).not.toBe(newNonce());
   });
@@ -57,11 +61,14 @@ describe("proxy (nonce CSP)", () => {
     const prod = directives(contentSecurityPolicy("n", "production"));
     expect(prod["script-src"]).not.toContain("'unsafe-eval'");
     expect(prod["upgrade-insecure-requests"]).toEqual([]);
-    expect(directives(contentSecurityPolicy("n", "test"))["upgrade-insecure-requests"]).toBeUndefined();
+    expect(
+      directives(contentSecurityPolicy("n", "test"))["upgrade-insecure-requests"],
+    ).toBeUndefined();
   });
 
   it("runs on pages but skips API routes, static assets, icons and prefetches", () => {
-    const matches = (url: string, headers: Record<string, string> = {}) => unstable_doesMiddlewareMatch({ config, url, headers });
+    const matches = (url: string, headers: Record<string, string> = {}) =>
+      unstable_doesMiddlewareMatch({ config, url, headers });
     expect(matches("/")).toBe(true);
     expect(matches("/plan/abcdef123456")).toBe(true);
     expect(matches("/api/plan")).toBe(false);

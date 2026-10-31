@@ -17,13 +17,29 @@ export const IdeasSection = memo(function IdeasSection({ ideas, lang }: Props) {
   };
   return (
     <section id="ideas" aria-labelledby="ideas-title" className="scroll-mt-20">
-      <SectionHead id="ideas" number="01" kicker="Ideas" title={<>Three ways to <span className="accent">throw it</span>.</>}>
-        Each concept is shaped by your vibe, city and constraints. Pick one, mix them, or ask for more below.
+      <SectionHead
+        id="ideas"
+        number="01"
+        kicker="Ideas"
+        title={
+          <>
+            Three ways to <span className="accent">throw it</span>.
+          </>
+        }
+      >
+        Each concept is shaped by your vibe, city and constraints. Pick one, mix them, or ask for
+        more below.
       </SectionHead>
       <ol className="grid gap-5 lg:grid-cols-3">
         {ideas.map((idea, i) => (
           <li key={i} className="reveal">
-            <IdeaCover idea={idea} index={i} lang={lang} tinted={tinted === i} onTint={() => tint(i)} />
+            <IdeaCover
+              idea={idea}
+              index={i}
+              lang={lang}
+              tinted={tinted === i}
+              onTint={() => tint(i)}
+            />
           </li>
         ))}
       </ol>
@@ -37,15 +53,32 @@ function IdeaCover({ idea, index, lang, tinted, onTint }: CoverProps) {
   const band = `linear-gradient(120deg, ${idea.palette.join(", ")})`;
   return (
     <article className="panel flex h-full flex-col overflow-hidden">
-      <div aria-hidden="true" data-print-keep="" className="h-28 sm:h-36" style={{ background: band }} />
+      <div
+        aria-hidden="true"
+        data-print-keep=""
+        className="h-28 sm:h-36"
+        style={{ background: band }}
+      />
       <div className="flex flex-1 flex-col gap-5 p-6 sm:p-7">
         <p className="eyebrow">Issue Nº 0{index + 1}</p>
-        <h4 lang={lang} className="h3">{idea.name}</h4>
-        <p lang={lang} className="text-cream/90">{idea.concept}</p>
+        <h4 lang={lang} className="h3">
+          {idea.name}
+        </h4>
+        <p lang={lang} className="text-cream/90">
+          {idea.concept}
+        </p>
         <ul aria-label="Palette" className="flex flex-wrap gap-2">
           {idea.palette.map((hex, i) => (
-            <li key={i} className="flex items-center gap-2 rounded-full border border-line py-1 pl-1 pr-3 font-mono text-xs uppercase">
-              <span aria-hidden="true" data-print-keep="" className="size-6 rounded-full border border-cream/30" style={{ background: hex }} />
+            <li
+              key={i}
+              className="flex items-center gap-2 rounded-full border border-line py-1 pr-3 pl-1 font-mono text-xs uppercase"
+            >
+              <span
+                aria-hidden="true"
+                data-print-keep=""
+                className="size-6 rounded-full border border-cream/30"
+                style={{ background: hex }}
+              />
               {hex}
             </li>
           ))}
@@ -56,11 +89,18 @@ function IdeaCover({ idea, index, lang, tinted, onTint }: CoverProps) {
           <p className="eyebrow mb-1">Music</p>
           <p lang={lang}>{idea.music}</p>
         </div>
-        <blockquote lang={lang} className="accent mt-auto border-l-2 border-gold pl-4 text-lg text-gold">
+        <blockquote
+          lang={lang}
+          className="accent mt-auto border-l-2 border-gold pl-4 text-lg text-gold"
+        >
           {idea.signatureMoment}
         </blockquote>
-        <button type="button" aria-pressed={tinted} onClick={onTint}
-          className="btn btn-ghost no-print self-start text-sm aria-pressed:border-gold aria-pressed:text-gold">
+        <button
+          type="button"
+          aria-pressed={tinted}
+          onClick={onTint}
+          className="btn btn-ghost no-print self-start text-sm aria-pressed:border-gold aria-pressed:text-gold"
+        >
           <span aria-hidden="true">{tinted ? "●" : "○"}</span>
           Tint the lanterns
         </button>
@@ -76,7 +116,9 @@ function List({ title, items, lang }: { title: string; items: string[]; lang?: s
       <ul lang={lang} className="flex flex-col gap-1.5">
         {items.map((item, i) => (
           <li key={i} className="flex gap-2">
-            <span aria-hidden="true" className="text-gold">✦</span>
+            <span aria-hidden="true" className="text-gold">
+              ✦
+            </span>
             <span>{item}</span>
           </li>
         ))}

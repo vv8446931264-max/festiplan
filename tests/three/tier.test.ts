@@ -19,14 +19,19 @@ type Fake = {
   context?: "webgl2" | "webgl" | "none" | "throw";
 };
 
-function fakeWindow({ media = {}, nav = { hardwareConcurrency: 8 }, width = 1440, context = "webgl2" }: Fake) {
+function fakeWindow({
+  media = {},
+  nav = { hardwareConcurrency: 8 },
+  width = 1440,
+  context = "webgl2",
+}: Fake) {
   const loseContext = vi.fn();
   const getContext = vi.fn((kind: string) => {
     if (context === "throw") throw new Error("blocked");
     return kind === context ? { getExtension: () => ({ loseContext }) } : null;
   });
   const win = {
-    matchMedia: (q: string) => ({ matches: media[q] === true }),
+    matchMedia: (q: string) => ({ matches: media[q] }),
     navigator: nav,
     innerWidth: width,
     document: { createElement: () => ({ getContext }) },
@@ -37,7 +42,9 @@ function fakeWindow({ media = {}, nav = { hardwareConcurrency: 8 }, width = 1440
 describe("tierFrom", () => {
   it("is high on a capable desktop", () => {
     expect(tierFrom(good)).toBe("high");
-    expect(tierFrom({ ...good, hardwareConcurrency: undefined, deviceMemory: undefined })).toBe("high");
+    expect(tierFrom({ ...good, hardwareConcurrency: undefined, deviceMemory: undefined })).toBe(
+      "high",
+    );
   });
 
   it.each<[string, Partial<TierSignals>]>([
@@ -82,7 +89,10 @@ describe("readSignals", () => {
   });
 
   it("tolerates missing matchMedia and hints, and can skip the WebGL probe", () => {
-    const { win, getContext } = fakeWindow({ nav: { hardwareConcurrency: Number.NaN }, context: "none" });
+    const { win, getContext } = fakeWindow({
+      nav: { hardwareConcurrency: Number.NaN },
+      context: "none",
+    });
     (win as unknown as { matchMedia: unknown }).matchMedia = undefined;
     const s = readSignals(win, false);
     expect(s.reducedMotion).toBe(false);

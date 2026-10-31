@@ -134,7 +134,10 @@
     font-weight: 700;
     line-height: 1.1;
     text-decoration-line: none;
-    transition: transform 200ms var(--ease-out-soft), background-color 200ms, color 200ms;
+    transition:
+      transform 200ms var(--ease-out-soft),
+      background-color 200ms,
+      color 200ms;
   }
   .btn:active {
     transform: scale(0.97);
@@ -177,7 +180,9 @@
   }
   /* Copy that floats over the live sky keeps a soft espresso halo for contrast. */
   .legible {
-    text-shadow: 0 1px 2px rgb(16 9 4 / 0.6), 0 0 24px rgb(16 9 4 / 0.85);
+    text-shadow:
+      0 1px 2px rgb(16 9 4 / 0.6),
+      0 0 24px rgb(16 9 4 / 0.85);
   }
   .legible .btn {
     text-shadow: none;

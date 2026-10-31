@@ -20,5 +20,7 @@ export function storeKind(env: Env = process.env): StoreKind {
  */
 export function getStore(env: Env = process.env): PlanStore {
   const kind = storeKind(env);
-  return processSingleton(`store:${kind}`, () => (kind === "firestore" ? new FirestoreStore() : new MemoryStore()));
+  return processSingleton(`store:${kind}`, () =>
+    kind === "firestore" ? new FirestoreStore() : new MemoryStore(),
+  );
 }

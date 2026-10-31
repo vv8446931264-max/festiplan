@@ -19,7 +19,9 @@ describe("googleCalendarUrl", () => {
   });
 
   it("uses an explicit end date as given", () => {
-    const url = parse(googleCalendarUrl({ title: "Sangeet", date: "2027-02-14", endDate: "2027-02-17" }));
+    const url = parse(
+      googleCalendarUrl({ title: "Sangeet", date: "2027-02-14", endDate: "2027-02-17" }),
+    );
     expect(url.searchParams.get("dates")).toBe("20270214/20270217");
   });
 
@@ -40,13 +42,23 @@ describe("googleCalendarUrl", () => {
       }),
     );
     expect(url.searchParams.get("text")).toBe("Riya & Arjun's sangeet");
-    expect(url.searchParams.get("details")).toBe("Plan: https://festiplan.example/plan/abc?x=1&y=2");
+    expect(url.searchParams.get("details")).toBe(
+      "Plan: https://festiplan.example/plan/abc?x=1&y=2",
+    );
     expect(url.searchParams.get("location")).toBe("मुंबई, India");
-    expect([...url.searchParams.keys()]).toEqual(["action", "text", "dates", "details", "location"]);
+    expect([...url.searchParams.keys()]).toEqual([
+      "action",
+      "text",
+      "dates",
+      "details",
+      "location",
+    ]);
   });
 
   it("keeps empty-string details and location (they were provided)", () => {
-    const url = parse(googleCalendarUrl({ title: "x", date: "2027-02-14", details: "", location: "" }));
+    const url = parse(
+      googleCalendarUrl({ title: "x", date: "2027-02-14", details: "", location: "" }),
+    );
     expect(url.searchParams.get("details")).toBe("");
     expect(url.searchParams.get("location")).toBe("");
   });

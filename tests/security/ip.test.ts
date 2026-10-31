@@ -2,7 +2,8 @@
 import { describe, expect, it } from "vitest";
 import { clientKey, expandIpv6, rateLimitSubject } from "@/lib/security/ip";
 
-const req = (xff: string) => new Request("http://localhost:3000/api/plan", { headers: { "x-forwarded-for": xff } });
+const req = (xff: string) =>
+  new Request("http://localhost:3000/api/plan", { headers: { "x-forwarded-for": xff } });
 
 describe("expandIpv6", () => {
   it("expands :: in every position", () => {
@@ -10,7 +11,9 @@ describe("expandIpv6", () => {
     expect(expandIpv6("::1")).toEqual([0, 0, 0, 0, 0, 0, 0, 1]);
     expect(expandIpv6("fe80::")).toEqual([0xfe80, 0, 0, 0, 0, 0, 0, 0]);
     expect(expandIpv6("::")).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
-    expect(expandIpv6("2001:DB8:0:0:8:800:200C:417A")).toEqual([0x2001, 0xdb8, 0, 0, 8, 0x800, 0x200c, 0x417a]);
+    expect(expandIpv6("2001:DB8:0:0:8:800:200C:417A")).toEqual([
+      0x2001, 0xdb8, 0, 0, 8, 0x800, 0x200c, 0x417a,
+    ]);
     expect(expandIpv6("1:2:3:4:5:6:7::")).toEqual([1, 2, 3, 4, 5, 6, 7, 0]);
   });
 
@@ -20,7 +23,17 @@ describe("expandIpv6", () => {
   });
 
   it("rejects malformed addresses", () => {
-    for (const bad of ["1::2::3", "1:2:3:4:5:6:7:8:9", "1:2:3", ":1:2:3:4:5:6:7", "12345::1", "::ffff:300.1.1.1", "1:2:3:4:5:6:7:8::", "1.2.3.4", "g::1"]) {
+    for (const bad of [
+      "1::2::3",
+      "1:2:3:4:5:6:7:8:9",
+      "1:2:3",
+      ":1:2:3:4:5:6:7",
+      "12345::1",
+      "::ffff:300.1.1.1",
+      "1:2:3:4:5:6:7:8::",
+      "1.2.3.4",
+      "g::1",
+    ]) {
       expect(expandIpv6(bad)).toBeNull();
     }
   });
@@ -52,7 +65,9 @@ describe("rateLimitSubject", () => {
 
 describe("clientKey", () => {
   it("gives every address in one /64 the same key, and IPv4 its own", () => {
-    expect(clientKey(req("6.6.6.6, 2001:db8:1:2:aaaa::1"))).toBe(clientKey(req("2001:db8:1:2:ffff:ffff:ffff:ffff")));
+    expect(clientKey(req("6.6.6.6, 2001:db8:1:2:aaaa::1"))).toBe(
+      clientKey(req("2001:db8:1:2:ffff:ffff:ffff:ffff")),
+    );
     expect(clientKey(req("2001:db8:1:2::1"))).toBe("2001:db8:1:2::/64");
     expect(clientKey(req("198.51.100.4"))).toBe("198.51.100.4");
     expect(clientKey(req("10.0.0.1, 198.51.100.4, 10.0.0.2"), 2)).toBe("198.51.100.4");
