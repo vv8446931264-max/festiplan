@@ -1,5 +1,8 @@
-# Deploys main to Cloud Run after the `ci` workflow passes.
+# Deploys main to Cloud Run after the `ci` workflow passes on a push to main.
 # Inactive until scripts/gcp-bootstrap.sh has set the GCP_* repository variables.
+# `workflow_run` also fires for pull-request CI runs (including forks, whose branch may be
+# named "main"), so the job only runs for successful CI runs triggered by a push in this
+# repository, or for a manual dispatch on main.
 name: deploy
 
 on:
@@ -19,19 +22,28 @@ concurrency:
 
 jobs:
   deploy:
-    if: vars.GCP_WIF_PROVIDER != '' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    if: >-
+      vars.GCP_WIF_PROVIDER != '' && (
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      )
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
 
-      - uses: google-github-actions/auth@v2
+      - uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed # v2.1.13
         with:
           workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
           service_account: ${{ vars.GCP_DEPLOY_SA }}
 
-      - uses: google-github-actions/setup-gcloud@v2
+      - uses: google-github-actions/setup-gcloud@e427ad8a34f8676edf47cf7d7925499adf3eb74f # v2.2.1
 
       - name: Deploy to Cloud Run (source build, Vertex AI via ADC — no API key)
         shell: bash
@@ -56,8 +68,11 @@ jobs:
           gcloud run deploy festiplan "${args[@]}"
 
       - name: Smoke test the live service
+        shell: bash
+        env:
+          PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
         run: |
-          URL=$(gcloud run services describe festiplan --project "${{ vars.GCP_PROJECT_ID }}" --region us-central1 --format='value(status.url)')
+          URL=$(gcloud run services describe festiplan --project "$PROJECT_ID" --region us-central1 --format='value(status.url)')
           HEALTH=$(curl -fsS --retry 5 --retry-delay 3 "$URL/api/health")
           echo "$HEALTH"
           echo "$HEALTH" | grep -q '"status":"ok"'
