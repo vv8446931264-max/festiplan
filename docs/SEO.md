@@ -113,8 +113,8 @@ ran before that paint.
 ## Reproduce
 
 ```bash
-npm run build && RATE_LIMIT_SCALE=50 npx next start -p 3500 &
-CHROME_PATH=/opt/pw-browsers/chromium npx lighthouse@13.5.0 http://localhost:3500/ \
+npm run build && RATE_LIMIT_SCALE=50 PORT=3500 HOSTNAME=127.0.0.1 npm start &
+CHROME_PATH=/opt/pw-browsers/chromium npx lighthouse@13.5.0 http://127.0.0.1:3500/ \
   --only-categories=seo,performance,accessibility,best-practices \
   --chrome-flags="--headless=new --no-sandbox"            # add --preset=desktop for desktop
 curl -s -H 'Accept-Encoding: gzip' localhost:3500/ | wc -c  # HTML bytes on the wire

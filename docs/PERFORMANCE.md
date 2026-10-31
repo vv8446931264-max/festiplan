@@ -49,7 +49,7 @@ and the HTML is still the complete page (10.6 KB gzip).
 ## Reproduce
 
 ```bash
-npm run build && npx next start -p 3300 &
-curl -s localhost:3300/ | grep -o '/_next/static/chunks/[^"]*\.js' | sort -u \
+npm run build && PORT=3300 HOSTNAME=127.0.0.1 npm start &
+curl -s 127.0.0.1:3300/ | grep -o '/_next/static/chunks/[^"]*\.js' | sort -u \
   | while read f; do printf '%s %s\n' "$(gzip -9 -c ".next${f#/_next}" | wc -c)" "$f"; done
 ```

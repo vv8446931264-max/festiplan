@@ -14,7 +14,7 @@ import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { chromium } from "playwright";
+import { chromium } from "@playwright/test";
 import { createServer } from "vite";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));

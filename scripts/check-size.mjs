@@ -4,9 +4,10 @@
 // arrow functions and methods are measured too.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import ts from "typescript";
 
-const ROOT = new URL("..", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const MAX_FILE_LINES = 200;
 const MAX_FUNCTION_LINES = 40;
 const FILE_RULE_DIRS = ["src", "tests", "e2e", "scripts"];
