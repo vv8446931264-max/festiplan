@@ -5,8 +5,8 @@ import { PlanPatchSchema } from "@/lib/contracts";
 
 describe("mergePatch", () => {
   it("returns the newer patch when nothing is queued", () => {
-    const p = { tasks: [{ id: "a", done: true }] };
-    expect(mergePatch(null, p)).toBe(p);
+    const patch = { tasks: [{ id: "a", done: true }] };
+    expect(mergePatch(null, patch)).toBe(patch);
   });
 
   it("keeps the latest state per task, vendor and actual", () => {

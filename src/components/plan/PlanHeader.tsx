@@ -16,6 +16,9 @@ const SAVE_TEXT: Record<SaveState, string> = {
   forbidden: "This link can't save changes. Ask the organiser for the edit link.",
 };
 
+/** The short, human-readable plan number is the id's first characters. */
+const PLAN_NUMBER_LENGTH = 6;
+
 type Props = {
   plan: PublicPlan;
   saveState: SaveState;
@@ -42,36 +45,23 @@ export function PlanHeader({
   focusOnMount,
   titleAs: Title = "h2",
 }: Props) {
-  const ref = useRef<HTMLHeadingElement>(null);
-  const { input } = plan;
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const today = useToday() || plan.today;
   const lang = aiLang(plan);
 
   useEffect(() => {
     if (!focusOnMount) return;
-    ref.current?.focus({ preventScroll: true });
-    ref.current?.scrollIntoView({ block: "start" });
+    titleRef.current?.focus({ preventScroll: true });
+    titleRef.current?.scrollIntoView({ block: "start" });
   }, [focusOnMount]);
 
   return (
     <header className="legible flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="eyebrow">Plan Nº {plan.id.slice(0, 6).toUpperCase()}</span>
-        <SourceBadge source={plan.source} model={plan.model} />
-        {!editable && (
-          <span className="eyebrow rounded-full border border-line px-3 py-1">Read-only</span>
-        )}
-      </div>
-      <Title ref={ref} id="plan-title" tabIndex={-1} className="h2 scroll-mt-24 outline-none">
-        {planTitle(input)}
+      <PlanBadges plan={plan} editable={editable} />
+      <Title ref={titleRef} id="plan-title" tabIndex={-1} className="h2 scroll-mt-24 outline-none">
+        {planTitle(plan.input)}
       </Title>
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-5">
-        <Fact term="When" value={formatDate(input.eventDate)} />
-        <Fact term="Where" value={input.city} />
-        <Fact term="Guests" value={String(input.guests)} />
-        <Fact term="Budget" value={formatINR(input.budgetINR)} />
-        <Fact term="Countdown" value={countdownLabel(diffDays(today, input.eventDate))} />
-      </dl>
+      <PlanFacts input={plan.input} today={today} />
       <p lang={lang} className="lead max-w-4xl text-cream">
         {plan.ai.summary}
       </p>
@@ -79,6 +69,32 @@ export function PlanHeader({
         {SAVE_TEXT[saveState]}
       </p>
     </header>
+  );
+}
+
+/** Plan number, where the ideas came from, and whether this link can edit. */
+function PlanBadges({ plan, editable }: { plan: PublicPlan; editable: boolean }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <span className="eyebrow">Plan Nº {plan.id.slice(0, PLAN_NUMBER_LENGTH).toUpperCase()}</span>
+      <SourceBadge source={plan.source} model={plan.model} />
+      {!editable && (
+        <span className="eyebrow rounded-full border border-line px-3 py-1">Read-only</span>
+      )}
+    </div>
+  );
+}
+
+/** The brief at a glance: when, where, how many, how much, and how long until the day. */
+function PlanFacts({ input, today }: { input: PublicPlan["input"]; today: string }) {
+  return (
+    <dl className="grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-5">
+      <Fact term="When" value={formatDate(input.eventDate)} />
+      <Fact term="Where" value={input.city} />
+      <Fact term="Guests" value={String(input.guests)} />
+      <Fact term="Budget" value={formatINR(input.budgetINR)} />
+      <Fact term="Countdown" value={countdownLabel(diffDays(today, input.eventDate))} />
+    </dl>
   );
 }
 

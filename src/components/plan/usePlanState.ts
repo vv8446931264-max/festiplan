@@ -32,6 +32,9 @@ export function usePlanState(initial: PublicPlan, initialKey: string | null) {
   return { plan, editable: editKey !== null, editKey, saveState, ...actions };
 }
 
+/** The live plan, who may edit it, the save status and the owner actions. */
+export type PlanState = ReturnType<typeof usePlanState>;
+
 type Queue = (patch: PlanPatch) => void;
 
 /** Owner actions: dispatch the pure change, and queue the matching save where it is known up front. */

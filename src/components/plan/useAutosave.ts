@@ -6,11 +6,19 @@ import type { PlanPatch } from "@/lib/contracts";
 import { mergePatch } from "./patch";
 
 export type SaveState = "idle" | "saving" | "saved" | "retrying" | "rejected" | "forbidden";
+
 const SAVE_DELAY_MS = 700;
 const MAX_RETRIES = 4;
+const RETRY_STEP_MS = 2000;
+
+const NETWORK_FAILURE = 0;
+const FORBIDDEN = 403;
+const TOO_MANY_REQUESTS = 429;
+const SERVER_ERROR = 500;
 
 /** Network errors, rate limits and server faults are worth retrying; 4xx rejections are not. */
-const isTransient = (status: number) => status === 0 || status === 429 || status >= 500;
+const isTransient = (status: number) =>
+  status === NETWORK_FAILURE || status === TOO_MANY_REQUESTS || status >= SERVER_ERROR;
 
 /**
  * Debounced, ordered autosave. Changes merge into one pending patch; saves run one
@@ -25,24 +33,24 @@ export function useAutosave(planId: string, editKey: string | null) {
   const [failures, setFailures] = useState(0);
   const pending = useRef<PlanPatch | null>(null);
   const chain = useRef<Promise<void>>(Promise.resolve());
-  const busy = useRef(0);
-  const timer = useRef<number | undefined>(undefined);
+  const inFlight = useRef(0);
+  const { schedule, cancel: cancelDebounce } = useDebounce();
 
   const flush = useCallback(
     (keepalive = false) => {
-      window.clearTimeout(timer.current);
+      cancelDebounce();
       const patch = pending.current;
       pending.current = null;
       if (!patch || !editKey) return;
-      busy.current += 1;
+      inFlight.current += 1;
       const save = async () => {
-        const res = await savePlan(planId, editKey, patch, keepalive);
-        busy.current -= 1;
-        settle(res.ok ? 200 : res.status, patch, { pending, busy, setSaveState, setFailures });
+        const outcome = await savePlan(planId, editKey, patch, keepalive);
+        inFlight.current -= 1;
+        settle(outcome, patch, { pending, inFlight, setSaveState, setFailures });
       };
       chain.current = chain.current.then(save).catch(() => setSaveState("retrying"));
     },
-    [editKey, planId],
+    [cancelDebounce, editKey, planId],
   );
 
   const queue = useCallback(
@@ -50,62 +58,77 @@ export function useAutosave(planId: string, editKey: string | null) {
       if (!editKey) return;
       pending.current = mergePatch(pending.current, patch);
       setSaveState("saving");
-      window.clearTimeout(timer.current);
-      timer.current = window.setTimeout(() => flush(), SAVE_DELAY_MS);
+      schedule(() => flush(), SAVE_DELAY_MS);
     },
-    [editKey, flush],
+    [editKey, flush, schedule],
   );
 
   useRetry(failures, flush);
-  useFlushOnLeave(flush, timer);
+  useFlushOnLeave(flush, cancelDebounce);
   return { saveState, queue };
 }
 
-type Settle = {
+/** One pending timer at a time: scheduling replaces it, cancelling clears whatever is pending. */
+function useDebounce() {
+  const timer = useRef<number | undefined>(undefined);
+  const cancel = useCallback(() => window.clearTimeout(timer.current), []);
+  const schedule = useCallback((run: () => void, delayMs: number) => {
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(run, delayMs);
+  }, []);
+  return { schedule, cancel };
+}
+
+type SaveOutcome = { ok: true } | { ok: false; status: number };
+
+/** The autosave's bookkeeping that a finished save updates. */
+type SaveTracker = {
   pending: RefObject<PlanPatch | null>;
-  busy: RefObject<number>;
-  setSaveState: (s: SaveState) => void;
+  inFlight: RefObject<number>;
+  setSaveState: (state: SaveState) => void;
   setFailures: React.Dispatch<React.SetStateAction<number>>;
 };
 
-/** What a finished save means for the status line and the pending queue. */
-function settle(status: number, patch: PlanPatch, s: Settle) {
-  if (status >= 200 && status < 300) {
-    s.setFailures(0);
-    if (!s.pending.current && s.busy.current === 0) s.setSaveState("saved");
-  } else if (status === 403) s.setSaveState("forbidden");
-  else if (!isTransient(status)) s.setSaveState("rejected");
-  else {
-    s.pending.current = s.pending.current ? mergePatch(patch, s.pending.current) : patch;
-    s.setSaveState("retrying");
-    s.setFailures((n) => n + 1);
+/** What a finished save means for the status line and the pending patch. */
+function settle(outcome: SaveOutcome, patch: PlanPatch, tracker: SaveTracker) {
+  const { pending, inFlight, setSaveState, setFailures } = tracker;
+  if (outcome.ok) {
+    setFailures(0);
+    if (!pending.current && inFlight.current === 0) setSaveState("saved");
+  } else if (outcome.status === FORBIDDEN) {
+    setSaveState("forbidden");
+  } else if (!isTransient(outcome.status)) {
+    setSaveState("rejected");
+  } else {
+    // Put the change back underneath anything queued since, and try again later.
+    pending.current = pending.current ? mergePatch(patch, pending.current) : patch;
+    setSaveState("retrying");
+    setFailures((count) => count + 1);
   }
 }
 
-/** After the n-th consecutive transient failure, try again in 2 s × n (up to MAX_RETRIES). */
+/** After the n-th consecutive transient failure, retry in RETRY_STEP_MS × n (up to MAX_RETRIES). */
 function useRetry(failures: number, flush: () => void) {
   useEffect(() => {
     if (failures === 0 || failures > MAX_RETRIES) return;
-    const id = window.setTimeout(flush, 2000 * failures);
-    return () => window.clearTimeout(id);
+    const retry = window.setTimeout(flush, RETRY_STEP_MS * failures);
+    return () => window.clearTimeout(retry);
   }, [failures, flush]);
 }
 
-/** Flush with keepalive when the page is hidden or left; clear the debounce on unmount. */
-function useFlushOnLeave(
-  flush: (keepalive?: boolean) => void,
-  timer: RefObject<number | undefined>,
-) {
+/** Flush with keepalive when the page is hidden or left; cancel the debounce on unmount. */
+function useFlushOnLeave(flush: (keepalive?: boolean) => void, cancelDebounce: () => void) {
   useEffect(() => {
-    const debounce = timer;
-    const now = () => flush(true);
-    const onVisibility = () => document.visibilityState === "hidden" && now();
-    window.addEventListener("pagehide", now);
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      window.removeEventListener("pagehide", now);
-      document.removeEventListener("visibilitychange", onVisibility);
-      window.clearTimeout(debounce.current);
+    const flushNow = () => flush(true);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") flushNow();
     };
-  }, [flush, timer]);
+    window.addEventListener("pagehide", flushNow);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.removeEventListener("pagehide", flushNow);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      cancelDebounce();
+    };
+  }, [flush, cancelDebounce]);
 }

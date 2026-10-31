@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlanView } from "@/components/plan/PlanView";
 import { fixturePlan } from "../fixtures/plan";
 import { axeViolations } from "./axe";
+import { jsonResponse, respondWith } from "./fetch-stubs";
 
 vi.mock("@/components/three/lazy", () => ({
   LazyBudgetFlow: () => null,
@@ -10,14 +11,17 @@ vi.mock("@/components/three/lazy", () => ({
 }));
 vi.mock("@/three/bus", () => ({ setPalette: vi.fn(), setMood: vi.fn(), celebrate: vi.fn() }));
 
-const sumOf = (container: HTMLElement) => {
-  const lines = [...container.querySelectorAll("[data-amount]")].map((el) =>
-    Number(el.getAttribute("data-amount")),
+const EDIT_KEY = "k".repeat(43);
+
+/** Every budget line plus the contingency, read back from the rendered data attributes. */
+const budgetTotal = (container: HTMLElement) => {
+  const lines = [...container.querySelectorAll("[data-amount]")].map((element) =>
+    Number(element.getAttribute("data-amount")),
   );
   const contingency = Number(
     container.querySelector("[data-contingency]")?.getAttribute("data-contingency"),
   );
-  return lines.reduce((a, b) => a + b, 0) + contingency;
+  return lines.reduce((sum, amount) => sum + amount, 0) + contingency;
 };
 
 const openTab = (name: string) => fireEvent.click(screen.getByRole("tab", { name }));
@@ -27,13 +31,13 @@ beforeEach(() => {
   window.history.replaceState(null, "", "/");
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => new Response(JSON.stringify({ plan: {} }), { status: 200 })),
+    respondWith(() => jsonResponse({ plan: {} })),
   );
 });
 
 describe("PlanView", () => {
   it("opens on an overview of every chapter, with no axe violations", async () => {
-    const { container } = render(<PlanView plan={fixturePlan()} editKey={"k".repeat(43)} />);
+    const { container } = render(<PlanView plan={fixturePlan()} editKey={EDIT_KEY} />);
     expect(screen.getByRole("heading", { level: 2, name: "Riya's sangeet" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true");
     const overview = screen.getByRole("tabpanel", { name: "Overview" });
@@ -45,7 +49,7 @@ describe("PlanView", () => {
   });
 
   it("shows one chapter at a time and every chapter passes axe", async () => {
-    const { container } = render(<PlanView plan={fixturePlan()} editKey={"k".repeat(43)} />);
+    const { container } = render(<PlanView plan={fixturePlan()} editKey={EDIT_KEY} />);
     openTab("Ideas");
     expect(screen.getAllByText(/^Issue Nº 0/)).toHaveLength(3);
     expect(screen.queryByRole("tabpanel", { name: "Overview" })).toBeNull();
@@ -78,12 +82,12 @@ describe("PlanView", () => {
   });
 
   it("keeps the budget exact while a slider moves, and respects locks", () => {
-    const { container } = render(<PlanView plan={fixturePlan()} editKey={"k".repeat(43)} />);
+    const { container } = render(<PlanView plan={fixturePlan()} editKey={EDIT_KEY} />);
     openTab("Budget");
-    expect(sumOf(container)).toBe(1_200_000);
+    expect(budgetTotal(container)).toBe(1_200_000);
     const venue = screen.getByRole("slider", { name: "Venue" });
     fireEvent.change(venue, { target: { value: "50000" } });
-    expect(sumOf(container)).toBe(1_200_000);
+    expect(budgetTotal(container)).toBe(1_200_000);
     expect(container.querySelector('[data-category="venue"]')?.getAttribute("data-amount")).toBe(
       "50000",
     );
@@ -123,7 +127,7 @@ describe("PlanView", () => {
   });
 
   it("records actual spend and shows the variance", () => {
-    render(<PlanView plan={fixturePlan()} editKey={"k".repeat(43)} />);
+    render(<PlanView plan={fixturePlan()} editKey={EDIT_KEY} />);
     openTab("Budget");
     const input = screen.getByRole("textbox", { name: /spent so far on venue/i });
     fireEvent.change(input, { target: { value: "9,99,999" } });

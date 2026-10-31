@@ -7,24 +7,20 @@ import { formatDate, progress } from "@/lib/engine";
 import { SectionHead } from "./SectionHead";
 import { VendorFinder } from "./VendorFinder";
 
+type OnToggle = (category: BudgetCategory, done: boolean) => void;
+
 type Props = {
   planId: string;
   input: PublicPlan["input"];
   vendors: VendorItem[];
   editable: boolean;
   lang?: string;
-  onToggle: (c: BudgetCategory, done: boolean) => void;
+  onToggle: OnToggle;
 };
 
 /** Vendor checklist: book-by dates, questions, red flags and real nearby places. */
-export const VendorsSection = memo(function VendorsSection({
-  planId,
-  input,
-  vendors,
-  editable,
-  lang,
-  onToggle,
-}: Props) {
+export const VendorsSection = memo(function VendorsSection(props: Props) {
+  const { planId, input, vendors, editable, lang, onToggle } = props;
   const stats = progress(vendors);
   return (
     <section id="vendors" aria-labelledby="vendors-title" className="scroll-mt-20">
@@ -42,10 +38,10 @@ export const VendorsSection = memo(function VendorsSection({
         invents a vendor name.
       </SectionHead>
       <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {vendors.map((v) => (
-          <li key={v.category} className="reveal">
+        {vendors.map((item) => (
+          <li key={item.category} className="reveal">
             <VendorCard
-              item={v}
+              item={item}
               planId={planId}
               city={input.city}
               editable={editable}
@@ -65,58 +61,65 @@ type CardProps = {
   city: string;
   editable: boolean;
   lang?: string;
-  onToggle: Props["onToggle"];
+  onToggle: OnToggle;
 };
 
-function VendorCard({ item: v, planId, city, editable, lang, onToggle }: CardProps) {
-  const label = CATEGORY_LABELS[v.category];
-  const id = `vendor-${v.category}`;
+function VendorCard({ item, planId, city, editable, lang, onToggle }: CardProps) {
+  const titleId = `vendor-${item.category}-title`;
+  const late = item.overdue && !item.done;
   return (
     <article
-      aria-labelledby={`${id}-title`}
-      className={`panel flex h-full flex-col gap-4 p-5 sm:p-6 ${v.done ? "border-gold" : ""}`}
+      aria-labelledby={titleId}
+      className={`panel flex h-full flex-col gap-4 p-5 sm:p-6 ${item.done ? "border-gold" : ""}`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h4 id={`${id}-title`} className="text-2xl font-bold tracking-tight">
-            {label}
+          <h4 id={titleId} className="text-2xl font-bold tracking-tight">
+            {CATEGORY_LABELS[item.category]}
           </h4>
           <p className="tabular text-sm text-muted">
             Book by{" "}
-            <strong className={v.overdue && !v.done ? "text-ember-bright" : "text-gold"}>
-              {formatDate(v.bookBy)}
+            <strong className={late ? "text-ember-bright" : "text-gold"}>
+              {formatDate(item.bookBy)}
             </strong>
           </p>
         </div>
-        {editable ? (
-          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
-            <input
-              type="checkbox"
-              className="size-6 shrink-0"
-              checked={v.done}
-              onChange={(e) => onToggle(v.category, e.target.checked)}
-            />
-            Booked <span className="sr-only">{label}</span>
-          </label>
-        ) : (
-          <span className="eyebrow">{v.done ? "Booked" : "Not booked"}</span>
-        )}
+        <BookedStatus item={item} editable={editable} onToggle={onToggle} />
       </div>
-      <VendorBrief item={v} lang={lang} />
-      <VendorFinder planId={planId} category={v.category} city={city} />
+      <VendorBrief item={item} lang={lang} />
+      <VendorFinder planId={planId} category={item.category} city={city} />
     </article>
   );
 }
 
+type StatusProps = { item: VendorItem; editable: boolean; onToggle: OnToggle };
+
+/** A "Booked" checkbox for owners; a plain status for everyone else. */
+function BookedStatus({ item, editable, onToggle }: StatusProps) {
+  if (!editable) return <span className="eyebrow">{item.done ? "Booked" : "Not booked"}</span>;
+  return (
+    <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-sm font-semibold">
+      <input
+        type="checkbox"
+        className="size-6 shrink-0"
+        checked={item.done}
+        onChange={(event) => onToggle(item.category, event.target.checked)}
+      />
+      Booked <span className="sr-only">{CATEGORY_LABELS[item.category]}</span>
+    </label>
+  );
+}
+
 /** Questions and red flags, folded away until wanted so the checklist stays scannable. */
-function VendorBrief({ item: v, lang }: { item: VendorItem; lang?: string }) {
+function VendorBrief({ item, lang }: { item: VendorItem; lang?: string }) {
+  const { questions, redFlags } = item;
   return (
     <details className="group rounded-2xl border border-line/70">
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-2 text-sm font-semibold [&::-webkit-details-marker]:hidden">
         <span>What to ask</span>
         <span className="text-muted">
-          {v.questions.length} questions · {v.redFlags.length} red{" "}
-          {v.redFlags.length === 1 ? "flag" : "flags"}
+          {questions.length} questions · {redFlags.length} red{" "}
+          {redFlags.length === 1 ? "flag" : "flags"}
           <span
             aria-hidden="true"
             className="ml-2 inline-block text-gold transition-transform group-open:rotate-90"
@@ -127,15 +130,15 @@ function VendorBrief({ item: v, lang }: { item: VendorItem; lang?: string }) {
       </summary>
       <div className="flex flex-col gap-4 border-t border-line/60 px-4 py-4">
         <ul lang={lang} className="flex list-disc flex-col gap-1 pl-5">
-          {v.questions.map((q, i) => (
-            <li key={i}>{q}</li>
+          {questions.map((question, index) => (
+            <li key={index}>{question}</li>
           ))}
         </ul>
         <div>
           <p className="eyebrow mb-2 text-ember-bright">Red flags</p>
           <ul lang={lang} className="flex list-disc flex-col gap-1 pl-5 text-muted">
-            {v.redFlags.map((r, i) => (
-              <li key={i}>{r}</li>
+            {redFlags.map((flag, index) => (
+              <li key={index}>{flag}</li>
             ))}
           </ul>
         </div>

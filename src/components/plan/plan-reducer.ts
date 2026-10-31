@@ -22,10 +22,10 @@ export type PlanAction =
  * uses, so the browser shows exactly what will be saved. No AI call, no I/O.
  */
 export function planReducer(plan: PublicPlan, action: PlanAction): PublicPlan {
-  const ctx = { totalINR: plan.input.budgetINR, guests: plan.input.guests };
+  const totals = { totalINR: plan.input.budgetINR, guests: plan.input.guests };
   switch (action.type) {
     case "move":
-      return { ...plan, budget: rebalance(plan.budget, action.category, action.amountINR, ctx) };
+      return { ...plan, budget: rebalance(plan.budget, action.category, action.amountINR, totals) };
     case "lock":
       return { ...plan, budget: setLocked(plan.budget, action.category, action.locked) };
     case "actual":
@@ -48,5 +48,7 @@ export function planReducer(plan: PublicPlan, action: PlanAction): PublicPlan {
 
 /** The allocation edit list the PATCH endpoint expects, as a comparable key. */
 export function allocationKey(budget: PublicPlan["budget"]): string {
-  return budget.map((a) => `${a.category}:${a.amountINR}:${a.locked ? 1 : 0}`).join("|");
+  return budget
+    .map((line) => `${line.category}:${line.amountINR}:${line.locked ? 1 : 0}`)
+    .join("|");
 }

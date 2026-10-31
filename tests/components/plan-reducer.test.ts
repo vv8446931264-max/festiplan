@@ -3,8 +3,9 @@ import { describe, expect, it } from "vitest";
 import { allocationKey, planReducer } from "@/components/plan/plan-reducer";
 import { FIXTURE_TODAY, fixturePlan } from "../fixtures/plan";
 
-const total = (p: ReturnType<typeof fixturePlan>) =>
-  p.budget.reduce((s, a) => s + a.amountINR, 0) + p.contingencyINR;
+/** Every budget line plus the contingency. */
+const total = (plan: ReturnType<typeof fixturePlan>) =>
+  plan.budget.reduce((sum, line) => sum + line.amountINR, 0) + plan.contingencyINR;
 
 describe("planReducer", () => {
   it("moves a budget line and keeps the total exact", () => {

@@ -19,8 +19,10 @@ export function VendorFinder({ planId, category, city }: Props) {
 
   async function search() {
     setState({ kind: "busy" });
-    const res = await findVendors({ planId, category });
-    setState(res.ok ? { kind: "done", result: res } : { kind: "error", message: res.error });
+    const response = await findVendors({ planId, category });
+    setState(
+      response.ok ? { kind: "done", result: response } : { kind: "error", message: response.error },
+    );
   }
 
   return (
@@ -59,15 +61,15 @@ function Results({ result, label, city }: { result: VendorResult; label: string;
     <div className="flex flex-col gap-2">
       <p className="eyebrow">From Google Maps</p>
       <ul className="flex flex-col gap-1">
-        {result.places.map((p) => (
-          <li key={p.uri}>
+        {result.places.map((place) => (
+          <li key={place.uri}>
             <a
-              href={p.uri}
+              href={place.uri}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex min-h-8 items-center font-semibold"
             >
-              {p.title} <span className="sr-only">on Google Maps (opens in a new tab)</span>
+              {place.title} <span className="sr-only">on Google Maps (opens in a new tab)</span>
             </a>
           </li>
         ))}

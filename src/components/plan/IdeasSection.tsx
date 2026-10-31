@@ -10,8 +10,8 @@ type Props = { ideas: Idea[]; lang?: string };
 /** Three concepts laid out as magazine covers, each with its palette and menu. */
 export const IdeasSection = memo(function IdeasSection({ ideas, lang }: Props) {
   const [tinted, setTinted] = useState<number | null>(0);
-  const tint = (i: number) => {
-    const next = tinted === i ? null : i;
+  const toggleTint = (index: number) => {
+    const next = tinted === index ? null : index;
     setTinted(next);
     setPalette(next === null ? null : (ideas[next]?.palette ?? null));
   };
@@ -31,14 +31,14 @@ export const IdeasSection = memo(function IdeasSection({ ideas, lang }: Props) {
         more below.
       </SectionHead>
       <ol className="grid gap-5 lg:grid-cols-3">
-        {ideas.map((idea, i) => (
-          <li key={i} className="reveal">
+        {ideas.map((idea, index) => (
+          <li key={index} className="reveal">
             <IdeaCover
               idea={idea}
-              index={i}
+              issue={index + 1}
               lang={lang}
-              tinted={tinted === i}
-              onTint={() => tint(i)}
+              tinted={tinted === index}
+              onTint={() => toggleTint(index)}
             />
           </li>
         ))}
@@ -47,9 +47,9 @@ export const IdeasSection = memo(function IdeasSection({ ideas, lang }: Props) {
   );
 });
 
-type CoverProps = { idea: Idea; index: number; lang?: string; tinted: boolean; onTint: () => void };
+type CoverProps = { idea: Idea; issue: number; lang?: string; tinted: boolean; onTint: () => void };
 
-function IdeaCover({ idea, index, lang, tinted, onTint }: CoverProps) {
+function IdeaCover({ idea, issue, lang, tinted, onTint }: CoverProps) {
   const band = `linear-gradient(120deg, ${idea.palette.join(", ")})`;
   return (
     <article className="panel flex h-full flex-col overflow-hidden">
@@ -60,31 +60,16 @@ function IdeaCover({ idea, index, lang, tinted, onTint }: CoverProps) {
         style={{ background: band }}
       />
       <div className="flex flex-1 flex-col gap-5 p-6 sm:p-7">
-        <p className="eyebrow">Issue Nº 0{index + 1}</p>
+        <p className="eyebrow">Issue Nº 0{issue}</p>
         <h4 lang={lang} className="h3">
           {idea.name}
         </h4>
         <p lang={lang} className="text-cream/90">
           {idea.concept}
         </p>
-        <ul aria-label="Palette" className="flex flex-wrap gap-2">
-          {idea.palette.map((hex, i) => (
-            <li
-              key={i}
-              className="flex items-center gap-2 rounded-full border border-line py-1 pr-3 pl-1 font-mono text-xs uppercase"
-            >
-              <span
-                aria-hidden="true"
-                data-print-keep=""
-                className="size-6 rounded-full border border-cream/30"
-                style={{ background: hex }}
-              />
-              {hex}
-            </li>
-          ))}
-        </ul>
-        <List title="Décor" items={idea.decor} lang={lang} />
-        <List title="On the menu" items={idea.food} lang={lang} />
+        <PaletteSwatches palette={idea.palette} />
+        <BulletList title="Décor" items={idea.decor} lang={lang} />
+        <BulletList title="On the menu" items={idea.food} lang={lang} />
         <div>
           <p className="eyebrow mb-1">Music</p>
           <p lang={lang}>{idea.music}</p>
@@ -95,27 +80,56 @@ function IdeaCover({ idea, index, lang, tinted, onTint }: CoverProps) {
         >
           {idea.signatureMoment}
         </blockquote>
-        <button
-          type="button"
-          aria-pressed={tinted}
-          onClick={onTint}
-          className="btn btn-ghost no-print self-start text-sm aria-pressed:border-gold aria-pressed:text-gold"
-        >
-          <span aria-hidden="true">{tinted ? "●" : "○"}</span>
-          Tint the lanterns
-        </button>
+        <TintButton pressed={tinted} onToggle={onTint} />
       </div>
     </article>
   );
 }
 
-function List({ title, items, lang }: { title: string; items: string[]; lang?: string }) {
+/** Each palette colour as a swatch beside its hex code, so it reads without colour vision. */
+function PaletteSwatches({ palette }: { palette: string[] }) {
+  return (
+    <ul aria-label="Palette" className="flex flex-wrap gap-2">
+      {palette.map((hex, index) => (
+        <li
+          key={index}
+          className="flex items-center gap-2 rounded-full border border-line py-1 pr-3 pl-1 font-mono text-xs uppercase"
+        >
+          <span
+            aria-hidden="true"
+            data-print-keep=""
+            className="size-6 rounded-full border border-cream/30"
+            style={{ background: hex }}
+          />
+          {hex}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Toggles this concept's palette onto the lantern sky behind the page. */
+function TintButton({ pressed, onToggle }: { pressed: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      onClick={onToggle}
+      className="btn btn-ghost no-print self-start text-sm aria-pressed:border-gold aria-pressed:text-gold"
+    >
+      <span aria-hidden="true">{pressed ? "●" : "○"}</span>
+      Tint the lanterns
+    </button>
+  );
+}
+
+function BulletList({ title, items, lang }: { title: string; items: string[]; lang?: string }) {
   return (
     <div>
       <p className="eyebrow mb-2">{title}</p>
       <ul lang={lang} className="flex flex-col gap-1.5">
-        {items.map((item, i) => (
-          <li key={i} className="flex gap-2">
+        {items.map((item, index) => (
+          <li key={index} className="flex gap-2">
             <span aria-hidden="true" className="text-gold">
               ✦
             </span>

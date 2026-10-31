@@ -1,17 +1,14 @@
 "use client";
 
 import type { PublicPlan } from "@/lib/contracts";
-import { AskSection } from "./AskSection";
-import { BudgetSection } from "./BudgetSection";
-import { IdeasSection } from "./IdeasSection";
+import { renderChapter } from "./chapters";
 import { PlanHeader } from "./PlanHeader";
-import { PlanOverview } from "./PlanOverview";
-import { PlanTabs, TabPanel, useActiveTab, useUnfoldForPrint } from "./PlanTabs";
+import { PlanTabs, TabPanel } from "./PlanTabs";
 import { aiLang } from "./SectionHead";
-import { ShareSection } from "./ShareSection";
-import { TimelineSection } from "./TimelineSection";
+import { TABS } from "./tabs";
+import { useActiveTab } from "./useActiveTab";
 import { usePlanState } from "./usePlanState";
-import { VendorsSection } from "./VendorsSection";
+import { useUnfoldForPrint } from "./useUnfoldForPrint";
 
 type Props = {
   plan: PublicPlan;
@@ -27,68 +24,27 @@ type Props = {
  * Overview, Ideas, Budget, Timeline, Vendors, Ask and Share — one screen at a time
  * instead of one endless page. Server-renderable; browser-only work happens in effects.
  */
-export function PlanView({ plan: initial, editKey, focusOnMount, titleAs }: Props) {
-  const s = usePlanState(initial, editKey);
-  const { plan } = s;
-  const lang = aiLang(plan);
-  const [tab, setTab] = useActiveTab();
+export function PlanView({ plan: initialPlan, editKey, focusOnMount, titleAs }: Props) {
+  const planState = usePlanState(initialPlan, editKey);
+  const [activeTab, selectTab] = useActiveTab();
   useUnfoldForPrint();
+  const context = { planState, lang: aiLang(planState.plan), openTab: selectTab };
 
   return (
     <article aria-labelledby="plan-title" className="flex flex-col gap-8 sm:gap-10">
       <PlanHeader
-        plan={plan}
-        saveState={s.saveState}
-        editable={s.editable}
+        plan={planState.plan}
+        saveState={planState.saveState}
+        editable={planState.editable}
         focusOnMount={focusOnMount}
         titleAs={titleAs}
       />
-      <PlanTabs active={tab} onSelect={setTab} />
-      <TabPanel id="overview" active={tab === "overview"}>
-        <PlanOverview plan={plan} lang={lang} onOpen={setTab} />
-      </TabPanel>
-      <TabPanel id="ideas" active={tab === "ideas"}>
-        <IdeasSection ideas={plan.ai.ideas} lang={lang} />
-      </TabPanel>
-      <TabPanel id="budget" active={tab === "budget"}>
-        <BudgetSection
-          input={plan.input}
-          budget={plan.budget}
-          contingencyINR={plan.contingencyINR}
-          editable={s.editable}
-          onMove={s.moveBudget}
-          onLock={s.lockBudget}
-          onActual={s.recordActual}
-        />
-      </TabPanel>
-      <TabPanel id="timeline" active={tab === "timeline"}>
-        <TimelineSection
-          planId={plan.id}
-          input={plan.input}
-          timeline={plan.timeline}
-          aiTasks={plan.ai.tasks}
-          today={plan.today}
-          editable={s.editable}
-          onToggle={s.toggleTask}
-          lang={lang}
-        />
-      </TabPanel>
-      <TabPanel id="vendors" active={tab === "vendors"}>
-        <VendorsSection
-          planId={plan.id}
-          input={plan.input}
-          vendors={plan.vendors}
-          editable={s.editable}
-          onToggle={s.toggleVendor}
-          lang={lang}
-        />
-      </TabPanel>
-      <TabPanel id="ask" active={tab === "ask"}>
-        <AskSection planId={plan.id} lang={lang} />
-      </TabPanel>
-      <TabPanel id="share" active={tab === "share"}>
-        <ShareSection planId={plan.id} editKey={s.editKey} />
-      </TabPanel>
+      <PlanTabs active={activeTab} onSelect={selectTab} />
+      {TABS.map(({ id }) => (
+        <TabPanel key={id} id={id} active={id === activeTab}>
+          {renderChapter(id, context)}
+        </TabPanel>
+      ))}
     </article>
   );
 }

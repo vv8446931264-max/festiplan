@@ -11,6 +11,7 @@ export async function axeViolations(container: Element): Promise<string[]> {
     rules: { "color-contrast": { enabled: false } },
   });
   return results.violations.map(
-    (v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(", ")}`,
+    (violation) =>
+      `${violation.id}: ${violation.nodes.map((node) => node.target.join(" ")).join(", ")}`,
   );
 }

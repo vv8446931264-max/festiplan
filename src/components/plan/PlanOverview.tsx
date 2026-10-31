@@ -5,12 +5,19 @@ import { CATEGORY_COLORS, CATEGORY_PATTERNS } from "@/lib/category-style";
 import { CATEGORY_LABELS } from "@/lib/contracts/constants";
 import type { PublicPlan } from "@/lib/contracts";
 import { formatDateShort, formatINR, formatPercent, nextActions, progress } from "@/lib/engine";
-import type { TabId } from "./PlanTabs";
+import type { TabId } from "./tabs";
+import { ALL_TASKS_DONE } from "./TimelineSummary";
 import { TipsSection } from "./TipsSection";
+
+/** How much of each chapter the overview previews. */
+const SWATCHES_PER_IDEA = 4;
+const TOP_BUDGET_LINES = 4;
+const UPCOMING_TASKS = 3;
+const VENDORS_TO_BOOK = 3;
 
 type Props = { plan: PublicPlan; lang?: string; onOpen: (tab: TabId) => void };
 
-/** The plan at a glance: concepts, money, what's next and who to book — one screen, no scrolling marathon. */
+/** The plan at a glance: concepts, money, what's next and who to book — one screen. */
 export function PlanOverview({ plan, lang, onOpen }: Props) {
   return (
     <section aria-labelledby="overview-title" className="flex flex-col gap-10">
@@ -40,17 +47,10 @@ export function PlanOverview({ plan, lang, onOpen }: Props) {
   );
 }
 
-function Card({
-  title,
-  action,
-  onOpen,
-  children,
-}: {
-  title: string;
-  action: string;
-  onOpen: () => void;
-  children: ReactNode;
-}) {
+type CardProps = { title: string; action: string; onOpen: () => void; children: ReactNode };
+
+/** One overview card with a button that opens its chapter. */
+function Card({ title, action, onOpen, children }: CardProps) {
   return (
     <article className="panel flex flex-col gap-5 p-6 sm:p-7">
       <h4 className="eyebrow text-cream">{title}</h4>
@@ -65,12 +65,12 @@ function Card({
 function ConceptList({ plan, lang }: { plan: PublicPlan; lang?: string }) {
   return (
     <ol className="flex flex-col gap-4">
-      {plan.ai.ideas.map((idea, i) => (
-        <li key={i} className="flex items-center gap-4">
+      {plan.ai.ideas.map((idea, index) => (
+        <li key={index} className="flex items-center gap-4">
           <span aria-hidden="true" data-print-keep="" className="flex shrink-0 -space-x-1.5">
-            {idea.palette.slice(0, 4).map((hex, j) => (
+            {idea.palette.slice(0, SWATCHES_PER_IDEA).map((hex, swatch) => (
               <span
-                key={j}
+                key={swatch}
                 className="size-5 rounded-full border border-espresso"
                 style={{ background: hex }}
               />
@@ -86,17 +86,17 @@ function ConceptList({ plan, lang }: { plan: PublicPlan; lang?: string }) {
 }
 
 function MoneyGlance({ plan }: { plan: PublicPlan }) {
-  const top = plan.budget.slice(0, 4);
+  const { budgetINR, guests } = plan.input;
   return (
     <div className="flex flex-col gap-4">
-      <p className="h3 tabular">{formatINR(plan.input.budgetINR)}</p>
+      <p className="h3 tabular">{formatINR(budgetINR)}</p>
       <ul className="flex flex-col gap-3">
-        {top.map((a) => (
-          <li key={a.category} className="flex flex-col gap-1">
+        {plan.budget.slice(0, TOP_BUDGET_LINES).map((line) => (
+          <li key={line.category} className="flex flex-col gap-1">
             <span className="flex justify-between gap-3 text-sm">
-              <span className="font-semibold">{CATEGORY_LABELS[a.category]}</span>
+              <span className="font-semibold">{CATEGORY_LABELS[line.category]}</span>
               <span className="tabular">
-                {formatINR(a.amountINR)} · {formatPercent(a.percent)}
+                {formatINR(line.amountINR)} · {formatPercent(line.percent)}
               </span>
             </span>
             <span aria-hidden="true" className="h-2 rounded-full bg-line/60">
@@ -104,9 +104,9 @@ function MoneyGlance({ plan }: { plan: PublicPlan }) {
                 data-print-keep=""
                 className="block h-full rounded-full"
                 style={{
-                  width: `${Math.min(100, a.percent)}%`,
-                  backgroundColor: CATEGORY_COLORS[a.category],
-                  backgroundImage: CATEGORY_PATTERNS[a.category],
+                  width: `${Math.min(100, line.percent)}%`,
+                  backgroundColor: CATEGORY_COLORS[line.category],
+                  backgroundImage: CATEGORY_PATTERNS[line.category],
                 }}
               />
             </span>
@@ -115,7 +115,7 @@ function MoneyGlance({ plan }: { plan: PublicPlan }) {
       </ul>
       <p className="text-sm text-muted">
         {formatINR(plan.contingencyINR)} held back as contingency ·{" "}
-        {formatINR(Math.round(plan.input.budgetINR / plan.input.guests))} per guest
+        {formatINR(Math.round(budgetINR / guests))} per guest
       </p>
     </div>
   );
@@ -123,24 +123,24 @@ function MoneyGlance({ plan }: { plan: PublicPlan }) {
 
 function NextGlance({ plan, lang }: { plan: PublicPlan; lang?: string }) {
   const stats = progress(plan.timeline);
-  const next = nextActions(plan.timeline, 3);
+  const upcoming = nextActions(plan.timeline, UPCOMING_TASKS);
   return (
     <div className="flex flex-col gap-4">
       <p className="tabular font-semibold">
         {stats.done} of {stats.total} tasks done
       </p>
       <progress max={stats.total} value={stats.done} aria-label="Tasks done" className="meter" />
-      {next.length === 0 ? (
-        <p>Everything is ticked off. Go enjoy it.</p>
+      {upcoming.length === 0 ? (
+        <p>{ALL_TASKS_DONE}</p>
       ) : (
         <ol className="flex flex-col gap-2">
-          {next.map((t) => (
-            <li key={t.id} className="flex items-baseline gap-3">
+          {upcoming.map((task) => (
+            <li key={task.id} className="flex items-baseline gap-3">
               <span className="tabular w-14 shrink-0 font-mono text-sm text-gold">
-                {formatDateShort(t.due)}
+                {formatDateShort(task.due)}
               </span>
               <span lang={lang} className="font-semibold">
-                {t.title}
+                {task.title}
               </span>
             </li>
           ))}
@@ -151,23 +151,23 @@ function NextGlance({ plan, lang }: { plan: PublicPlan; lang?: string }) {
 }
 
 function VendorGlance({ plan }: { plan: PublicPlan }) {
-  const open = plan.vendors.filter((v) => !v.done).slice(0, 3);
   const stats = progress(plan.vendors);
+  const toBook = plan.vendors.filter((vendor) => !vendor.done).slice(0, VENDORS_TO_BOOK);
   return (
     <div className="flex flex-col gap-4">
       <p className="tabular font-semibold">
         {stats.done} of {stats.total} booked
       </p>
-      {open.length === 0 ? (
+      {toBook.length === 0 ? (
         <p>Every vendor is booked.</p>
       ) : (
         <ol className="flex flex-col gap-2">
-          {open.map((v) => (
-            <li key={v.category} className="flex items-baseline gap-3">
+          {toBook.map((vendor) => (
+            <li key={vendor.category} className="flex items-baseline gap-3">
               <span className="tabular w-14 shrink-0 font-mono text-sm text-gold">
-                {formatDateShort(v.bookBy)}
+                {formatDateShort(vendor.bookBy)}
               </span>
-              <span className="font-semibold">{CATEGORY_LABELS[v.category]}</span>
+              <span className="font-semibold">{CATEGORY_LABELS[vendor.category]}</span>
             </li>
           ))}
         </ol>
