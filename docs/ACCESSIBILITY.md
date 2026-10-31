@@ -1,8 +1,9 @@
 # Accessibility
 
-Target: **WCAG 2.2 AA**. Verified automatically by axe-core in two places — component tests
-(jsdom) and Playwright against the real rendered pages on desktop and mobile — with **zero
-violations** on `/` and `/plan/[id]`. Manual checks are listed below.
+Target: **WCAG 2.2 AA**. Verified automatically in three places — `eslint-plugin-jsx-a11y`
+in its `strict` preset on every component, axe-core in component tests (jsdom), and axe-core
+in Playwright against the real rendered pages on desktop and mobile — with **zero
+violations** on `/` and on every tab of `/plan/[id]`. Manual checks are listed below.
 
 ## What is in place
 
@@ -21,6 +22,7 @@ violations** on `/` and `/plan/[id]`. Manual checks are listed below.
 | Motion | `prefers-reduced-motion: reduce` → no WebGL, a static poster, instant reveals, no smooth scrolling; Save-Data and low-power devices also get the poster; no scroll hijacking — scroll is native and the camera only listens |
 | Canvas | Every canvas is `aria-hidden`; every number it shows is in the DOM (the budget table is the source of truth) |
 | Readability over the live sky | Text over the WebGL sky has a soft espresso halo, and lanterns dim to 30 % in the working chapters |
+| High contrast | Under `forced-colors: active` (Windows High Contrast) the system palette takes over; states that were shown only by colour get system-colour equivalents: the selected tab uses `Highlight`/`HighlightText`, primary buttons keep a `ButtonText` border, progress meters draw in `Highlight` on `Canvas`, and palette swatches (content, not decoration) keep their real colours |
 | Print | A print stylesheet produces a clean black-on-white plan |
 
 ## Checks performed (scripted in Chromium, 2026-10-24)

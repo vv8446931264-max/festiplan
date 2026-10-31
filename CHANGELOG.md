@@ -1,5 +1,30 @@
 # Changelog
 
+## [1.3.0] — 2026-10-31
+### Security
+- Deploys run only for CI runs triggered by a push to this repository (or a manual
+  dispatch on `main`): a pull request from a fork whose branch is named `main` can no
+  longer reach the deploy job and its Google Cloud identity.
+- Every GitHub Action is pinned to a full commit SHA; checkouts drop the token; repository
+  variables reach shell steps through `env`. New CodeQL workflow (code and workflows).
+- CI fails on high or critical advisories in production dependencies (`npm audit
+  --omit=dev`); a patched `glob` is pinned under `rimraf` so that tree audits clean.
+- `Cross-Origin-Resource-Policy: same-origin`; Permissions-Policy also denies payment and
+  USB; CI credential files are kept out of git, Docker and source uploads.
+### Changed
+- Prettier (100 columns, Tailwind class order) formats the whole codebase and CI checks it;
+  `.editorconfig` matches.
+- ESLint runs typescript-eslint `strictTypeChecked` + `stylisticTypeChecked` with type
+  information, plus `jsx-a11y` strict; every finding was fixed in code, and the only two
+  suppressions (`no-img-element` for a decorative poster and an OG-image `<img>`) state why.
+- The size rule now covers tests, e2e and scripts (files < 200 lines); large components,
+  scenes, templates, engine modules and test suites are split by responsibility, with
+  descriptive names and named constants throughout.
+### Added
+- `CONTRIBUTING.md`; `SECURITY.md` rewritten as a threat model with a control table that
+  points at the code; README sections for the chosen vertical, approach, how it works and
+  assumptions.
+
 ## [1.2.0] — 2026-10-24
 ### Added
 - Tabbed plan workspace: Overview, Ideas, Budget, Timeline, Vendors, Ask and Share are

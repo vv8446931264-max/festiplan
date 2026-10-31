@@ -1,25 +1,25 @@
 # Performance
 
-Measured on the production build (`npm run build`, Next.js 16.4 with Turbopack), gzip -9
-sizes of the files the landing page actually requests.
+Measured on the production build (`npm run build`, Next.js 16.4 with Turbopack) on
+2026-10-31: gzip -9 sizes, in KiB, of the files the landing page actually requests.
 
 ## Landing page payload
 
 | Asset | gzip | Notes |
 |---|---|---|
-| HTML (server-rendered) | 7 KB | Full content in the first response; no skeleton |
-| CSS | 7 KB | Tailwind v4, one file |
+| HTML (server-rendered) | 10.6 KB | Full content in the first response (FAQ and JSON-LD included); no skeleton |
+| CSS | 8.4 KB | Tailwind v4, one file |
 | JavaScript — React DOM | 70 KB | framework |
-| JavaScript — Next.js runtime | 43 KB | framework |
-| JavaScript — FestiPlan code | ~47 KB | planner, plan view, engine, client helpers |
-| **Initial JS total (modern browsers)** | **160 KB** | the 38 KB `nomodule` polyfill chunk is only fetched by legacy browsers |
+| JavaScript — Next.js runtime | 44 KB | framework |
+| JavaScript — FestiPlan code | ~49 KB | planner, tabbed plan workspace, engine, client helpers |
+| **Initial JS total (modern browsers)** | **163 KB** | the `nomodule` polyfill chunk is only fetched by legacy browsers |
 | three.js scene chunk | 135 KB | **not** in the initial load — imported after first paint via `requestIdleCallback`, and never on reduced-motion, Save-Data, ≤ 4-core or no-WebGL devices |
-| Poster (`public/poster.webp`) | 48.9 KB | static fallback, captured from the real scene |
+| Poster (`public/poster.webp`) | 48 KB | static fallback, captured from the real scene |
 | Fonts | self-hosted | `next/font`, `display: swap`, Latin subsets only |
 
 DESIGN.md originally budgeted 120 KB for landing JS; React 19 + the Next runtime alone are
-113 KB, so the honest budget we hold ourselves to is **≤ 50 KB of our own code on top of the
-framework** (currently ~47 KB). One regression we caught and fixed: importing constants
+114 KB, so the honest budget we hold ourselves to is **≤ 50 KB of our own code on top of the
+framework** (currently ~49 KB). One regression we caught and fixed: importing constants
 through the contracts barrel pulled Zod (~40 KB) into the browser; a lint rule
 (`@typescript-eslint/no-restricted-imports` in `eslint.config.mjs`) now prevents it.
 
@@ -27,8 +27,8 @@ through the contracts barrel pulled Zod (~40 KB) into the browser; a lint rule
 
 Every page is rendered per request so each response can carry a fresh CSP nonce
 (`src/proxy.ts`): no `'unsafe-inline'` scripts. Measured cost on the production build:
-**~23 ms** server time for the landing page on a laptop-class CPU (5 runs, `curl -w %{time_total}`),
-and the HTML is still the complete page (7 KB gzip).
+**~19 ms** server time for the landing page (median of 5 warm runs, `curl -w %{time_total}`),
+and the HTML is still the complete page (10.6 KB gzip).
 
 ## Runtime
 
