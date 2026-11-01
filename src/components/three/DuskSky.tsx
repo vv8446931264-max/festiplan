@@ -1,35 +1,15 @@
-import type { CSSProperties, Ref } from "react";
-import { DUSK_BACKGROUND, ESPRESSO } from "@/three/dusk";
+import type { Ref } from "react";
 
 /*
  * The fixed sky layer: rendered on the server (as next/dynamic's loading state)
  * and again by SceneBackdrop on the client with identical markup, so the dusk is
- * in the first paint and never flashes. z-index -1 puts it under all content; the
- * hoisted rule makes <body> a stacking context, otherwise body's own espresso
- * background (globals.css) would paint over a negative z-index layer.
+ * in the first paint and never flashes. z-index -1 puts it under all content; <body>
+ * is its own stacking context (`isolation: isolate` in globals.css), otherwise body's
+ * espresso background would paint over a negative z-index layer. Every style comes
+ * from classes (the sky and poster rules live in globals.css), so the markup carries
+ * no style attribute for the CSP to block; only runtime changes (scroll dimming, the
+ * canvas) are written, through the CSSOM.
  */
-
-const ROOT_STYLE: CSSProperties = {
-  position: "fixed",
-  inset: 0,
-  height: "100lvh",
-  zIndex: -1,
-  pointerEvents: "none",
-  overflow: "hidden",
-  background: ESPRESSO,
-};
-
-const SKY_STYLE: CSSProperties = { position: "absolute", inset: 0, background: DUSK_BACKGROUND };
-
-// The poster dims with scroll exactly like the live lanterns (--lantern-dim, set by the scroll hook).
-const POSTER_STYLE: CSSProperties = {
-  width: "100%",
-  height: "100%",
-  objectFit: "cover",
-  display: "block",
-  opacity: "var(--lantern-dim, 1)",
-  transition: "opacity 1.2s cubic-bezier(.2,.7,.2,1)",
-};
 
 /** Props for {@link DuskSky}; all optional so it can serve as a loading placeholder. */
 export type DuskSkyProps = {
@@ -49,15 +29,13 @@ export function DuskSky({ rootRef, skyRef, poster = false, tier = "pending" }: D
       aria-hidden="true"
       data-scene-backdrop=""
       data-tier={tier}
-      style={ROOT_STYLE}
+      className="pointer-events-none fixed inset-0 -z-1 h-lvh overflow-hidden bg-espresso"
     >
-      <style href="festiplan-backdrop" precedence="default">
-        {"body{isolation:isolate}"}
-      </style>
-      <div ref={skyRef} data-sky="" style={SKY_STYLE}>
+      <div ref={skyRef} data-sky="" className="dusk-sky absolute inset-0">
         {poster ? (
           // A plain <img>: decorative, fixed 1600×1000 WebP already sized for the
-          // job, and next/image's optimiser would only re-encode it.
+          // job, and next/image's optimiser would only re-encode it. It dims with
+          // scroll like the live lanterns (.dusk-poster reads --lantern-dim).
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src="/poster.webp"
@@ -65,7 +43,7 @@ export function DuskSky({ rootRef, skyRef, poster = false, tier = "pending" }: D
             width={1600}
             height={1000}
             decoding="async"
-            style={POSTER_STYLE}
+            className="dusk-poster block size-full object-cover"
           />
         ) : null}
       </div>

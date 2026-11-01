@@ -102,18 +102,41 @@ before the event. Phases by days before the event:
   message every route uses.
 - `server/plan-patch.ts` — `applyPatch(plan, patch)` → `{ ok: true, plan }` or a 422
   `PatchRejection`: the pure edit logic, run inside the store transaction.
-- `time.ts` — `todayIST()`, `dtstamp()`, `DAY_MS` (the single copy for server and AI code).
+- `time.ts` — `todayIST()`, `dtstamp()`, and the single copies of `DAY_MS` and `DAYS_PER_WEEK`
+  shared by the engine, the server and the AI layer.
+- `contracts/ai-limits.ts` — the one set of AI-plan counts and text limits; the Zod schema, the
+  Gemini JSON schema, the prompt text and the templates all derive from it (a golden test pins
+  the schema and prompts byte for byte). `contracts/api.ts` holds the request/response types
+  shared by routes and client.
 - `server/log.ts` — structured JSON logs for Cloud Logging (severity, route, status, latency; never user text).
 
 ## Proxy and CSP — `src/proxy.ts`
 
 Runs before every page (the matcher skips `/api`, `_next/static`, `_next/image`, icons and
 router prefetches). It mints a 128-bit nonce, sets `Content-Security-Policy` on the request,
-where Next.js reads the nonce and stamps it on its own scripts, and on the response. Scripts
-need the nonce (`'strict-dynamic'` covers the lazy WebGL chunks those scripts load), so there
-is no `'unsafe-inline'` for scripts. The root layout calls `connection()`, which renders every
+where Next.js reads the nonce and stamps it on its own scripts and inline styles, and on the
+response. Scripts and styles both need the nonce: `script-src 'self' 'nonce-…' 'strict-dynamic'`
+(`'strict-dynamic'` covers the lazy WebGL chunks those scripts load) and
+`style-src 'self' 'nonce-…'`. The production policy therefore contains no `'unsafe-inline'` at
+all. Development lists `'unsafe-inline'` in place of the style nonce, because the dev server
+injects styles without one and a nonce in the list makes browsers ignore `'unsafe-inline'`, and
+adds `'unsafe-eval'` for scripts. The root layout calls `connection()`, which renders every
 page per request; a prerendered page would ship scripts without a nonce. The other hardening
 headers stay static in `next.config.ts`, and API responses get `default-src 'none'`.
+
+**No inline styles.** A nonce cannot unlock a `style` attribute, so server-rendered markup
+carries none and no `<style>` element of its own. Static looks are Tailwind classes or rules in
+`globals.css` (`.dusk-sky`, `.dusk-poster`, `.palette-band`, and `[data-category-fill]`, whose
+colours mirror `CATEGORY_COLORS`); the hero's entrance delays are `[animation-delay:…]`
+utilities; the model's palette colours are SVG `fill` and `stop-color` attributes, which CSP does
+not treat as inline style; budget bar widths are SVG `width` attributes. Changes made at run
+time (scroll dimming through `--lantern-dim`, sky opacity, canvas size) go through the CSSOM,
+which CSP also leaves alone. `tests/components/no-inline-styles.test.tsx` renders the pages'
+server HTML and fails on any `style` attribute or `<style>`; `tests/security/csp-stylesheet.test.ts`
+keeps the CSS copies of `CATEGORY_COLORS` and `DUSK_BACKGROUND` in step with the TypeScript; and
+`e2e/csp.spec.ts` loads the pages from a production build and fails on any violation. The image
+routes (`opengraph-image.tsx`, the icons) do use style objects, but `next/og` renders them to
+PNG, not HTML.
 
 ## UI — `src/app`, `src/components`, `src/three`
 

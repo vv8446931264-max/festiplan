@@ -16,7 +16,8 @@ import { todayIST } from "@/lib/time";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const limit = perIpLimit("plan-refine", 10);
+const REFINES_PER_MINUTE = 10;
+const limit = perIpLimit("plan-refine", REFINES_PER_MINUTE);
 
 const STREAM_HEADERS = {
   "Content-Type": "text/plain; charset=utf-8",

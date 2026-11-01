@@ -11,8 +11,11 @@ export function newNonce(): string {
  * The Content-Security-Policy for one HTML response. Scripts run only when they carry
  * this request's nonce; `'strict-dynamic'` extends that trust to the chunks those
  * scripts load (lazy WebGL scenes), so there is no `'unsafe-inline'` for scripts.
- * Development adds `'unsafe-eval'` (React's dev tooling); production adds
- * `upgrade-insecure-requests`.
+ * Styles need the nonce too: pages ship no `style` attributes, Next.js stamps the nonce
+ * on its own inline styles, and runtime changes go through the CSSOM, which CSP allows.
+ * Development swaps the style nonce for `'unsafe-inline'` (dev tooling injects styles
+ * without one; a nonce in the list would switch `'unsafe-inline'` off) and adds
+ * `'unsafe-eval'` (React's dev tooling); production adds `upgrade-insecure-requests`.
  * @param nonce the value from `newNonce()` for this request
  * @param mode `NODE_ENV` (inlined at build time by Next.js)
  */
@@ -20,13 +23,13 @@ export function contentSecurityPolicy(
   nonce: string,
   mode: string | undefined = process.env.NODE_ENV,
 ): string {
-  const devEval = mode === "development" ? " 'unsafe-eval'" : "";
+  const development = mode === "development";
+  const devEval = development ? " 'unsafe-eval'" : "";
+  const styleSource = development ? "'unsafe-inline'" : `'nonce-${nonce}'`;
   const directives = [
     "default-src 'self'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${devEval}`,
-    // React style attributes (palette swatches, slider fills, animation delays) need inline
-    // styles; the only model-derived values are Zod-validated #RRGGBB colours.
-    "style-src 'self' 'unsafe-inline'",
+    `style-src 'self' ${styleSource}`,
     "img-src 'self' data: blob:",
     "font-src 'self'",
     "connect-src 'self'",

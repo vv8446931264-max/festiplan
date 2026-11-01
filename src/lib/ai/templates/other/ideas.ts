@@ -1,6 +1,6 @@
 import type { Idea, PlanInput } from "@/lib/contracts";
-import { isVegetarian } from "../shared";
-import type { Concept } from "../shared";
+import { isVegetarian } from "@/lib/ai/templates/shared";
+import type { Concept } from "@/lib/ai/templates/shared";
 
 const WARM_COURTYARD: Concept = {
   name: "Warm Courtyard Gathering",

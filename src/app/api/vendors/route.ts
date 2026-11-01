@@ -16,7 +16,8 @@ import { todayIST } from "@/lib/time";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const limit = perIpLimit("vendors", 10);
+const VENDOR_LOOKUPS_PER_MINUTE = 10;
+const limit = perIpLimit("vendors", VENDOR_LOOKUPS_PER_MINUTE);
 
 /**
  * POST /api/vendors — Maps-grounded vendors for one category of an existing plan.

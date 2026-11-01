@@ -1,5 +1,5 @@
 import type { Idea, PlanInput } from "@/lib/contracts";
-import { isVegetarian } from "../shared";
+import { isVegetarian } from "@/lib/ai/templates/shared";
 import { festivalFrom } from "./festival";
 
 /** The mela minus its name (which carries the festival) and its menu (which follows diet). */

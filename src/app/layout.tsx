@@ -36,6 +36,15 @@ export const viewport: Viewport = {
 };
 
 /**
+ * Keeps the sticky plan tab bar from covering whatever has keyboard focus (WCAG 2.4.11 Focus
+ * Not Obscured): the browser scrolls a focused element or an anchor target to just below this
+ * much of the viewport's top edge. 17 spacing units = 4.25rem = the bar's height in
+ * PlanTabs.tsx (`py-3` twice + `min-h-11` buttons); tests/components/scroll-padding.test.tsx
+ * fails if the two ever drift apart.
+ */
+const STICKY_BAR_SCROLL_PADDING = "scroll-pt-17";
+
+/**
  * Root layout: fonts, the lazy dusk backdrop and a skip link. Rendered per request
  * (`connection()`) because every page's scripts carry the CSP nonce minted by `src/proxy.ts`;
  * a prerendered page would ship scripts without it and be blocked.
@@ -43,7 +52,10 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   await connection();
   return (
-    <html lang="en" className={`${hanken.variable} ${literata.variable} ${jetbrains.variable}`}>
+    <html
+      lang="en"
+      className={`${hanken.variable} ${literata.variable} ${jetbrains.variable} ${STICKY_BAR_SCROLL_PADDING}`}
+    >
       <body>
         <a
           href="#main"

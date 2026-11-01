@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { ZodType } from "zod";
+import type { ErrorBody, Issue } from "@/lib/contracts";
 import { readJson } from "@/lib/security/body";
 import { clientKey } from "@/lib/security/ip";
 import { isSameOrigin } from "@/lib/security/origin";
@@ -26,11 +27,9 @@ export function json(data: unknown, init: { status?: number; headers?: HeaderMap
 
 /** A plain-language error response: `{ error }` with the given status. */
 export function problem(status: number, message: string, extraHeaders: HeaderMap = {}): Response {
-  return json({ error: message }, { status, headers: extraHeaders });
+  const body: ErrorBody = { error: message };
+  return json(body, { status, headers: extraHeaders });
 }
-
-/** One field-level validation problem, e.g. `{ path: "guests", message: "…" }`. */
-export type Issue = { path: string; message: string };
 
 /** Flattens Zod issues into `{ path, message }` pairs (dotted paths). */
 export function toIssues(error: {
@@ -43,7 +42,8 @@ export function toIssues(error: {
 
 /** 400 with `{ error, issues }` for a body that failed schema validation. */
 export function invalid(issues: Issue[], message = "Some details need another look."): Response {
-  return json({ error: message, issues }, { status: 400 });
+  const body: ErrorBody = { error: message, issues };
+  return json(body, { status: 400 });
 }
 
 /** Outcome of `readBody`: the validated body, or the error response to send instead. */

@@ -92,7 +92,7 @@ type InputProps = {
   onCommit: (amountINR: number | null) => void;
 };
 
-/** "Spent so far" for owners: validates on blur or Enter, shows an inline error, saves real changes only. */
+/** "Spent so far" for owners: validates on blur or Enter, saves real changes only, shows an inline error. */
 function ActualInput({ label, value, onCommit }: InputProps) {
   const [draft, setDraft] = useState(value === null ? "" : String(value));
   const [error, setError] = useState<string | null>(null);
@@ -122,11 +122,20 @@ function ActualInput({ label, value, onCommit }: InputProps) {
         className="field min-h-11 w-32 py-1 text-right"
         placeholder="₹0"
       />
-      {error && (
-        <p id={errorId} className="max-w-48 text-right text-xs font-semibold text-ember-bright">
-          {error}
-        </p>
-      )}
+      {error && <SpendError id={errorId} message={error} />}
     </div>
+  );
+}
+
+/**
+ * The inline "spent so far" error. `role="alert"` announces it the moment it appears, even
+ * though focus has already moved on (the check runs on blur); the field's `aria-describedby`
+ * points here, so it is read again when the field is revisited.
+ */
+function SpendError({ id, message }: { id: string; message: string }) {
+  return (
+    <p id={id} role="alert" className="max-w-48 text-right text-xs font-semibold text-ember-bright">
+      {message}
+    </p>
   );
 }

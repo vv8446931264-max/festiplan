@@ -21,7 +21,7 @@ import dynamic from "next/dynamic";
 import { DuskSky } from "./DuskSky";
 
 function FlowPlaceholder() {
-  return <div aria-hidden="true" style={{ width: "100%", aspectRatio: "4 / 3" }} />;
+  return <div aria-hidden="true" className="aspect-[4/3] w-full" />;
 }
 
 /** Fixed dusk backdrop with the lantern scene; place once, first in <body>. No props. */

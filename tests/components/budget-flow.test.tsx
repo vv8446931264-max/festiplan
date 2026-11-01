@@ -2,6 +2,7 @@ import { act, fireEvent, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type * as TierModule from "@/three/tier";
 import type { Tier } from "@/three/tier";
+import { setAnimationPaused } from "@/components/three/animation-pause";
 import { BudgetFlow } from "@/components/three/BudgetFlow";
 import { resetTierCache } from "@/components/three/use-tier";
 import {
@@ -27,7 +28,10 @@ beforeEach(() => {
   createBudgetFlowScene.mockReset();
 });
 
-afterEach(restoreBrowserFakes);
+afterEach(() => {
+  act(() => setAnimationPaused(false));
+  restoreBrowserFakes();
+});
 
 describe("BudgetFlow", () => {
   it("renders an aria-hidden static fallback with one bar per category", () => {
@@ -53,11 +57,12 @@ describe("BudgetFlow", () => {
   it("keeps a fixed 4:3 box unless the caller passes an aspect class", () => {
     forced.tier = "off";
     const plain = render(<BudgetFlow allocations={[]} highlight={null} />);
-    expect(plain.container.firstElementChild?.getAttribute("style")).toContain("aspect-ratio");
+    expect(plain.container.firstElementChild).toHaveClass("aspect-[4/3]");
     const sized = render(
       <BudgetFlow allocations={[]} highlight={null} className="aspect-[16/9] w-full" />,
     );
-    expect(sized.container.firstElementChild?.getAttribute("style")).not.toContain("aspect-ratio");
+    expect(sized.container.firstElementChild).toHaveClass("aspect-[16/9]");
+    expect(sized.container.firstElementChild).not.toHaveClass("aspect-[4/3]");
   });
 
   it("loads the scene when visible, syncs props, reports hover and pauses off-screen", async () => {
@@ -78,9 +83,7 @@ describe("BudgetFlow", () => {
     act(() => intersect(true));
     await waitFor(() => expect(createBudgetFlowScene).toHaveBeenCalledOnce());
     expect(flow.api.setAllocations).toHaveBeenCalledWith(ALLOCATIONS);
-    await waitFor(() =>
-      expect(view.container.querySelector("svg")?.getAttribute("style")).toContain("opacity: 0"),
-    );
+    await waitFor(() => expect(view.container.querySelector("svg")).toHaveClass("opacity-0"));
     act(() => flow.hover("venue"));
     expect(onHighlight).toHaveBeenLastCalledWith("venue");
     const next = ALLOCATIONS.map((line) =>

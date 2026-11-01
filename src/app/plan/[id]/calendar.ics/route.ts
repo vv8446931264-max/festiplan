@@ -1,5 +1,6 @@
 import { buildIcs, planTitle } from "@/lib/engine";
 import { perIpLimit, problem, runGuards, withRoute } from "@/lib/server/http";
+import type { IdRouteContext } from "@/lib/server/http";
 import { PLAN_NOT_FOUND, getPublicPlan, isPlanId } from "@/lib/server/plan-service";
 import { dtstamp, todayIST } from "@/lib/time";
 
@@ -8,15 +9,13 @@ export const runtime = "nodejs";
 /** Always rendered per request: the timeline changes as tasks are ticked off. */
 export const dynamic = "force-dynamic";
 
-type RouteContext = { params: Promise<{ id: string }> };
-
 const ICS_DOWNLOADS_PER_MINUTE = 60;
 const rateLimit = perIpLimit("plan-ics", ICS_DOWNLOADS_PER_MINUTE);
 
 /** GET /plan/[id]/calendar.ics — the timeline as an RFC 5545 download. 200 · 404 · 429. */
 export const GET = withRoute(
   "GET /plan/[id]/calendar.ics",
-  async (req: Request, context: RouteContext) => {
+  async (req: Request, context: IdRouteContext) => {
     const blocked = runGuards(req, rateLimit);
     if (blocked) return blocked;
     const { id } = await context.params;

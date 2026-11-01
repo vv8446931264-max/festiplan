@@ -3,7 +3,7 @@
 import { memo, useState } from "react";
 import { LazyBudgetFlow } from "@/components/three/lazy";
 import type { Allocation, BudgetCategory, PublicPlan } from "@/lib/contracts";
-import { formatINR } from "@/lib/engine";
+import { allocatedTotal, formatINR } from "@/lib/engine";
 import { BudgetSliders } from "./BudgetSliders";
 import { BudgetTable } from "./BudgetTable";
 import { SectionHead } from "./SectionHead";
@@ -80,7 +80,7 @@ type CheckProps = { budget: Allocation[]; contingencyINR: number; totalINR: numb
 
 /** The contingency held back, and proof that lines plus contingency add up to the total. */
 function BudgetCheck({ budget, contingencyINR, totalINR }: CheckProps) {
-  const allocatedINR = budget.reduce((sum, line) => sum + line.amountINR, 0) + contingencyINR;
+  const allocatedINR = allocatedTotal(budget, contingencyINR);
   return (
     <p className="mt-6 flex flex-wrap items-center gap-3 text-sm">
       <span

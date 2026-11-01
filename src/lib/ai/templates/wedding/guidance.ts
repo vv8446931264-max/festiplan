@@ -1,5 +1,5 @@
 import type { BudgetWeight, Tip, VendorGuide } from "@/lib/contracts";
-import { tip, vendor, weight } from "../shared";
+import { tip, vendor, weight } from "@/lib/ai/templates/shared";
 
 /** Relative budget priorities for a multi-function Indian wedding. */
 export const WEDDING_WEIGHTS: BudgetWeight[] = [

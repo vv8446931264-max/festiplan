@@ -1,6 +1,7 @@
 import { CATEGORY_LABELS } from "@/lib/contracts";
 import type { PublicPlan } from "@/lib/contracts";
 import { formatDate, formatINR, nextActions } from "@/lib/engine";
+import { TEMPLATE_ANSWER_PREFIX } from "./answer-source";
 import { getAi, thinkingFor } from "./client";
 import type { AiHandle } from "./client";
 import { SYSTEM_REFINE, dataBlock, languageName } from "./prompts";
@@ -10,8 +11,8 @@ export type RefineDeps = { ai?: AiHandle | null; timeoutMs?: number };
 
 /** Deadline for one streamed answer, first token to last. */
 export const REFINE_TIMEOUT_MS = 30_000;
-/** First line of every deterministic answer, so readers (and tests) can tell it apart. */
-export const TEMPLATE_ANSWER_PREFIX = "Template answer — AI unavailable.";
+// Defined in the dependency-free answer-source.ts, so the browser can spot it without this module.
+export { TEMPLATE_ANSWER_PREFIX };
 
 /** Output ceiling for one answer; the prompt asks for at most 180 words. */
 const REFINE_MAX_TOKENS = 1024;

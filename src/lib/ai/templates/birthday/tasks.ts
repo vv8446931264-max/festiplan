@@ -1,5 +1,5 @@
 import type { AiTask } from "@/lib/contracts";
-import { task } from "../shared";
+import { task } from "@/lib/ai/templates/shared";
 
 /** A birthday from guest list to thank-you notes, with the kids/adults split built in. */
 export const BIRTHDAY_TASKS: AiTask[] = [

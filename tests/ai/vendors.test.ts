@@ -5,6 +5,7 @@ import { TtlCache } from "@/lib/ai/cache";
 import { clearVendorCache, findVendors, groundedPlaces, vendorQueryText } from "@/lib/ai/vendors";
 import type { VendorLookup } from "@/lib/ai/vendors";
 import type { VendorResult } from "@/lib/contracts";
+import { DAY_MS } from "@/lib/time";
 import { fakeAi, promptText } from "../server/fixtures";
 
 const query: VendorLookup = { city: "Jaipur", category: "catering", eventType: "wedding" };
@@ -75,7 +76,7 @@ describe("findVendors", () => {
   });
 
   it("caches grounded results per city (case-insensitive), category and event type", async () => {
-    const cache = new TtlCache<VendorResult>(10, 86_400_000);
+    const cache = new TtlCache<VendorResult>(10, DAY_MS);
     const { handle, calls } = fakeAi([
       grounded([{ title: "A", uri: "https://maps.google.com/?cid=1" }]),
     ]);

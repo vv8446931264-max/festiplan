@@ -1,3 +1,5 @@
+import { BRAND_COLORS } from "@/lib/brand-colors";
+
 /**
  * The dusk sky, defined once (docs/DESIGN.md §3 `--dusk`). The DOM backdrop paints
  * it with CSS; the lantern scene re-creates the same vertical ramp inside its
@@ -5,10 +7,13 @@
  * three.js import — the SSR'd backdrop and the poster harness use this too.
  */
 
+/** Espresso, the page colour the sky dissolves into (one definition: `BRAND_COLORS`). */
+export const ESPRESSO = BRAND_COLORS.espresso;
+
 /**
  * Vertical ramp, top → bottom: the gradient stops #250187 → #8C019C → #CD197D →
  * #E9500E → #FFBF02 read as zenith → horizon, each mixed into espresso so cream
- * text stays ≥ 4.5:1 on top of it, then the "ground" falls into espresso #100904.
+ * text stays ≥ 4.5:1 on top of it, then the "ground" falls into espresso.
  */
 export const DUSK_STOPS: readonly { at: number; color: string }[] = [
   { at: 0, color: "#0c0620" },
@@ -18,11 +23,8 @@ export const DUSK_STOPS: readonly { at: number; color: string }[] = [
   { at: 0.63, color: "#5a1b2b" },
   { at: 0.72, color: "#3c1810" },
   { at: 0.84, color: "#1a0e06" },
-  { at: 1, color: "#100904" },
+  { at: 1, color: ESPRESSO },
 ];
-
-/** Espresso, the page colour the sky dissolves into. */
-export const ESPRESSO = "#100904";
 
 /** 180 px tile of SVG fractal-noise film grain (~3 % white): hides 8-bit banding. */
 const GRAIN =

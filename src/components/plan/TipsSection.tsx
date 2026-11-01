@@ -1,5 +1,6 @@
 import { memo } from "react";
 import type { Tip, TipKind } from "@/lib/contracts";
+import { Heading } from "./Heading";
 
 const KIND_LABELS: Record<TipKind, string> = {
   sustainability: "Lighter on the planet",
@@ -18,9 +19,9 @@ export const TipsSection = memo(function TipsSection({
 }) {
   return (
     <section aria-labelledby="tips-title" className="reveal">
-      <h3 id="tips-title" className="eyebrow mb-6 border-t border-line pt-6">
+      <Heading depth={2} id="tips-title" className="eyebrow mb-6 border-t border-line pt-6">
         Small things that matter
-      </h3>
+      </Heading>
       <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {tips.map((tip, i) => (
           <li key={i} className="panel flex flex-col gap-2 p-5">

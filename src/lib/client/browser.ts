@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { todayIST } from "../time";
+import { todayIST } from "@/lib/time";
 
 /** These values fire no change events; React re-reads the snapshot on every render instead. */
 const subscribeToNothing = (): (() => void) => () => undefined;

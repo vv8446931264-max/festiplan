@@ -2,16 +2,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as createPlanRoute } from "@/app/api/plan/route";
 import { POST as vendors } from "@/app/api/vendors/route";
-import type { PlanInput, PublicPlan } from "@/lib/contracts";
+import type { CreatedPlan, ErrorBody, PlanInput } from "@/lib/contracts";
 import { bodyOf, futureInput, jsonRequest, noCtx, offlineEnv } from "./request";
-import type { ErrorBody } from "./request";
 
 beforeEach(offlineEnv);
 afterEach(() => vi.unstubAllEnvs());
 
 async function planId(overrides: Partial<PlanInput> = {}): Promise<string> {
   const res = await createPlanRoute(jsonRequest("/api/plan", futureInput(overrides)), noCtx);
-  return ((await res.json()) as { plan: PublicPlan }).plan.id;
+  return ((await res.json()) as CreatedPlan).plan.id;
 }
 
 const lookup = (body: unknown, headers: Record<string, string> = {}) =>

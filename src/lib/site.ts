@@ -31,15 +31,5 @@ export const IMAGE_ROUTES = {
   apple: "/apple-icon",
 } as const;
 
-/** Brand colours for places CSS cannot reach (image routes, manifest); mirrors `globals.css`. */
-export const BRAND_COLORS = {
-  espresso: "#100904",
-  night: "#1a0f08",
-  cream: "#ffedd7",
-  muted: "#bbac97",
-  gold: "#ffbf02",
-  ember: "#dc5000",
-  emberDeep: "#b54200",
-  magenta: "#cd197d",
-  plum: "#8c019c",
-} as const;
+/** Brand colours for places CSS cannot reach (image routes, manifest); see `brand-colors.ts`. */
+export { BRAND_COLORS } from "@/lib/brand-colors";

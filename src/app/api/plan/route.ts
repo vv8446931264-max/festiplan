@@ -1,4 +1,5 @@
 import { LIMITS, PlanInputSchema, checkEventDate } from "@/lib/contracts";
+import type { CreatedPlan } from "@/lib/contracts";
 import {
   aiGlobalLimit,
   invalid,
@@ -15,7 +16,8 @@ import { todayIST } from "@/lib/time";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const limit = perIpLimit("plan-create", 5);
+const PLAN_CREATES_PER_MINUTE = 5;
+const limit = perIpLimit("plan-create", PLAN_CREATES_PER_MINUTE);
 
 /**
  * POST /api/plan — validates a brief, generates and stores a plan.
@@ -34,5 +36,6 @@ export const POST = withRoute("POST /api/plan", async (req: Request) => {
   const busy = aiGlobalLimit(req);
   if (busy) return busy;
   const { plan, editKey } = await createPlan(body.data, today);
-  return json({ plan, editKey }, { status: 201, headers: { Location: `/plan/${plan.id}` } });
+  const created = { plan, editKey } satisfies CreatedPlan;
+  return json(created, { status: 201, headers: { Location: `/plan/${plan.id}` } });
 });

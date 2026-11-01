@@ -4,6 +4,7 @@ import { memo } from "react";
 import { CATEGORY_LABELS } from "@/lib/contracts/constants";
 import type { BudgetCategory, PublicPlan, VendorItem } from "@/lib/contracts";
 import { formatDate, progress } from "@/lib/engine";
+import { Heading } from "./Heading";
 import { SectionHead } from "./SectionHead";
 import { VendorFinder } from "./VendorFinder";
 
@@ -74,14 +75,22 @@ function VendorCard({ item, planId, city, editable, lang, onToggle }: CardProps)
     >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h4 id={titleId} className="text-2xl font-bold tracking-tight">
+          <Heading depth={2} id={titleId} className="text-2xl font-bold tracking-tight">
             {CATEGORY_LABELS[item.category]}
-          </h4>
-          <p className="tabular text-sm text-muted">
-            Book by{" "}
-            <strong className={late ? "text-ember-bright" : "text-gold"}>
-              {formatDate(item.bookBy)}
-            </strong>
+          </Heading>
+          <p className="tabular flex flex-wrap items-center gap-x-2 text-sm text-muted">
+            <span>
+              Book by{" "}
+              <strong className={late ? "text-ember-bright" : "text-gold"}>
+                {formatDate(item.bookBy)}
+              </strong>
+            </span>
+            {/* Colour is never the only cue (WCAG 1.4.1): the same text badge as overdue tasks. */}
+            {late && (
+              <span className="eyebrow rounded-full border border-ember-bright px-2 text-ember-bright">
+                Overdue
+              </span>
+            )}
           </p>
         </div>
         <BookedStatus item={item} editable={editable} onToggle={onToggle} />

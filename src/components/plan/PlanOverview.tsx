@@ -1,10 +1,17 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { CATEGORY_COLORS, CATEGORY_PATTERNS } from "@/lib/category-style";
 import { CATEGORY_LABELS } from "@/lib/contracts/constants";
 import type { PublicPlan } from "@/lib/contracts";
-import { formatDateShort, formatINR, formatPercent, nextActions, progress } from "@/lib/engine";
+import {
+  amountPerGuest,
+  formatDateShort,
+  formatINR,
+  formatPercent,
+  nextActions,
+  progress,
+} from "@/lib/engine";
+import { Heading } from "./Heading";
 import type { TabId } from "./tabs";
 import { ALL_TASKS_DONE } from "./TimelineSummary";
 import { TipsSection } from "./TipsSection";
@@ -21,9 +28,9 @@ type Props = { plan: PublicPlan; lang?: string; onOpen: (tab: TabId) => void };
 export function PlanOverview({ plan, lang, onOpen }: Props) {
   return (
     <section aria-labelledby="overview-title" className="flex flex-col gap-10">
-      <h3 id="overview-title" className="sr-only">
+      <Heading depth={1} id="overview-title" className="sr-only">
         Plan overview
-      </h3>
+      </Heading>
       <div className="grid gap-5 lg:grid-cols-2">
         <Card title="Three concepts" action="See the ideas" onOpen={() => onOpen("ideas")}>
           <ConceptList plan={plan} lang={lang} />
@@ -53,7 +60,9 @@ type CardProps = { title: string; action: string; onOpen: () => void; children: 
 function Card({ title, action, onOpen, children }: CardProps) {
   return (
     <article className="panel flex flex-col gap-5 p-6 sm:p-7">
-      <h4 className="eyebrow text-cream">{title}</h4>
+      <Heading depth={2} className="eyebrow text-cream">
+        {title}
+      </Heading>
       <div className="flex-1">{children}</div>
       <button type="button" onClick={onOpen} className="btn btn-ghost no-print self-start text-sm">
         {action} <span aria-hidden="true">→</span>
@@ -69,11 +78,10 @@ function ConceptList({ plan, lang }: { plan: PublicPlan; lang?: string }) {
         <li key={index} className="flex items-center gap-4">
           <span aria-hidden="true" data-print-keep="" className="flex shrink-0 -space-x-1.5">
             {idea.palette.slice(0, SWATCHES_PER_IDEA).map((hex, swatch) => (
-              <span
-                key={swatch}
-                className="size-5 rounded-full border border-espresso"
-                style={{ background: hex }}
-              />
+              // A 20 px disc with an espresso rim; the colour is an SVG attribute, not a style.
+              <svg key={swatch} viewBox="0 0 20 20" className="size-5">
+                <circle cx="10" cy="10" r="9.5" fill={hex} className="stroke-espresso" />
+              </svg>
             ))}
           </span>
           <span lang={lang} className="text-lg font-bold tracking-tight">
@@ -100,14 +108,12 @@ function MoneyGlance({ plan }: { plan: PublicPlan }) {
               </span>
             </span>
             <span aria-hidden="true" className="h-2 rounded-full bg-line/60">
-              <span
+              {/* Width from an attribute, colour and pattern from globals.css: no inline style. */}
+              <svg
                 data-print-keep=""
+                data-category-fill={line.category}
+                width={`${Math.min(100, line.percent)}%`}
                 className="block h-full rounded-full"
-                style={{
-                  width: `${Math.min(100, line.percent)}%`,
-                  backgroundColor: CATEGORY_COLORS[line.category],
-                  backgroundImage: CATEGORY_PATTERNS[line.category],
-                }}
               />
             </span>
           </li>
@@ -115,7 +121,7 @@ function MoneyGlance({ plan }: { plan: PublicPlan }) {
       </ul>
       <p className="text-sm text-muted">
         {formatINR(plan.contingencyINR)} held back as contingency ·{" "}
-        {formatINR(Math.round(budgetINR / guests))} per guest
+        {formatINR(amountPerGuest(budgetINR, guests))} per guest
       </p>
     </div>
   );

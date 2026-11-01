@@ -1,8 +1,12 @@
 import type { ReactNode } from "react";
+import { Heading } from "./Heading";
 
 type Props = { id: string; number: string; kicker: string; title: ReactNode; children?: ReactNode };
 
-/** Editorial chapter heading: mono kicker, big headline, optional lead. */
+/**
+ * Editorial chapter heading: mono kicker, big headline, optional lead. The headline is one
+ * level below the plan title (h2 on the share page, h3 inside the landing page).
+ */
 export function SectionHead({ id, number, kicker, title, children }: Props) {
   return (
     <div className="legible mb-8 grid gap-4 border-t border-line pt-6 lg:grid-cols-[1fr_2fr] lg:gap-10">
@@ -10,9 +14,9 @@ export function SectionHead({ id, number, kicker, title, children }: Props) {
         Nº {number} — {kicker}
       </p>
       <div className="flex flex-col gap-4">
-        <h3 id={`${id}-title`} className="h2">
+        <Heading depth={1} id={`${id}-title`} className="h2">
           {title}
-        </h3>
+        </Heading>
         {children && <div className="lead max-w-3xl text-muted">{children}</div>}
       </div>
     </div>

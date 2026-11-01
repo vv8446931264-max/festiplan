@@ -1,23 +1,23 @@
 "use client";
 
+import { EVENT_TYPES, EVENT_TYPE_LABELS } from "@/lib/contracts/constants";
 import type { EventType } from "@/lib/contracts";
 
 type EventTypeOption = { value: EventType; label: string; note: string };
 
-const EVENT_TYPE_OPTIONS: readonly EventTypeOption[] = [
-  {
-    value: "wedding",
-    label: "Wedding",
-    note: "Haldi to reception — every function, every family.",
-  },
-  { value: "birthday", label: "Birthday", note: "Age-aware themes, cake, games and return gifts." },
-  {
-    value: "community",
-    label: "Community",
-    note: "Festivals, society melas, fundraisers, volunteers.",
-  },
-  { value: "other", label: "Something else", note: "Anniversaries, naming ceremonies, reunions." },
-];
+/** The line under each event type's name. */
+const EVENT_TYPE_NOTES: Record<EventType, string> = {
+  wedding: "Haldi to reception — every function, every family.",
+  birthday: "Age-aware themes, cake, games and return gifts.",
+  community: "Festivals, society melas, fundraisers, volunteers.",
+  other: "Anniversaries, naming ceremonies, reunions.",
+};
+
+const EVENT_TYPE_OPTIONS: readonly EventTypeOption[] = EVENT_TYPES.map((value) => ({
+  value,
+  label: EVENT_TYPE_LABELS[value],
+  note: EVENT_TYPE_NOTES[value],
+}));
 
 const CARD_CLASS =
   "group relative flex min-h-36 cursor-pointer flex-col justify-between rounded-3xl border border-line bg-espresso/70 p-4 transition-colors duration-200 hover:border-cream has-[:checked]:border-gold has-[:checked]:bg-brown has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-offset-3 has-[:focus-visible]:outline-ember-bright sm:p-5";

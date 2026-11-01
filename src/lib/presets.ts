@@ -1,5 +1,5 @@
-import type { PlanInput } from "./contracts";
-import { addDays } from "./engine";
+import type { PlanInput } from "@/lib/contracts";
+import { addDays } from "@/lib/engine";
 
 /** Constraint tags offered as toggles in the brief form. */
 export const CONSTRAINT_OPTIONS = [
@@ -19,7 +19,6 @@ export const CONSTRAINT_OPTIONS = [
 export type Preset = {
   id: "sangeet" | "birthday" | "mela";
   label: string;
-  persona: string;
   daysAhead: number;
   input: Omit<PlanInput, "eventDate">;
 };
@@ -29,7 +28,6 @@ export const PRESETS: readonly Preset[] = [
   {
     id: "sangeet",
     label: "Priya's sangeet · Jaipur · 180 guests · ₹12L",
-    persona: "Priya, 27 — her sister's sangeet",
     daysAhead: 150,
     input: {
       eventType: "wedding",
@@ -45,7 +43,6 @@ export const PRESETS: readonly Preset[] = [
   {
     id: "birthday",
     label: "Rahul's dino birthday · Bengaluru · 30 kids · ₹40K",
-    persona: "Rahul, 35 — his son's 7th birthday",
     daysAhead: 14,
     input: {
       eventType: "birthday",
@@ -61,7 +58,6 @@ export const PRESETS: readonly Preset[] = [
   {
     id: "mela",
     label: "Meera's Diwali mela · Pune · 400 residents · ₹2.5L",
-    persona: "Meera, 52 — her housing society's Diwali mela",
     daysAhead: 45,
     input: {
       eventType: "community",

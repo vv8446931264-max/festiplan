@@ -1,6 +1,5 @@
 /** ISO `YYYY-MM-DD` date arithmetic. UTC only, no clock access, no locale. */
-
-const DAY_MS = 86_400_000;
+import { DAY_MS } from "@/lib/time";
 
 /** Midnight UTC of an ISO date, in epoch milliseconds (NaN when unparsable). */
 const utcMidnightMs = (iso: string): number => Date.parse(`${iso}T00:00:00Z`);

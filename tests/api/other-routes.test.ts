@@ -5,7 +5,7 @@ import { POST as createPlanRoute } from "@/app/api/plan/route";
 import { POST as refine } from "@/app/api/plan/[id]/refine/route";
 import { GET as ics } from "@/app/plan/[id]/calendar.ics/route";
 import { TEMPLATE_ANSWER_PREFIX } from "@/lib/ai/refine";
-import type { PublicPlan } from "@/lib/contracts";
+import type { CreatedPlan } from "@/lib/contracts";
 import { ORIGIN, futureInput, idCtx, jsonRequest, noCtx, offlineEnv } from "./request";
 
 beforeEach(offlineEnv);
@@ -13,7 +13,7 @@ afterEach(() => vi.unstubAllEnvs());
 
 async function planId(): Promise<string> {
   const res = await createPlanRoute(jsonRequest("/api/plan", futureInput()), noCtx);
-  return ((await res.json()) as { plan: PublicPlan }).plan.id;
+  return ((await res.json()) as CreatedPlan).plan.id;
 }
 
 describe("POST /api/plan/[id]/refine", () => {

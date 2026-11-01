@@ -1,5 +1,5 @@
+import { DAYS_PER_WEEK } from "@/lib/time";
 import { diffDays } from "./dates";
-import { DAYS_PER_WEEK } from "./shared";
 
 /** How a plan's ideal lead times compare with the days actually left before the event. */
 export type ScheduleCompression = {
@@ -22,6 +22,14 @@ export type ScheduleCompression = {
 export function compressionFactor(idealSpanDays: number, availableDays: number): number {
   if (idealSpanDays <= 0 || idealSpanDays <= availableDays) return 1;
   return Math.max(0, availableDays) / idealSpanDays;
+}
+
+/**
+ * A length of days as whole weeks, to the nearest week: 112 days is 16 weeks.
+ * @param days Length in days.
+ */
+export function daysToWeeks(days: number): number {
+  return Math.round(days / DAYS_PER_WEEK);
 }
 
 /**

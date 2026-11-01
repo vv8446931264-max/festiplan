@@ -1,3 +1,4 @@
+import { AI_TEXT_MAX } from "@/lib/contracts";
 import type { AiPlan, EventType, PlanInput } from "@/lib/contracts";
 import { birthdayPlan } from "./birthday";
 import { communityPlan } from "./community";
@@ -12,9 +13,6 @@ const BUILDERS: Record<EventType, (input: PlanInput) => AiPlan> = {
   other: otherPlan,
 };
 
-/** Summary limit from `AiPlanSchema` (kept in step by tests). */
-const SUMMARY_MAX = 320;
-
 /**
  * A deterministic, high-quality `AiPlan` for the input's event type, used when Gemini
  * is unavailable or fails validation twice. The UI labels it "Template plan — AI unavailable".
@@ -25,7 +23,7 @@ export function templatePlan(input: PlanInput): AiPlan {
   const base = BUILDERS[input.eventType](input);
   return structuredClone({
     ...base,
-    summary: clip(base.summary, SUMMARY_MAX),
+    summary: clip(base.summary, AI_TEXT_MAX.summary),
     tips: mergeTips(base.tips, constraintTips(input)),
   });
 }

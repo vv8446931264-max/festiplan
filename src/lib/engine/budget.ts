@@ -1,7 +1,7 @@
 import { CONTINGENCY_PERCENT } from "@/lib/contracts/constants";
 import type { Allocation, BudgetWeight } from "@/lib/contracts";
 import { largestRemainder } from "./largest-remainder";
-import { budgetCategoryRank } from "./shared";
+import { budgetCategoryRank, sum } from "./shared";
 
 /** `part` as a percentage of `whole`, rounded to one decimal place (×1000, round, ÷10). */
 const percentOf = (part: number, whole: number): number => Math.round((part / whole) * 1000) / 10;
@@ -9,6 +9,38 @@ const percentOf = (part: number, whole: number): number => Math.round((part / wh
 /** `round(total × percent / 100)`, kept within `[0, total]`. */
 const contingencyFor = (totalINR: number, percent: number): number =>
   Math.min(totalINR, Math.max(0, Math.round((totalINR * percent) / 100)));
+
+/**
+ * One guest's share of an amount, in whole rupees.
+ * @param amountINR Amount in rupees.
+ * @param guests Guest count (at least 1 is assumed).
+ */
+export function amountPerGuest(amountINR: number, guests: number): number {
+  return Math.round(amountINR / Math.max(1, guests));
+}
+
+/**
+ * `part` as an unrounded percentage of `whole`: 100 000 of 1 000 000 is 10. Round it for display
+ * with `formatPercent`.
+ * @param part The portion, in any unit.
+ * @param whole The total in the same unit (at least 1 is assumed).
+ */
+export function percentShare(part: number, whole: number): number {
+  return (part / Math.max(1, whole)) * 100;
+}
+
+/**
+ * Rupees allocated across the budget lines, plus the contingency when it is given. Lines plus
+ * contingency equal the total budget, so this is how a screen proves the books balance.
+ * @param allocations Budget lines.
+ * @param contingencyINR Contingency held back (0 to count the lines alone).
+ */
+export function allocatedTotal(
+  allocations: readonly Pick<Allocation, "amountINR">[],
+  contingencyINR = 0,
+): number {
+  return sum(allocations.map((line) => line.amountINR)) + contingencyINR;
+}
 
 /**
  * Recomputes `percent` (share of the total, one decimal) and `perGuestINR` for every line.
@@ -22,11 +54,10 @@ export function withDerived(
   guests: number,
 ): Allocation[] {
   const total = Math.max(1, totalINR);
-  const guestCount = Math.max(1, guests);
   return allocations.map((line) => ({
     ...line,
     percent: percentOf(line.amountINR, total),
-    perGuestINR: Math.round(line.amountINR / guestCount),
+    perGuestINR: amountPerGuest(line.amountINR, guests),
   }));
 }
 

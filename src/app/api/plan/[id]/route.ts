@@ -1,4 +1,5 @@
 import { LIMITS, PlanPatchSchema } from "@/lib/contracts";
+import type { PlanResponse } from "@/lib/contracts";
 import {
   json,
   perIpLimit,
@@ -15,8 +16,10 @@ import { todayIST } from "@/lib/time";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const readLimit = perIpLimit("plan-read", 120);
-const patchLimit = perIpLimit("plan-patch", 30);
+const PLAN_READS_PER_MINUTE = 120;
+const PLAN_PATCHES_PER_MINUTE = 30;
+const readLimit = perIpLimit("plan-read", PLAN_READS_PER_MINUTE);
+const patchLimit = perIpLimit("plan-patch", PLAN_PATCHES_PER_MINUTE);
 
 const MISSING_EDIT_KEY =
   "Editing needs the plan's edit key. Open the plan on the device that created it.";
@@ -28,7 +31,7 @@ export const GET = withRoute("GET /api/plan/[id]", async (req: Request, ctx: IdR
   const { id } = await ctx.params;
   if (!isPlanId(id)) return problem(404, PLAN_NOT_FOUND);
   const plan = await getPublicPlan(id, todayIST());
-  return plan ? json({ plan }) : problem(404, PLAN_NOT_FOUND);
+  return plan ? json({ plan } satisfies PlanResponse) : problem(404, PLAN_NOT_FOUND);
 });
 
 /**
@@ -47,6 +50,7 @@ export const PATCH = withRoute(
     const body = await readBody(req, LIMITS.patchBodyBytes, PlanPatchSchema);
     if (!body.ok) return body.response;
     const result = await patchPlan(id, editKey, body.data, todayIST());
-    return result.ok ? json({ plan: result.plan }) : problem(result.status, result.error);
+    if (!result.ok) return problem(result.status, result.error);
+    return json({ plan: result.plan } satisfies PlanResponse);
   },
 );

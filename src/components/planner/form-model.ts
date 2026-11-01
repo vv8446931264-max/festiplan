@@ -1,6 +1,6 @@
 import { LIMITS } from "@/lib/contracts/constants";
 import { checkEventDate } from "@/lib/contracts/dates";
-import type { EventType, Lang, PlanInput } from "@/lib/contracts";
+import type { EventType, Issue, Lang, PlanInput } from "@/lib/contracts";
 
 /** Raw values held by the brief form (inputs are strings until validated). */
 export type FormValues = {
@@ -20,9 +20,6 @@ export type FieldName = Exclude<keyof FormValues, "constraints" | "language">;
 
 /** At most one plain-language message per invalid field. */
 export type FieldErrors = Partial<Record<FieldName, string>>;
-
-/** A validation issue as the API reports it (`path` is dot-separated). */
-export type ServerIssue = { path: string; message: string };
 
 /** Order used by the error summary, matching the visual order of the form. */
 export const FIELD_ORDER: readonly FieldName[] = [
@@ -139,7 +136,7 @@ export function toggleConstraint(selected: readonly string[], tag: string): stri
 }
 
 /** Maps API issue paths onto form fields; the first message for a field wins. */
-export function issuesToErrors(issues: readonly ServerIssue[]): FieldErrors {
+export function issuesToErrors(issues: readonly Issue[]): FieldErrors {
   const errors: FieldErrors = {};
   for (const issue of issues) {
     const [head = ""] = issue.path.split(".");

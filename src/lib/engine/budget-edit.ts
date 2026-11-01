@@ -12,6 +12,17 @@ export type AllocationEdit = { category: BudgetCategory; amountINR: number; lock
 const amountsOf = (lines: readonly { amountINR: number }[]): number[] =>
   lines.map((line) => line.amountINR);
 
+/**
+ * The most rupees one line can hold: everything allocated, less what the other locked lines
+ * keep. `rebalance` clamps a request to exactly this, so it is also the right `max` for a slider.
+ * @param allocations Current lines.
+ * @param category Line being edited.
+ */
+export function roomFor(allocations: readonly Allocation[], category: BudgetCategory): number {
+  const keptByOthers = allocations.filter((line) => line.locked && line.category !== category);
+  return sum(amountsOf(allocations)) - sum(amountsOf(keptByOthers));
+}
+
 /** A requested amount as whole rupees within `[0, max]`. */
 function clampAmount(value: number, max: number): number {
   const whole = Math.round(value);
@@ -39,8 +50,7 @@ export function rebalance(
   if (!allocations.some((line) => line.category === category)) return [...allocations];
   const others = allocations.filter((line) => line.category !== category);
   const unlocked = others.filter((line) => !line.locked);
-  const lockedTotal = sum(amountsOf(others.filter((line) => line.locked)));
-  const room = sum(amountsOf(allocations)) - lockedTotal;
+  const room = roomFor(allocations, category);
   const target = unlocked.length === 0 ? room : clampAmount(amountINR, room);
   const shares = largestRemainder(room - target, amountsOf(unlocked));
   const nextAmounts = new Map<BudgetCategory, number>(

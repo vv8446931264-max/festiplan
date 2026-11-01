@@ -81,7 +81,7 @@ export function TabPanel({ id, active, children }: PanelProps) {
       aria-labelledby={`tab-${id}`}
       hidden={!active}
       tabIndex={0}
-      className="tab-panel scroll-mt-20 outline-none"
+      className="tab-panel scroll-mt-3 outline-none"
     >
       {children}
     </div>

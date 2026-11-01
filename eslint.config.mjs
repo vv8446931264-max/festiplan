@@ -5,6 +5,9 @@ import tseslint from "typescript-eslint";
 
 const TS_FILES = ["**/*.{ts,tsx,mts,cts}"];
 
+const BARREL_MESSAGE =
+  "Import values from @/lib/contracts/constants, /ai-limits or /dates; the barrel loads Zod.";
+
 /** typescript-eslint's strictest presets, run with full type information on TypeScript files. */
 const typeChecked = [
   ...tseslint.configs.strictTypeChecked,
@@ -55,7 +58,7 @@ const config = [
   },
   {
     // Browser and engine code must not pull Zod into the client bundle: take values from
-    // the zod-free modules (constants, dates) and only types from the contracts barrel.
+    // the zod-free modules (constants, ai-limits, dates) and only types from the contracts barrel.
     files: [
       "src/components/**",
       "src/lib/engine/**",
@@ -70,8 +73,16 @@ const config = [
           paths: [
             {
               name: "@/lib/contracts",
-              message:
-                "Import values from @/lib/contracts/constants or /dates; the barrel loads Zod.",
+              message: BARREL_MESSAGE,
+              allowTypeImports: true,
+            },
+          ],
+          // The barrel by any other spelling: `../contracts`, `../../lib/contracts/index`,
+          // `@/lib/contracts/index`. Its modules (`contracts/constants`, …) stay importable.
+          patterns: [
+            {
+              regex: "^(?:\\.{1,2}/(?:.*/)?contracts(?:/index)?|@/lib/contracts/index)$",
+              message: BARREL_MESSAGE,
               allowTypeImports: true,
             },
           ],

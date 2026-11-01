@@ -36,7 +36,6 @@ export function PlannerApp() {
         <PlanForm
           values={planner.values}
           errors={planner.errors}
-          busy={planner.busy}
           minDate={planner.today ? addDays(planner.today, 1) : undefined}
           maxDate={planner.today ? maxEventDate(planner.today) : undefined}
           onChange={planner.update}

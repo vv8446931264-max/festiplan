@@ -99,12 +99,6 @@ const GLASS_GRADIENT = (
  */
 export function BudgetFlowFallback({ allocations, highlight, hidden, onHighlight }: Props) {
   const floorLineY = VIEW.floorY + FLOOR_LINE.drop;
-  const style = {
-    position: "absolute",
-    inset: 0,
-    opacity: hidden ? 0 : 1,
-    transition: "opacity 600ms ease",
-  } as const;
   return (
     <svg
       viewBox={`0 0 ${VIEW.width} ${VIEW.height}`}
@@ -112,7 +106,8 @@ export function BudgetFlowFallback({ allocations, highlight, hidden, onHighlight
       height="100%"
       focusable="false"
       data-flow-fallback=""
-      style={style}
+      // Fades out over 600 ms once the canvas draws; classes, as the CSP allows no inline styles.
+      className={`absolute inset-0 transition-opacity duration-600 ease-[ease] ${hidden ? "opacity-0" : "opacity-100"}`}
     >
       <defs>{GLASS_GRADIENT}</defs>
       {layoutBars(allocations).map((bar) => (

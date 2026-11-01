@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { DAY_MS } from "../src/lib/time";
 
 type LdNode = { "@type": string; [key: string]: unknown };
 type Question = { name: string; acceptedAnswer: { text: string } };
@@ -6,7 +7,6 @@ type Question = { name: string; acceptedAnswer: { text: string } };
 /** Lengths that search results show without truncation. */
 const TITLE_LENGTH = { min: 50, max: 60 };
 const DESCRIPTION_LENGTH = { min: 140, max: 160 };
-const DAY_MS = 86_400_000;
 const EVENT_DAYS_AHEAD = 90;
 
 const meta = (page: Page, selector: string) => page.locator(selector).getAttribute("content");

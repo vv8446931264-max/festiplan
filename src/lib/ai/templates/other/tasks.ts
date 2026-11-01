@@ -1,5 +1,5 @@
 import type { AiTask } from "@/lib/contracts";
-import { task } from "../shared";
+import { task } from "@/lib/ai/templates/shared";
 
 /** A general celebration: format and venue first, then food, décor and invitations. */
 export const OTHER_TASKS: AiTask[] = [

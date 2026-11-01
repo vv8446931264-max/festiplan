@@ -4,14 +4,13 @@ import { EventTypePicker } from "./EventTypePicker";
 import { BasicsFields, PreferenceFields, StoryFields, type FieldsProps } from "./BriefFields";
 
 type Props = FieldsProps & {
-  busy: boolean;
   minDate?: string;
   maxDate?: string;
   onSubmit: () => void;
 };
 
 /** The brief: event type, date, city, guests, budget, vibe, constraints, language. */
-export function PlanForm({ busy, minDate, maxDate, onSubmit, ...fields }: Props) {
+export function PlanForm({ minDate, maxDate, onSubmit, ...fields }: Props) {
   return (
     <form
       noValidate
@@ -31,8 +30,8 @@ export function PlanForm({ busy, minDate, maxDate, onSubmit, ...fields }: Props)
       <StoryFields {...fields} />
       <PreferenceFields {...fields} />
       <div className="flex flex-wrap items-center gap-4">
-        <button type="submit" className="btn btn-primary px-8 text-lg" disabled={busy}>
-          {busy ? "Planning…" : "Plan my celebration"}
+        <button type="submit" className="btn btn-primary px-8 text-lg">
+          Plan my celebration
           <span aria-hidden="true">→</span>
         </button>
         <p className="text-sm text-muted">Gemini drafts the ideas. Arithmetic does the money.</p>

@@ -2,12 +2,15 @@
 
 import { memo, useMemo } from "react";
 import type { AiTask, PublicPlan, ScheduledTask } from "@/lib/contracts";
-import { formatDate, scheduleCompression, type ScheduleCompression } from "@/lib/engine";
+import {
+  daysToWeeks,
+  formatDate,
+  scheduleCompression,
+  type ScheduleCompression,
+} from "@/lib/engine";
 import { PhaseList } from "./PhaseList";
 import { SectionHead } from "./SectionHead";
 import { TimelineSummary } from "./TimelineSummary";
-
-const DAYS_PER_WEEK = 7;
 
 type Props = {
   planId: string;
@@ -68,9 +71,8 @@ function CompressionNote({ compression }: { compression: ScheduleCompression }) 
   return (
     <p role="note" className="mb-6 rounded-2xl border border-gold px-5 py-4">
       <strong className="text-gold">Short on time, not on order.</strong> You have {availableDays}{" "}
-      {availableDays === 1 ? "day" : "days"}; this plan ideally starts{" "}
-      {Math.round(idealDays / DAYS_PER_WEEK)} weeks out, so every step is compressed proportionally
-      and keeps its sequence.
+      {availableDays === 1 ? "day" : "days"}; this plan ideally starts {daysToWeeks(idealDays)}{" "}
+      weeks out, so every step is compressed proportionally and keeps its sequence.
     </p>
   );
 }

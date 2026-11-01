@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { AiPlan, PlanInput, PlanSource } from "@/lib/contracts";
 import { diffDays } from "@/lib/engine";
 import { logEvent } from "@/lib/server/log";
+import { DAYS_PER_WEEK } from "@/lib/time";
 import { TtlCache } from "./cache";
 import { getAi } from "./client";
 import type { AiHandle } from "./client";
@@ -30,7 +31,6 @@ export type PlanDeps = {
 export const PLAN_TIMEOUT_MS = 50_000;
 const PLAN_CACHE_ENTRIES = 50;
 const PLAN_CACHE_TTL_MS = 60 * 60 * 1000;
-const DAYS_PER_WEEK = 7;
 const sharedCache = new TtlCache<AiPlan>(PLAN_CACHE_ENTRIES, PLAN_CACHE_TTL_MS);
 
 /** Empties the shared plan cache (tests and admin use). */

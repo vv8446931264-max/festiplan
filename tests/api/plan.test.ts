@@ -2,10 +2,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/plan/route";
 import { addDays } from "@/lib/engine";
-import type { PublicPlan } from "@/lib/contracts";
+import type { CreatedPlan, ErrorBody } from "@/lib/contracts";
 import { todayIST } from "@/lib/time";
 import { ORIGIN, bodyOf, futureInput, jsonRequest, noCtx, offlineEnv } from "./request";
-import type { ErrorBody } from "./request";
 
 beforeEach(offlineEnv);
 afterEach(() => vi.unstubAllEnvs());
@@ -16,7 +15,7 @@ describe("POST /api/plan", () => {
     const res = await POST(jsonRequest("/api/plan", input), noCtx);
     expect(res.status).toBe(201);
     expect(res.headers.get("cache-control")).toBe("no-store");
-    const body = (await res.json()) as { plan: PublicPlan; editKey: string };
+    const body = (await res.json()) as CreatedPlan;
     expect(body.editKey).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(res.headers.get("location")).toBe(`/plan/${body.plan.id}`);
     expect(body.plan.source).toBe("template");
@@ -33,12 +32,9 @@ describe("POST /api/plan", () => {
       noCtx,
     );
     expect(res.status).toBe(400);
-    const body = (await res.json()) as {
-      error: string;
-      issues: { path: string; message: string }[];
-    };
+    const body = (await res.json()) as ErrorBody;
     expect(body.error).toBeTruthy();
-    expect(body.issues.map((i) => i.path)).toContain("guests");
+    expect(body.issues?.map((i) => i.path)).toContain("guests");
   });
 
   it("rejects past and far-future dates with a plain-language message", async () => {

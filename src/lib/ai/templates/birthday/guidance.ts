@@ -1,5 +1,5 @@
 import type { BudgetWeight, Tip, VendorGuide } from "@/lib/contracts";
-import { tip, vendor, weight } from "../shared";
+import { tip, vendor, weight } from "@/lib/ai/templates/shared";
 
 /** Relative budget priorities; a children's party shifts money towards fun, décor and gifts. */
 export function birthdayWeights(kids: boolean): BudgetWeight[] {

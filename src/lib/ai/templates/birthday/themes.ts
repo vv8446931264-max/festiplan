@@ -1,5 +1,5 @@
 import type { PlanInput } from "@/lib/contracts";
-import { briefText } from "../shared";
+import { briefText } from "@/lib/ai/templates/shared";
 
 /** A kids' party theme: the brief words that pick it, and its look. */
 export type Theme = {

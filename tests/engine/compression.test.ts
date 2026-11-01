@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   compressedLeadDays,
   compressionFactor,
+  daysToWeeks,
   scheduleCompression,
 } from "@/lib/engine/compression";
 import { addDays } from "@/lib/engine/dates";
@@ -96,5 +97,26 @@ describe("scheduleCompression", () => {
       compressed: true,
       idealDays: 280,
     });
+  });
+});
+
+describe("daysToWeeks", () => {
+  it("is exact for whole weeks", () => {
+    expect(daysToWeeks(0)).toBe(0);
+    expect(daysToWeeks(7)).toBe(1);
+    expect(daysToWeeks(112)).toBe(16);
+  });
+
+  it("rounds to the nearest week, halves up", () => {
+    expect(daysToWeeks(3)).toBe(0);
+    expect(daysToWeeks(4)).toBe(1);
+    expect(daysToWeeks(10)).toBe(1);
+    expect(daysToWeeks(11)).toBe(2);
+    expect(daysToWeeks(10.5)).toBe(2);
+  });
+
+  it("turns scheduleCompression's ideal days back into the longest lead time in weeks", () => {
+    const { idealDays } = scheduleCompression([task("a", 26), task("b", 8)], TODAY, TODAY);
+    expect(daysToWeeks(idealDays)).toBe(26);
   });
 });

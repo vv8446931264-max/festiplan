@@ -26,7 +26,7 @@ through the contracts barrel pulled Zod (~40 KB) into the browser; a lint rule
 ## Rendering
 
 Every page is rendered per request so each response can carry a fresh CSP nonce
-(`src/proxy.ts`): no `'unsafe-inline'` scripts. Measured cost on the production build:
+(`src/proxy.ts`): no `'unsafe-inline'` for scripts or styles. Measured cost on the production build:
 **~19 ms** server time for the landing page (median of 5 warm runs, `curl -w %{time_total}`),
 and the HTML is still the complete page (10.6 KB gzip).
 

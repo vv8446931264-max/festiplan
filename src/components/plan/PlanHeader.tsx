@@ -12,6 +12,8 @@ const SAVE_TEXT: Record<SaveState, string> = {
   saving: "Saving…",
   saved: "All changes saved",
   retrying: "Couldn't save yet — retrying in a moment. Your changes are kept in this tab.",
+  stalled:
+    "Couldn't save your changes. They're kept in this tab, and saving resumes when you're back online or make another change.",
   rejected: "That change couldn't be saved. Refresh the page to see the latest plan.",
   forbidden: "This link can't save changes. Ask the organiser for the edit link.",
 };
@@ -58,7 +60,8 @@ export function PlanHeader({
   return (
     <header className="legible flex flex-col gap-6">
       <PlanBadges plan={plan} editable={editable} />
-      <Title ref={titleRef} id="plan-title" tabIndex={-1} className="h2 scroll-mt-24 outline-none">
+      {/* scroll-mt-7 + the 4.25rem scroll padding on <html> (layout.tsx) = the 6rem scroll-mt-24 gave. */}
+      <Title ref={titleRef} id="plan-title" tabIndex={-1} className="h2 scroll-mt-7 outline-none">
         {planTitle(plan.input)}
       </Title>
       <PlanFacts input={plan.input} today={today} />

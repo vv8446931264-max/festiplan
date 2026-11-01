@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PauseAnimationToggle } from "@/components/three/PauseAnimationToggle";
 
 /** In-page chapters linked from the top bar (hidden on small screens, where the CTA wins). */
 const SECTION_LINKS = [
@@ -9,32 +10,42 @@ const SECTION_LINKS = [
 const SECTION_LINK_CLASS =
   "eyebrow inline-flex min-h-11 items-center px-3 text-cream no-underline hover:text-gold";
 
-/** Top bar: wordmark home link, section links (how it works, FAQ) and the primary call to action. */
+/**
+ * Top bar on every page that shows the lantern sky: wordmark home link, section links (how it
+ * works, FAQ), the primary call to action and the "Pause animation" toggle. On the narrowest
+ * phones the toggle wraps under the call to action instead of pushing the page sideways.
+ */
 export function SiteHeader() {
   return (
-    <header className="shell relative z-10 flex items-center justify-between gap-4 py-5">
-      <Link href="/" className="text-xl font-extrabold tracking-tight text-cream no-underline">
+    <header className="shell relative z-10 flex items-start justify-between gap-4 py-5">
+      <Link
+        href="/"
+        className="inline-flex min-h-11 items-center text-xl font-extrabold tracking-tight text-cream no-underline"
+      >
         FestiPlan
         <span className="text-gold" aria-hidden="true">
           .
         </span>
       </Link>
-      <nav aria-label="Main">
-        <ul className="flex items-center gap-1 sm:gap-3">
-          {SECTION_LINKS.map(({ href, label }) => (
-            <li key={href} className="hidden sm:block">
-              <Link href={href} className={SECTION_LINK_CLASS}>
-                {label}
+      <div className="flex flex-wrap items-center justify-end gap-x-1 gap-y-2 sm:gap-x-3">
+        <nav aria-label="Main">
+          <ul className="flex items-center gap-1 sm:gap-3">
+            {SECTION_LINKS.map(({ href, label }) => (
+              <li key={href} className="hidden sm:block">
+                <Link href={href} className={SECTION_LINK_CLASS}>
+                  {label}
+                </Link>
+              </li>
+            ))}
+            <li>
+              <Link href="/#plan" className="btn btn-primary min-h-11 px-5 py-2 text-sm">
+                Start planning
               </Link>
             </li>
-          ))}
-          <li>
-            <Link href="/#plan" className="btn btn-primary min-h-11 px-5 py-2 text-sm">
-              Start planning
-            </Link>
-          </li>
-        </ul>
-      </nav>
+          </ul>
+        </nav>
+        <PauseAnimationToggle />
+      </div>
     </header>
   );
 }

@@ -1,9 +1,8 @@
 "use client";
 
-import { CATEGORY_COLORS, CATEGORY_PATTERNS } from "@/lib/category-style";
 import { CATEGORY_LABELS } from "@/lib/contracts/constants";
 import type { Allocation, BudgetCategory } from "@/lib/contracts";
-import { formatINR, formatPercent } from "@/lib/engine";
+import { allocatedTotal, formatINR, formatPercent, roomFor } from "@/lib/engine";
 
 type Handlers = {
   onHighlight: (category: BudgetCategory | null) => void;
@@ -24,20 +23,16 @@ const SMALLEST_STEP_INR = 10;
 const sliderStep = (totalINR: number) =>
   SLIDER_STEPS.find((tier) => totalINR >= tier.fromINR)?.stepINR ?? SMALLEST_STEP_INR;
 
-const sumOf = (lines: Allocation[]) => lines.reduce((sum, line) => sum + line.amountINR, 0);
-
 /** One native range input per category; owners can lock lines they've already booked. */
 export function BudgetSliders({ allocations, totalINR, ...shared }: Props) {
-  const distributableINR = sumOf(allocations);
-  const lockedINR = sumOf(allocations.filter((line) => line.locked));
+  const distributableINR = allocatedTotal(allocations);
   return (
     <ul className="flex flex-col gap-1" aria-label="Budget by category">
       {allocations.map((allocation) => (
         <SliderRow
           key={allocation.category}
           allocation={allocation}
-          // A line can grow until every other unlocked line is down to zero.
-          max={distributableINR - lockedINR + (allocation.locked ? allocation.amountINR : 0)}
+          max={roomFor(allocations, allocation.category)}
           distributableINR={distributableINR}
           step={sliderStep(totalINR)}
           {...shared}
@@ -98,14 +93,12 @@ function SliderLabel({ allocation, inputId }: { allocation: Allocation; inputId:
   const { category } = allocation;
   return (
     <div className="flex items-center gap-3">
+      {/* Colour and pattern come from globals.css ([data-category-fill]): no inline style. */}
       <span
         aria-hidden="true"
         data-print-keep=""
+        data-category-fill={category}
         className="size-4 shrink-0 rounded-sm"
-        style={{
-          backgroundColor: CATEGORY_COLORS[category],
-          backgroundImage: CATEGORY_PATTERNS[category],
-        }}
       />
       <label htmlFor={inputId} className="font-semibold">
         {CATEGORY_LABELS[category]}

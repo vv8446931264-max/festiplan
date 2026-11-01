@@ -3,10 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as createPlanRoute } from "@/app/api/plan/route";
 import { POST as refine } from "@/app/api/plan/[id]/refine/route";
 import { POST as vendors } from "@/app/api/vendors/route";
-import type { PublicPlan } from "@/lib/contracts";
+import type { CreatedPlan, ErrorBody } from "@/lib/contracts";
 import { AI_GLOBAL_PER_MINUTE, aiGlobalLimit } from "@/lib/server/http";
 import { bodyOf, futureInput, idCtx, jsonRequest, noCtx, offlineEnv } from "./request";
-import type { ErrorBody } from "./request";
 
 beforeEach(offlineEnv);
 afterEach(() => vi.unstubAllEnvs());
@@ -40,7 +39,7 @@ describe("instance-wide AI ceiling", () => {
 
   it("returns 503 with Retry-After from plan creation, refine and vendors once spent", async () => {
     const created = await createPlanRoute(jsonRequest("/api/plan", futureInput()), noCtx);
-    const { plan } = (await created.json()) as { plan: PublicPlan };
+    const { plan } = (await created.json()) as CreatedPlan;
     exhaustAiWindow();
     await expectBusy(
       await createPlanRoute(

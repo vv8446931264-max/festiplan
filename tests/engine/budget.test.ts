@@ -1,6 +1,13 @@
 // @vitest-environment node
 import { describe, expect, it } from "vitest";
-import { allocateBudget, withDerived } from "@/lib/engine/budget";
+import {
+  allocateBudget,
+  allocatedTotal,
+  amountPerGuest,
+  percentShare,
+  withDerived,
+} from "@/lib/engine/budget";
+import { formatPercent } from "@/lib/engine/format";
 import { allocation, amountsOf, budgetWeight } from "./builders";
 
 describe("allocateBudget", () => {
@@ -96,5 +103,70 @@ describe("withDerived", () => {
       percent: 0,
       perGuestINR: 0,
     });
+  });
+});
+
+describe("amountPerGuest", () => {
+  it("divides by the guest count and rounds to whole rupees", () => {
+    expect(amountPerGuest(1_200_000, 180)).toBe(6_667);
+    expect(amountPerGuest(1_000, 3)).toBe(333);
+    expect(amountPerGuest(1_005, 2)).toBe(503);
+    expect(amountPerGuest(0, 40)).toBe(0);
+  });
+
+  it("assumes at least one guest, so it never divides by zero", () => {
+    expect(amountPerGuest(1_000, 0)).toBe(1_000);
+    expect(amountPerGuest(1_000, -4)).toBe(1_000);
+  });
+
+  it("is the per-guest figure withDerived stores on each line", () => {
+    const [line] = withDerived([allocation("venue", 333)], 1_000, 7);
+    expect(line.perGuestINR).toBe(amountPerGuest(333, 7));
+  });
+});
+
+describe("percentShare", () => {
+  it("is part over whole as an unrounded percentage", () => {
+    expect(percentShare(100_000, 1_000_000)).toBe(10);
+    expect(percentShare(500, 500)).toBe(100);
+    expect(percentShare(0, 500)).toBe(0);
+    expect(percentShare(1, 3)).toBeCloseTo(33.333_333, 5);
+  });
+
+  it("assumes a whole of at least 1, so it never divides by zero", () => {
+    expect(percentShare(5, 0)).toBe(500);
+  });
+
+  it("shows the default contingency as 10% once formatted", () => {
+    const totalINR = 1_234_567;
+    const weights = [budgetWeight("venue", 60), budgetWeight("catering", 40)];
+    const { contingencyINR } = allocateBudget({ totalINR, weights, guests: 1 });
+    expect(formatPercent(percentShare(contingencyINR, totalINR))).toBe("10%");
+  });
+});
+
+describe("allocatedTotal", () => {
+  const lines = [allocation("venue", 400), allocation("catering", 300), allocation("misc", 100)];
+
+  it("sums the line amounts, and is 0 without lines", () => {
+    expect(allocatedTotal(lines)).toBe(800);
+    expect(allocatedTotal([])).toBe(0);
+  });
+
+  it("adds the contingency when it is given", () => {
+    expect(allocatedTotal(lines, 200)).toBe(1_000);
+    expect(allocatedTotal([], 200)).toBe(200);
+  });
+
+  it("makes lines plus contingency equal the budget it was allocated from", () => {
+    const totalINR = 1_234_567;
+    const weights = [
+      budgetWeight("venue", 55),
+      budgetWeight("decor", 30),
+      budgetWeight("misc", 15),
+    ];
+    const { contingencyINR, allocations } = allocateBudget({ totalINR, weights, guests: 180 });
+    expect(allocatedTotal(allocations, contingencyINR)).toBe(totalINR);
+    expect(allocatedTotal(allocations)).toBe(totalINR - contingencyINR);
   });
 });

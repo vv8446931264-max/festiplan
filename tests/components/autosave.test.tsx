@@ -1,61 +1,19 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useAutosave } from "@/components/plan/useAutosave";
-import { jsonResponse, requestBody } from "./fetch-stubs";
+import { PlanHeader } from "@/components/plan/PlanHeader";
+import { fixturePlan } from "../fixtures/plan";
+import {
+  advance,
+  DEBOUNCE_MS,
+  drainPromises,
+  heldFetch,
+  renderAutosave,
+  scriptedFetch,
+  throwingFetch,
+} from "./autosave-fakes";
 
-const PLAN_ID = "plan123";
-const EDIT_KEY = "k".repeat(43);
-/** The autosave debounce (SAVE_DELAY_MS in useAutosave). */
-const DEBOUNCE_MS = 700;
-
-type Call = { body: unknown; keepalive: boolean | undefined };
-
-/** A fetch whose responses are held until the test releases them, one per call. */
-function heldFetch() {
-  const calls: Call[] = [];
-  const release: (() => void)[] = [];
-  vi.stubGlobal(
-    "fetch",
-    vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
-      calls.push({ body: requestBody(init), keepalive: init?.keepalive });
-      return new Promise<Response>((resolve) => {
-        release.push(() => resolve(jsonResponse({ plan: {} })));
-      });
-    }),
-  );
-  return { calls, release };
-}
-
-/** A fetch that answers with `statuses` in order (0 = network failure), then 200. */
-function scriptedFetch(statuses: number[]) {
-  const bodies: unknown[] = [];
-  vi.stubGlobal(
-    "fetch",
-    vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
-      bodies.push(requestBody(init));
-      const status = statuses.shift() ?? 200;
-      if (status === 0) return Promise.reject(new TypeError("network down"));
-      return Promise.resolve(jsonResponse(status < 300 ? { plan: {} } : { error: "nope" }, status));
-    }),
-  );
-  return bodies;
-}
-
-/** Advances the fake clock inside an async act scope, so React applies what it triggers. */
-async function advance(ms: number) {
-  await act(() => {
-    vi.advanceTimersByTime(ms);
-    return Promise.resolve();
-  });
-}
-
-/** Lets queued promise callbacks (saves, their responses, state updates) run to completion. */
-async function drainPromises() {
-  for (let i = 0; i < 20; i++) await act(async () => await Promise.resolve());
-}
-
-const renderAutosave = (editKey: string | null = EDIT_KEY) =>
-  renderHook(() => useAutosave(PLAN_ID, editKey));
+/** The waits between the first attempt and its four retries (RETRY_STEP_MS × 1…4 in useAutosave). */
+const RETRY_WAITS_MS = [2000, 4000, 6000, 8000];
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
@@ -144,6 +102,44 @@ describe("useAutosave failures", () => {
     });
   });
 
+  it("stops saying it is retrying once the retries run out, and resumes when the browser is online", async () => {
+    const bodies = scriptedFetch([0, 0, 0, 0, 0]);
+    const { result } = renderAutosave();
+    act(() => result.current.queue({ tasks: [{ id: "a", done: true }] }));
+    await advance(DEBOUNCE_MS);
+    await drainPromises();
+    for (const wait of RETRY_WAITS_MS) {
+      expect(result.current.saveState).toBe("retrying");
+      await advance(wait);
+      await drainPromises();
+    }
+    expect(bodies).toHaveLength(RETRY_WAITS_MS.length + 1);
+    expect(result.current.saveState).toBe("stalled");
+    await advance(60_000);
+    await drainPromises();
+    expect(bodies).toHaveLength(RETRY_WAITS_MS.length + 1);
+    act(() => void window.dispatchEvent(new Event("online")));
+    await drainPromises();
+    expect(bodies).toHaveLength(RETRY_WAITS_MS.length + 2);
+    expect(bodies.at(-1)).toEqual({ tasks: [{ id: "a", done: true }] });
+    expect(result.current.saveState).toBe("saved");
+  });
+
+  it("counts a save that throws as a failed attempt: nothing stays in flight, the change is kept", async () => {
+    const bodies = throwingFetch();
+    const { result } = renderAutosave();
+    act(() => result.current.queue({ tasks: [{ id: "a", done: true }] }));
+    await advance(DEBOUNCE_MS);
+    await drainPromises();
+    expect(result.current.saveState).toBe("retrying");
+    await advance(RETRY_WAITS_MS[0] ?? 0);
+    await drainPromises();
+    const change = { tasks: [{ id: "a", done: true }] };
+    expect(bodies).toEqual([change, change]);
+    // "saved" needs nothing in flight, so the counter came down after the throw too.
+    expect(result.current.saveState).toBe("saved");
+  });
+
   it("reports a rejected change without retrying it", async () => {
     const bodies = scriptedFetch([422]);
     const { result } = renderAutosave();
@@ -162,5 +158,14 @@ describe("useAutosave failures", () => {
     await advance(DEBOUNCE_MS);
     await drainPromises();
     expect(result.current.saveState).toBe("forbidden");
+  });
+});
+
+describe("the save status line", () => {
+  it("says what happens next once the retries have run out", () => {
+    render(<PlanHeader plan={fixturePlan()} saveState="stalled" editable />);
+    const status = screen.getByRole("status");
+    expect(status).toHaveTextContent(/back online or make another change/);
+    expect(status).not.toHaveTextContent(/retrying/);
   });
 });

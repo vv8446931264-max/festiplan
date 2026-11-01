@@ -1,3 +1,4 @@
+import { AI_COUNTS } from "@/lib/contracts";
 import type {
   AiTask,
   BudgetCategory,
@@ -9,9 +10,6 @@ import type {
   TipKind,
   VendorGuide,
 } from "@/lib/contracts";
-
-/** Most tips a plan may carry (the `AiPlanSchema` limit). */
-const MAX_TIPS = 8;
 
 /** An idea without its menu: the menu is filled in per brief, because it follows dietary needs. */
 export type Concept = Omit<Idea, "food">;
@@ -126,5 +124,5 @@ export function mergeTips(base: Tip[], extra: Tip[]): Tip[] {
       seen.add(key);
       return true;
     })
-    .slice(0, MAX_TIPS);
+    .slice(0, AI_COUNTS.tips.max);
 }

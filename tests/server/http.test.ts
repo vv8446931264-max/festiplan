@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PlanPatchSchema, PlanInputSchema } from "@/lib/contracts";
+import type { ErrorBody } from "@/lib/contracts";
 import { resetRateLimits } from "@/lib/security/rate-limit";
 import {
   invalid,
@@ -14,12 +15,10 @@ import {
   toIssues,
   withRoute,
 } from "@/lib/server/http";
-import type { Issue } from "@/lib/server/http";
 
 beforeEach(() => resetRateLimits());
 afterEach(() => vi.unstubAllEnvs());
 
-type ErrorBody = { error: string; issues?: Issue[] };
 const errorBody = async (res: Response) => (await res.json()) as ErrorBody;
 
 const post = (headers: Record<string, string> = {}, body?: string) =>

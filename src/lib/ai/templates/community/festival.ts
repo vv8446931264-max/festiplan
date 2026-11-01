@@ -1,5 +1,5 @@
 import type { PlanInput } from "@/lib/contracts";
-import { briefText } from "../shared";
+import { briefText } from "@/lib/ai/templates/shared";
 
 /** Festivals a community brief may name, in matching priority. */
 const FESTIVALS = [

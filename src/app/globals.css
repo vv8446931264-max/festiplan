@@ -50,6 +50,9 @@
     min-height: 100svh;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
+    /* A stacking context of its own, so the dusk backdrop (z-index -1, DuskSky.tsx) paints
+       above this espresso background instead of under it. */
+    isolation: isolate;
   }
 
   ::selection {
@@ -210,6 +213,130 @@
   .meter::-moz-meter-bar {
     background: var(--color-gold);
   }
+  /* Entrance rise. Kept in this layer so `[animation-delay:…]` utilities can stagger it
+     (Hero.tsx); an unlayered rule would win over every utility. */
+  @media (prefers-reduced-motion: no-preference) {
+    .rise {
+      animation: rise 900ms var(--ease-out-soft) both;
+    }
+  }
+
+  /* The dusk sky behind every page (DuskSky.tsx): DUSK_BACKGROUND from src/three/dusk.ts,
+     copied here so the backdrop needs no inline style; tests/security/csp-stylesheet.test.ts
+     keeps the two identical. */
+  .dusk-sky {
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23g)'/%3E%3C/svg%3E")
+        0 0 / 180px 180px,
+      radial-gradient(60% 26% at 26% 66%, rgb(255 191 2 / 0.09), transparent 70%),
+      radial-gradient(100% 40% at 32% 63%, rgb(233 80 14 / 0.16), transparent 72%),
+      radial-gradient(80% 36% at 80% 42%, rgb(140 1 156 / 0.14), transparent 70%),
+      linear-gradient(
+        180deg,
+        #0c0620 0%,
+        #170832 22%,
+        #2c0a40 40%,
+        #46103f 53%,
+        #5a1b2b 63%,
+        #3c1810 72%,
+        #1a0e06 84%,
+        #100904 100%
+      );
+  }
+  /* The static poster dims with scroll exactly like the live lanterns: useSkyScroll sets
+     --lantern-dim on the backdrop through the CSSOM, which CSP allows. */
+  .dusk-poster {
+    opacity: var(--lantern-dim, 1);
+    transition: opacity 1.2s var(--ease-out-soft);
+  }
+
+  /* An idea's palette band (IdeasSection.tsx). Its SVG gradient starts at the top-left corner,
+     is turned 30° below the horizontal (gradientTransform="rotate(30)") and ends at x2="100%"
+     of this SVG, which is exactly as long as the line of a CSS linear-gradient(120deg) on the
+     band: |w·sin 120°| + |h·cos 120°| = 86.6025% + h / 2. So the band looks as that gradient
+     did at any width, while the model's colours stay in SVG attributes, not in styles. */
+  .palette-band {
+    --band-height: 7rem;
+    height: var(--band-height);
+    overflow: hidden;
+  }
+  .palette-band > svg {
+    display: block;
+    width: calc(86.6025% + var(--band-height) / 2);
+    height: 100%;
+    overflow: visible;
+  }
+  @media (width >= 40rem) {
+    .palette-band {
+      --band-height: 9rem;
+    }
+  }
+
+  /* Budget category swatches and bars: colour plus a pattern, so the budget reads without
+     colour vision. The colours equal CATEGORY_COLORS (src/lib/category-style.ts), which the
+     SVG fallback and the WebGL scene use; tests/security/csp-stylesheet.test.ts checks it. */
+  [data-category-fill="venue"] {
+    background-color: #ffbf02;
+  }
+  [data-category-fill="catering"] {
+    background-color: #f58a07;
+    background-image: repeating-linear-gradient(
+      45deg,
+      rgb(0 0 0 / 0.28) 0 2px,
+      transparent 2px 6px
+    );
+  }
+  [data-category-fill="decor"] {
+    background-color: #e9500e;
+    background-image: radial-gradient(rgb(0 0 0 / 0.32) 1px, transparent 1.5px);
+    background-size: 5px 5px;
+  }
+  [data-category-fill="photography"] {
+    background-color: #cd197d;
+    background-image: repeating-linear-gradient(
+      90deg,
+      rgb(0 0 0 / 0.28) 0 2px,
+      transparent 2px 6px
+    );
+  }
+  [data-category-fill="entertainment"] {
+    background-color: #a23bc4;
+    background-image: repeating-linear-gradient(
+      -45deg,
+      rgb(0 0 0 / 0.28) 0 2px,
+      transparent 2px 6px
+    );
+  }
+  [data-category-fill="attire"] {
+    background-color: #7b6be0;
+    background-image: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.28) 0 2px, transparent 2px 6px);
+  }
+  [data-category-fill="invitations"] {
+    background-color: #8fa36a;
+    background-image: repeating-conic-gradient(rgb(0 0 0 / 0.25) 0 25%, transparent 0 50%);
+    background-size: 6px 6px;
+  }
+  [data-category-fill="gifts"] {
+    background-color: #c9d88f;
+    background-image: radial-gradient(rgb(0 0 0 / 0.3) 1.5px, transparent 2px);
+    background-size: 7px 7px;
+  }
+  [data-category-fill="transport"] {
+    background-color: #bbac97;
+    background-image: repeating-linear-gradient(
+      135deg,
+      rgb(0 0 0 / 0.3) 0 1px,
+      transparent 1px 4px
+    );
+  }
+  [data-category-fill="misc"] {
+    background-color: #ffedd7;
+    background-image: repeating-linear-gradient(
+      45deg,
+      rgb(0 0 0 / 0.18) 0 1px,
+      transparent 1px 8px
+    );
+  }
 }
 
 /* Scroll-driven reveals; content is fully visible where unsupported. */
@@ -220,9 +347,6 @@
       animation-timeline: view();
       animation-range: entry 0% cover 28%;
     }
-  }
-  .rise {
-    animation: rise 900ms var(--ease-out-soft) both;
   }
 }
 

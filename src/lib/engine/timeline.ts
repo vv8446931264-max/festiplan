@@ -1,7 +1,8 @@
 import type { AiTask, Phase, ScheduledTask } from "@/lib/contracts";
+import { DAYS_PER_WEEK } from "@/lib/time";
 import { compressedLeadDays, scheduleCompression } from "./compression";
 import { addDays, diffDays, maxDate, minDate } from "./dates";
-import { DAYS_PER_WEEK, compareAscending } from "./shared";
+import { compareAscending } from "./shared";
 
 /** Phase for a due date, by the most days left before the event that still belong to it. */
 const PHASE_BY_MAX_DAYS_LEFT: readonly (readonly [number, Phase])[] = [

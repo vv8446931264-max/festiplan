@@ -1,11 +1,26 @@
 import { BRAND } from "@/lib/site";
 
 const LETTERS = BRAND.name.split("");
+
+/*
+ * Entrance delays as Tailwind classes, not style attributes (the CSP allows no inline
+ * styles). Each class is written out in full so Tailwind generates it, and the `.rise`
+ * rule sits in the components layer so these utilities override its delay.
+ */
 /** The pitch rises after the eyebrow line has settled. */
-const PITCH_DELAY_MS = 350;
-/** The wordmark letters rise one after another, starting shortly after first paint. */
-const MASTHEAD_DELAY_MS = 120;
-const LETTER_STAGGER_MS = 55;
+const PITCH_DELAY = "[animation-delay:350ms]";
+/** The wordmark letters rise one after another: 120 ms after first paint, then every 55 ms. */
+const LETTER_DELAYS = [
+  "[animation-delay:120ms]",
+  "[animation-delay:175ms]",
+  "[animation-delay:230ms]",
+  "[animation-delay:285ms]",
+  "[animation-delay:340ms]",
+  "[animation-delay:395ms]",
+  "[animation-delay:450ms]",
+  "[animation-delay:505ms]",
+  "[animation-delay:560ms]",
+] as const;
 
 /** Chapter 0: the masthead over the lantern sky. */
 export function Hero() {
@@ -31,10 +46,7 @@ export function Hero() {
 
 function HeroPitch() {
   return (
-    <div
-      className="rise legible flex flex-col gap-6"
-      style={{ animationDelay: `${PITCH_DELAY_MS}ms` }}
-    >
+    <div className={`rise legible flex flex-col gap-6 ${PITCH_DELAY}`}>
       <p className="h3">
         Made for <span className="accent text-gold">moments</span>.
         <br />
@@ -66,11 +78,7 @@ function Masthead() {
         </span>{" "}
         <span aria-hidden="true" className="flex">
           {LETTERS.map((letter, index) => (
-            <span
-              key={index}
-              className="rise inline-block"
-              style={{ animationDelay: `${MASTHEAD_DELAY_MS + index * LETTER_STAGGER_MS}ms` }}
-            >
+            <span key={index} className={`rise inline-block ${LETTER_DELAYS[index]}`}>
               {letter}
             </span>
           ))}

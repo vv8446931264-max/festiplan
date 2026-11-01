@@ -4,7 +4,7 @@ import { useState, type RefObject } from "react";
 import { useToday } from "@/lib/client/browser";
 import { createPlan } from "@/lib/client/api";
 import { saveEditKey } from "@/lib/client/edit-keys";
-import type { PublicPlan } from "@/lib/contracts";
+import type { CreatedPlan } from "@/lib/contracts";
 import { PRESETS, presetInput } from "@/lib/presets";
 import { todayIST } from "@/lib/time";
 import { celebrate, setMood, setPalette } from "@/three/bus";
@@ -20,9 +20,6 @@ import {
 
 /** Id of one of the one-tap demo briefs. */
 export type PresetId = (typeof PRESETS)[number]["id"];
-
-/** A freshly created plan and the secret that lets this browser edit it. */
-type CreatedPlan = { plan: PublicPlan; editKey: string };
 
 /** Form values, field errors and focus on the error summary. */
 function useBrief(summaryRef: RefObject<HTMLDivElement | null>) {

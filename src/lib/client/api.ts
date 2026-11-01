@@ -1,10 +1,16 @@
-import type { PlanInput, PlanPatch, PublicPlan, VendorQuery, VendorResult } from "../contracts";
-
-/** One field-level validation problem reported by the API. */
-export type Issue = { path: string; message: string };
+import type {
+  CreatedPlan,
+  ErrorBody,
+  Issue,
+  PlanInput,
+  PlanPatch,
+  PlanResponse,
+  VendorQuery,
+  VendorResult,
+} from "@/lib/contracts";
 
 /** A failed call: HTTP status (0 when the network failed), a readable message, field issues. */
-export type ApiError = { ok: false; status: number; error: string; issues?: Issue[] };
+export type ApiError = { ok: false; status: number } & ErrorBody;
 
 /** A successful call: the response body's fields plus `ok: true`. */
 export type ApiSuccess<T> = { ok: true } & T;
@@ -54,9 +60,7 @@ async function request<T>(url: string, init: JsonRequest): Promise<ApiResult<T>>
 }
 
 /** POST /api/plan — generates and stores a plan. */
-export function createPlan(
-  input: PlanInput,
-): Promise<ApiResult<{ plan: PublicPlan; editKey: string }>> {
+export function createPlan(input: PlanInput): Promise<ApiResult<CreatedPlan>> {
   return request("/api/plan", { method: "POST", body: JSON.stringify(input) });
 }
 
@@ -69,7 +73,7 @@ export function savePlan(
   editKey: string,
   patch: PlanPatch,
   keepalive = false,
-): Promise<ApiResult<{ plan: PublicPlan }>> {
+): Promise<ApiResult<PlanResponse>> {
   return request(`/api/plan/${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { "x-edit-key": editKey },

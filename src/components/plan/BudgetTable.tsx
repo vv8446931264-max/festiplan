@@ -4,10 +4,12 @@ import type { ReactNode } from "react";
 import { CATEGORY_LABELS } from "@/lib/contracts/constants";
 import type { Allocation, BudgetCategory, PublicPlan } from "@/lib/contracts";
 import {
+  amountPerGuest,
   budgetVariance,
   formatINR,
   formatPercent,
   overspendAlerts,
+  percentShare,
   type OverspendAlert,
 } from "@/lib/engine";
 import { BudgetRow, formatSignedINR, NOT_RECORDED } from "./BudgetRow";
@@ -107,7 +109,7 @@ function Totals({ input, contingencyINR, actualINR, varianceINR }: TotalsProps) 
         </th>
         <td className="px-3 py-3 text-right">{formatINR(contingencyINR)}</td>
         <td className="px-3 py-3 text-right">
-          {formatPercent((contingencyINR / budgetINR) * 100)}
+          {formatPercent(percentShare(contingencyINR, budgetINR))}
         </td>
         <td colSpan={3} />
       </tr>
@@ -117,7 +119,7 @@ function Totals({ input, contingencyINR, actualINR, varianceINR }: TotalsProps) 
         </th>
         <td className="px-3 py-3 text-right">{formatINR(budgetINR)}</td>
         <td className="px-3 py-3 text-right">100%</td>
-        <td className="px-3 py-3 text-right">{formatINR(Math.round(budgetINR / guests))}</td>
+        <td className="px-3 py-3 text-right">{formatINR(amountPerGuest(budgetINR, guests))}</td>
         <td className="px-3 py-3 text-right">{spent ? formatINR(actualINR) : NOT_RECORDED}</td>
         <td className="px-5 py-3 text-right">
           {spent ? formatSignedINR(varianceINR) : NOT_RECORDED}

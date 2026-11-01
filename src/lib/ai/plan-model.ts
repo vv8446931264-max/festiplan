@@ -1,5 +1,6 @@
 import { FinishReason } from "@google/genai";
 import type { Content } from "@google/genai";
+import { AI_COUNTS, rangeText } from "@/lib/contracts";
 import type { AiPlan, Lang } from "@/lib/contracts";
 import { thinkingFor } from "./client";
 import type { AiHandle, AiResponse, AiUsage } from "./client";
@@ -59,8 +60,10 @@ export function addUsage(total: TokenTotals, usage: AiUsage | undefined): TokenT
 }
 
 /** The correction turn after an invalid reply: what failed, and the rules to meet this time. */
-function correction(error: string): string {
-  return `Your previous reply failed validation: ${error.slice(0, MAX_ERROR_CHARS)}\nReply again with the complete corrected JSON object only. Keep exactly 3 ideas, 12 to 30 tasks with unique kebab-case ids, unique categories, and no rupee amounts or dates.`;
+export function correction(error: string): string {
+  const ideas = rangeText(AI_COUNTS.ideas);
+  const tasks = rangeText(AI_COUNTS.tasks);
+  return `Your previous reply failed validation: ${error.slice(0, MAX_ERROR_CHARS)}\nReply again with the complete corrected JSON object only. Keep ${ideas} ideas, ${tasks} tasks with unique kebab-case ids, unique categories, and no rupee amounts or dates.`;
 }
 
 /** One model request: the conversation so far, its output budget, and why it is being made. */

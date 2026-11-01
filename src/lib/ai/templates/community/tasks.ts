@@ -1,5 +1,5 @@
 import type { AiTask } from "@/lib/contracts";
-import { task } from "../shared";
+import { task } from "@/lib/ai/templates/shared";
 
 /** A community event from committee to accounts: permits, sponsors, stalls, stage and safety. */
 export const COMMUNITY_TASKS: AiTask[] = [

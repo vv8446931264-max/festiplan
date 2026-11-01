@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PlannerApp } from "@/components/planner/PlannerApp";
+import { EVENT_TYPES, EVENT_TYPE_LABELS } from "@/lib/contracts/constants";
 import { fixturePlan } from "../fixtures/plan";
 import { axeViolations } from "./axe";
 
@@ -25,6 +26,17 @@ describe("PlannerApp", () => {
     expect(screen.getByRole("radio", { name: /Wedding/ })).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /·/ })).toHaveLength(3);
     expect(await axeViolations(container)).toEqual([]);
+  });
+
+  it("offers one card per event type, named by the shared labels", () => {
+    render(<PlannerApp />);
+    const cards = screen.getAllByRole("radio");
+    expect(cards).toHaveLength(EVENT_TYPES.length);
+    for (const type of EVENT_TYPES) {
+      expect(
+        screen.getByRole("radio", { name: new RegExp(EVENT_TYPE_LABELS[type]) }),
+      ).toHaveAttribute("value", type);
+    }
   });
 
   it("shows a focused error summary for an empty brief and makes no request", async () => {

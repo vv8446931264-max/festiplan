@@ -5,9 +5,6 @@ import { BUDGET_CATEGORIES, type BudgetCategory } from "@/lib/contracts/constant
  * engine barrel, so the public API stays the set of planning functions.
  */
 
-/** Days in a week, for turning the model's lead times (in weeks) into calendar days. */
-export const DAYS_PER_WEEK = 7;
-
 /** Sum of a list of numbers; 0 for an empty list. */
 export function sum(values: readonly number[]): number {
   return values.reduce((total, value) => total + value, 0);

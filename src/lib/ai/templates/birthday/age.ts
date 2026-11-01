@@ -1,5 +1,5 @@
 import type { PlanInput } from "@/lib/contracts";
-import { briefText } from "../shared";
+import { briefText } from "@/lib/ai/templates/shared";
 
 /** Oldest age the brief parser accepts; larger numbers are treated as noise. */
 const MAX_AGE = 110;

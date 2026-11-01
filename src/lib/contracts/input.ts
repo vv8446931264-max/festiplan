@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AI_COUNTS, AI_TEXT_MAX } from "./ai-limits";
 import { BUDGET_CATEGORIES, EVENT_TYPES, LANGS, LIMITS } from "./constants";
 
 export { checkEventDate } from "./dates";
@@ -21,15 +22,16 @@ export const PlanInputSchema = z.strictObject({
 });
 export type PlanInput = z.infer<typeof PlanInputSchema>;
 
-/** Longest task id the model may produce (mirrors `AiTaskSchema`). */
-const TASK_ID_MAX = 40;
-/** A plan holds at most 30 tasks; a patch may carry twice that before it is rejected. */
-const PATCH_TASKS_MAX = 60;
+/** A patch may carry twice the tasks a plan holds before it is rejected. */
+const PATCH_TASKS_MAX = 2 * AI_COUNTS.tasks.max;
 
 const hasAnyField = (patch: Record<string, unknown>): boolean =>
   Object.values(patch).some((value) => value !== undefined);
 
-const taskDone = z.strictObject({ id: z.string().min(1).max(TASK_ID_MAX), done: z.boolean() });
+const taskDone = z.strictObject({
+  id: z.string().min(1).max(AI_TEXT_MAX.taskId),
+  done: z.boolean(),
+});
 const vendorDone = z.strictObject({ category: z.enum(BUDGET_CATEGORIES), done: z.boolean() });
 const allocationEdit = z.strictObject({
   category: z.enum(BUDGET_CATEGORIES),

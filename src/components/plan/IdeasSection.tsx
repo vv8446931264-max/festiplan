@@ -1,8 +1,9 @@
 "use client";
 
-import { memo, useState } from "react";
+import { memo, useId, useState } from "react";
 import type { Idea } from "@/lib/contracts";
 import { setPalette } from "@/three/bus";
+import { Heading } from "./Heading";
 import { SectionHead } from "./SectionHead";
 
 type Props = { ideas: Idea[]; lang?: string };
@@ -50,20 +51,14 @@ export const IdeasSection = memo(function IdeasSection({ ideas, lang }: Props) {
 type CoverProps = { idea: Idea; issue: number; lang?: string; tinted: boolean; onTint: () => void };
 
 function IdeaCover({ idea, issue, lang, tinted, onTint }: CoverProps) {
-  const band = `linear-gradient(120deg, ${idea.palette.join(", ")})`;
   return (
     <article className="panel flex h-full flex-col overflow-hidden">
-      <div
-        aria-hidden="true"
-        data-print-keep=""
-        className="h-28 sm:h-36"
-        style={{ background: band }}
-      />
+      <PaletteBand palette={idea.palette} />
       <div className="flex flex-1 flex-col gap-5 p-6 sm:p-7">
         <p className="eyebrow">Issue Nº 0{issue}</p>
-        <h4 lang={lang} className="h3">
+        <Heading depth={2} lang={lang} className="h3">
           {idea.name}
-        </h4>
+        </Heading>
         <p lang={lang} className="text-cream/90">
           {idea.concept}
         </p>
@@ -86,6 +81,35 @@ function IdeaCover({ idea, issue, lang, tinted, onTint }: CoverProps) {
   );
 }
 
+/**
+ * The palette as a band across the cover, drawn like `linear-gradient(120deg, …)`. The model's
+ * colours go into SVG stop-color attributes, never a style (the CSP allows none); the
+ * `.palette-band` rules in globals.css size the SVG so the angle and length match exactly.
+ */
+function PaletteBand({ palette }: { palette: string[] }) {
+  const gradientId = useId();
+  const last = Math.max(palette.length - 1, 1);
+  return (
+    <div aria-hidden="true" data-print-keep="" className="palette-band">
+      <svg focusable="false">
+        <defs>
+          <linearGradient
+            id={gradientId}
+            gradientUnits="userSpaceOnUse"
+            x2="100%"
+            gradientTransform="rotate(30)"
+          >
+            {palette.map((hex, index) => (
+              <stop key={index} offset={index / last} stopColor={hex} />
+            ))}
+          </linearGradient>
+        </defs>
+        <rect width="200%" height="100%" fill={`url(#${gradientId})`} />
+      </svg>
+    </div>
+  );
+}
+
 /** Each palette colour as a swatch beside its hex code, so it reads without colour vision. */
 function PaletteSwatches({ palette }: { palette: string[] }) {
   return (
@@ -95,12 +119,11 @@ function PaletteSwatches({ palette }: { palette: string[] }) {
           key={index}
           className="flex items-center gap-2 rounded-full border border-line py-1 pr-3 pl-1 font-mono text-xs uppercase"
         >
-          <span
-            aria-hidden="true"
-            data-print-keep=""
-            className="size-6 rounded-full border border-cream/30"
-            style={{ background: hex }}
-          />
+          {/* A 24 px disc with a translucent cream rim over the colour, as SVG attributes. */}
+          <svg aria-hidden="true" data-print-keep="" viewBox="0 0 24 24" className="size-6">
+            <circle cx="12" cy="12" r="12" fill={hex} />
+            <circle cx="12" cy="12" r="11.5" fill="none" className="stroke-cream/30" />
+          </svg>
           {hex}
         </li>
       ))}

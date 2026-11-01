@@ -1,8 +1,6 @@
-import { AiPlanSchema } from "@/lib/contracts";
+import { AI_COUNTS, AiPlanSchema } from "@/lib/contracts";
 import type { AiPlan } from "@/lib/contracts";
 
-/** Most `dependsOn` entries kept per task (the `AiPlanSchema` limit). */
-const MAX_DEPENDENCIES = 5;
 /** Validation issues quoted back to the model in its correction turn. */
 const MAX_REPORTED_ISSUES = 12;
 
@@ -11,7 +9,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 /**
  * Drops `dependsOn` entries that do not name another task in the list (and self-references),
- * de-duplicates them and keeps at most five. Works on raw model output before Zod parsing.
+ * de-duplicates them and keeps at most `AI_COUNTS.dependsOn.max`. Works on raw model output
+ * before Zod parsing.
  */
 export function sanitizeDependsOn(raw: unknown): unknown {
   if (!isRecord(raw) || !Array.isArray(raw.tasks)) return raw;
@@ -28,7 +27,7 @@ export function sanitizeDependsOn(raw: unknown): unknown {
     const known = dependsOn.filter(
       (dep): dep is string => typeof dep === "string" && dep !== task.id && ids.has(dep),
     );
-    return { ...task, dependsOn: [...new Set(known)].slice(0, MAX_DEPENDENCIES) };
+    return { ...task, dependsOn: [...new Set(known)].slice(0, AI_COUNTS.dependsOn.max) };
   });
   return { ...raw, tasks: cleaned };
 }

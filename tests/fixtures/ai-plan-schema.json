@@ -1,0 +1,233 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "summary": {
+      "type": "string",
+      "description": "One or two sentence overview of the plan, at most 320 characters"
+    },
+    "ideas": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Short evocative concept name, at most 60 characters"
+          },
+          "concept": {
+            "type": "string",
+            "description": "Two or three sentences describing the concept, at most 400 characters"
+          },
+          "palette": {
+            "type": "array",
+            "description": "3 to 5 colours as #RRGGBB hex codes",
+            "minItems": 3,
+            "maxItems": 5,
+            "items": {
+              "type": "string"
+            }
+          },
+          "decor": {
+            "type": "array",
+            "description": "2 to 6 décor ideas",
+            "minItems": 2,
+            "maxItems": 6,
+            "items": {
+              "type": "string"
+            }
+          },
+          "food": {
+            "type": "array",
+            "description": "2 to 6 food and drink ideas",
+            "minItems": 2,
+            "maxItems": 6,
+            "items": {
+              "type": "string"
+            }
+          },
+          "music": {
+            "type": "string",
+            "description": "Music and entertainment direction"
+          },
+          "signatureMoment": {
+            "type": "string",
+            "description": "One memorable signature moment"
+          }
+        },
+        "required": ["name", "concept", "palette", "decor", "food", "music", "signatureMoment"]
+      }
+    },
+    "budgetWeights": {
+      "type": "array",
+      "description": "One entry per relevant budget category, each category at most once",
+      "minItems": 4,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "venue",
+              "catering",
+              "decor",
+              "photography",
+              "entertainment",
+              "attire",
+              "invitations",
+              "gifts",
+              "transport",
+              "misc"
+            ]
+          },
+          "weight": {
+            "type": "integer",
+            "description": "Relative priority 1-100. Not rupees, not a percentage.",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "rationale": {
+            "type": "string",
+            "description": "Why this category matters for this event, at most 200 characters"
+          }
+        },
+        "required": ["category", "weight", "rationale"]
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique kebab-case id, lowercase letters, digits and hyphens, e.g. book-venue"
+          },
+          "title": {
+            "type": "string",
+            "description": "Task title, at most 100 characters"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "venue",
+              "catering",
+              "decor",
+              "photography",
+              "entertainment",
+              "attire",
+              "invitations",
+              "gifts",
+              "transport",
+              "misc",
+              "admin"
+            ]
+          },
+          "leadWeeks": {
+            "type": "integer",
+            "description": "Weeks before the event to start this task",
+            "minimum": 0,
+            "maximum": 156
+          },
+          "durationDays": {
+            "type": "integer",
+            "description": "Days the task takes",
+            "minimum": 1,
+            "maximum": 90
+          },
+          "dependsOn": {
+            "type": "array",
+            "description": "Ids of other tasks in this list that must finish first",
+            "minItems": 0,
+            "maxItems": 5,
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["id", "title", "category", "leadWeeks", "durationDays", "dependsOn"]
+      }
+    },
+    "vendors": {
+      "type": "array",
+      "description": "Guidance per vendor category, each category at most once",
+      "minItems": 3,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "venue",
+              "catering",
+              "decor",
+              "photography",
+              "entertainment",
+              "attire",
+              "invitations",
+              "gifts",
+              "transport",
+              "misc"
+            ]
+          },
+          "bookByWeeks": {
+            "type": "integer",
+            "description": "Book this vendor at least this many weeks before the event",
+            "minimum": 0,
+            "maximum": 104
+          },
+          "questions": {
+            "type": "array",
+            "description": "2 to 5 questions to ask this kind of vendor",
+            "minItems": 2,
+            "maxItems": 5,
+            "items": {
+              "type": "string"
+            }
+          },
+          "redFlags": {
+            "type": "array",
+            "description": "1 to 4 red flags to watch for",
+            "minItems": 1,
+            "maxItems": 4,
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["category", "bookByWeeks", "questions", "redFlags"]
+      }
+    },
+    "tips": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": ["sustainability", "accessibility", "culture", "savings"]
+          },
+          "text": {
+            "type": "string",
+            "description": "A practical tip, at most 240 characters"
+          }
+        },
+        "required": ["kind", "text"]
+      }
+    }
+  },
+  "required": ["summary", "ideas", "budgetWeights", "tasks", "vendors", "tips"]
+}

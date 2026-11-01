@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { PLAN_ID_RE, PLAN_TTL_DAYS } from "@/lib/contracts";
-import type { Plan, PlanInput, PlanPatch, PublicPlan } from "@/lib/contracts";
+import type { CreatedPlan, Plan, PlanInput, PlanPatch, PublicPlan } from "@/lib/contracts";
 import type { AiHandle } from "@/lib/ai/client";
 import { generateAiPlan } from "@/lib/ai/plan";
 import {
@@ -71,7 +71,7 @@ export async function createPlan(
   input: PlanInput,
   today: string,
   deps: ServiceDeps = {},
-): Promise<{ plan: PublicPlan; editKey: string }> {
+): Promise<CreatedPlan> {
   const now = deps.now ?? new Date();
   const { ai, source, model } = await generateAiPlan(input, { ai: deps.ai, today });
   const { contingencyINR, allocations } = allocateBudget({

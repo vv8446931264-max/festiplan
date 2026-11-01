@@ -39,9 +39,6 @@ export function futureInput(overrides: Partial<PlanInput> = {}) {
   return sampleInput({ eventDate: addDays(todayIST(), 90), ...overrides });
 }
 
-/** The JSON body of every error response: `{ error }`, plus field `issues` for a 400. */
-export type ErrorBody = { error: string; issues?: { path: string; message: string }[] };
-
 /** Reads a response's JSON body as `T` (the route's documented response shape). */
 export async function bodyOf<T>(res: Response): Promise<T> {
   return (await res.json()) as T;

@@ -1,5 +1,50 @@
 # Changelog
 
+## [1.4.0] — 2026-11-01
+### Security
+- Nonce-based CSP now covers styles too: `style-src 'self' 'nonce-…'` in production,
+  no `'unsafe-inline'` at all. Model palette colours are SVG attributes; run-time changes
+  go through the CSSOM; component styles moved to `globals.css` class rules.
+- 14 new unit tests (`tests/security/csp-stylesheet.test.ts`) verify every CSS colour
+  equals the code constant; 8 tests (`tests/components/no-inline-styles.test.tsx`)
+  assert no `style` attribute or `<style>` tag on any server-rendered page including
+  `global-error.tsx`. 6 Playwright scenarios (`e2e/csp.spec.ts`) confirm no violation
+  fires in a real Chromium on the landing page and every plan tab.
+- `global-error.tsx` added (Next.js root error boundary) — its outer `<html>/<body>`
+  shell carries no inline styles, closing the last CSP gap.
+### Accessibility (WCAG 2.2 AA)
+- **Pause, stop, hide (SC 2.2.2):** "Pause animation" toggle in the site header pauses
+  the lantern sky and budget-flow particles; choice persists in `localStorage` and syncs
+  across tabs via the `storage` event. Budget Flow keyed on pause state so resuming
+  mounts a fresh scene.
+- **Heading order:** `<Heading depth>` component with `PlanHeadingLevel` context ensures
+  the plan outline never skips a level on either the share page or the landing page.
+- **Ask FestiPlan:** visible label; `aria-disabled` while streaming; polite status line;
+  `lang` on model text only (not the template fallback).
+- **Vendor lookup:** focus moves to the results heading on success; stays on the button
+  after a failed search; button stays `aria-disabled`, not `disabled`, while searching.
+- **Budget row error:** `role="alert"` announcement; field linked via `aria-describedby`.
+- **Autosave status:** `stalled` state; retries with exponential back-off; `online` event
+  resumes from a fresh set of retries; a throwing save is caught and put back, never dropped.
+- **Focus not obscured (SC 2.4.11):** `scroll-pt-17` on `<html>` keeps focused elements
+  below the sticky tab bar; tab panel `scroll-mt-3` aligns with the bar height.
+- **Overdue badge:** vendors and tasks that are overdue and unbooked/incomplete carry a
+  visible "Overdue" text badge, so lateness is never shown by colour alone (SC 1.4.1).
+- 7 new component test files covering all of the above; 0 axe violations in CI.
+### Code quality
+- Single sources of truth: `contracts/ai-limits.ts`, `contracts/api.ts`,
+  `lib/brand-colors.ts`, `lib/time.ts` (`DAY_MS`, `DAYS_PER_WEEK`). Golden test pins
+  the Gemini schema and prompts byte-for-byte.
+- Engine helpers: `amountPerGuest`, `percentShare`, `allocatedTotal`, `roomFor`,
+  `daysToWeeks`; components use them instead of duplicating arithmetic.
+- All `@/` alias imports; named rate-limit and event-type constants; barrel-import lint
+  rule prevents pulling Zod into the browser bundle.
+- Playwright e2e now builds and serves a standalone server (`npm run build && npm start`);
+  `scripts/prepare-standalone.mjs` copies static assets into the standalone output.
+- `global-error.tsx`, `.editorconfig`, `AGENTS.md` excluded from git; `allowJs: false`
+  in `tsconfig.json`.
+- 593 unit tests (↑ from 475), 38 e2e scenarios; `npm run verify` passes.
+
 ## [1.3.0] — 2026-10-31
 ### Security
 - Deploys run only for CI runs triggered by a push to this repository (or a manual

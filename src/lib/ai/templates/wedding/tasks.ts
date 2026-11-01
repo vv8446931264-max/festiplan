@@ -1,5 +1,5 @@
 import type { AiTask } from "@/lib/contracts";
-import { task } from "../shared";
+import { task } from "@/lib/ai/templates/shared";
 
 /** Every wedding function from haldi to reception, counted back from the muhurat. */
 export const WEDDING_TASKS: AiTask[] = [

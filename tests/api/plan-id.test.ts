@@ -2,16 +2,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/plan/route";
 import { GET, PATCH } from "@/app/api/plan/[id]/route";
-import type { PublicPlan } from "@/lib/contracts";
+import type { CreatedPlan, ErrorBody, PlanResponse } from "@/lib/contracts";
 import { ORIGIN, bodyOf, futureInput, idCtx, jsonRequest, noCtx, offlineEnv } from "./request";
-import type { ErrorBody } from "./request";
 
 beforeEach(offlineEnv);
 afterEach(() => vi.unstubAllEnvs());
 
-async function created(): Promise<{ plan: PublicPlan; editKey: string }> {
+async function created(): Promise<CreatedPlan> {
   const res = await POST(jsonRequest("/api/plan", futureInput()), noCtx);
-  return (await res.json()) as { plan: PublicPlan; editKey: string };
+  return (await res.json()) as CreatedPlan;
 }
 
 const patch = (id: string, body: unknown, key?: string, headers: Record<string, string> = {}) =>
@@ -29,7 +28,7 @@ describe("GET /api/plan/[id]", () => {
     const res = await GET(new Request(`${ORIGIN}/api/plan/${plan.id}`), idCtx(plan.id));
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("no-store");
-    const body = (await res.json()) as { plan: PublicPlan };
+    const body = (await res.json()) as PlanResponse;
     expect(body.plan.id).toBe(plan.id);
     expect(body.plan).not.toHaveProperty("editKeyHash");
   });
@@ -49,7 +48,7 @@ describe("PATCH /api/plan/[id]", () => {
     const id = plan.timeline[0]?.id ?? "x";
     const res = await patch(plan.id, { tasks: [{ id, done: true }] }, editKey);
     expect(res.status).toBe(200);
-    const body = (await res.json()) as { plan: PublicPlan };
+    const body = (await res.json()) as PlanResponse;
     expect(body.plan.timeline.find((t) => t.id === id)?.done).toBe(true);
   });
 
