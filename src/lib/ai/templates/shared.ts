@@ -59,7 +59,7 @@ export function briefText(input: PlanInput): string {
 }
 
 /** True when any keyword appears in the brief. */
-export function mentions(input: PlanInput, ...words: string[]): boolean {
+function mentions(input: PlanInput, ...words: string[]): boolean {
   const text = briefText(input);
   return words.some((word) => text.includes(word));
 }

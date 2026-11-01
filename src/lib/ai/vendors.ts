@@ -21,9 +21,9 @@ export type VendorDeps = {
 };
 
 /** Most places one lookup returns. */
-export const MAX_PLACES = 6;
+const MAX_PLACES = 6;
 /** Deadline for one Maps-grounded lookup. */
-export const VENDOR_TIMEOUT_MS = 15_000;
+const VENDOR_TIMEOUT_MS = 15_000;
 const VENDOR_CACHE_ENTRIES = 500;
 /** Longest place title kept from grounding metadata. */
 const MAX_TITLE_LENGTH = 120;

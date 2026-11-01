@@ -40,7 +40,7 @@ export type Pose = {
 /** Nearest and farthest lantern distance; the field wraps between them. */
 export const DEPTH_RANGE = { near: 4.5, far: 58 } as const;
 /** Distance that is "in focus" for the fake depth of field. */
-export const FOCUS = 9.5;
+const FOCUS = 9.5;
 /**
  * Circle of confusion (fraction of half the viewport height): a long lens
  * focused on the near lanterns — the foreground melts into big discs, the

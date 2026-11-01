@@ -2,7 +2,7 @@ import { ACESFilmicToneMapping, WebGLRenderer, type Camera, type Scene } from "t
 import type { Tier } from "./tier";
 
 /** Device-pixel-ratio ceiling per tier (docs/DESIGN.md §8). */
-export const DPR_CAP: Record<Exclude<Tier, "off">, number> = { high: 1.75, low: 1.25 };
+const DPR_CAP: Record<Exclude<Tier, "off">, number> = { high: 1.75, low: 1.25 };
 
 /** Slightly above neutral so the warm glass reads bright after ACES compression. */
 const TONE_MAPPING_EXPOSURE = 1.05;
@@ -56,7 +56,7 @@ export type Loop = {
  * {@link MAX_FRAME_SECONDS}; returning false lets the loop sleep until `wake()` (on-demand
  * rendering for scenes that come to rest).
  */
-export function createLoop(win: Window, frame: (dt: number, time: number) => boolean): Loop {
+function createLoop(win: Window, frame: (dt: number, time: number) => boolean): Loop {
   let frameHandle = 0;
   let lastTime = -1;
   let paused = false;

@@ -8,7 +8,7 @@ import { damp } from "./math";
 import type { Tier } from "./tier";
 
 /** Instance counts per tier: lanterns (body + core + glow) and glow-only bokeh orbs. */
-export const LANTERN_COUNTS = {
+const LANTERN_COUNTS = {
   high: { lanterns: 120, orbs: 22 },
   low: { lanterns: 50, orbs: 8 },
 } as const;

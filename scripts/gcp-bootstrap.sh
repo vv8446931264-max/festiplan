@@ -72,8 +72,8 @@ done
 echo "==> Deployer service account for GitHub Actions"
 gcloud iam service-accounts describe "$DEPLOY_SA" >/dev/null 2>&1 \
   || gcloud iam service-accounts create github-deployer --display-name="GitHub Actions deployer"
-for role in roles/run.admin roles/cloudbuild.builds.editor roles/artifactregistry.admin \
-            roles/storage.admin roles/iam.serviceAccountUser roles/serviceusage.serviceUsageConsumer; do
+for role in roles/run.admin roles/cloudbuild.builds.editor roles/artifactregistry.writer \
+            roles/storage.objectAdmin roles/iam.serviceAccountUser roles/serviceusage.serviceUsageConsumer; do
   grant "serviceAccount:$DEPLOY_SA" "$role"
 done
 # The deployer must be able to act as the runtime identity it deploys the service with.
@@ -88,7 +88,7 @@ gcloud iam workload-identity-pools providers describe "$POOL" --location=global 
        --workload-identity-pool="$POOL" \
        --issuer-uri="https://token.actions.githubusercontent.com" \
        --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository" \
-       --attribute-condition="assertion.repository=='${REPO}'"
+       --attribute-condition="assertion.repository=='${REPO}' && assertion.ref=='refs/heads/main'"
 gcloud iam service-accounts add-iam-policy-binding "$DEPLOY_SA" \
   --role=roles/iam.workloadIdentityUser \
   --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${POOL}/attribute.repository/${REPO}" \

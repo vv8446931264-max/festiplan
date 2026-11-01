@@ -15,7 +15,7 @@ const list = <T extends z.ZodType>(item: T, { min, max }: Bounds) =>
   min === max ? z.array(item).length(min) : z.array(item).min(min).max(max);
 
 /** One celebration concept: name, story, palette, décor, food, music and a signature moment. */
-export const IdeaSchema = z.object({
+const IdeaSchema = z.object({
   name: text(AI_TEXT_MAX.ideaName),
   concept: text(AI_TEXT_MAX.concept),
   palette: list(hexColour, AI_COUNTS.palette),
@@ -28,7 +28,7 @@ export const IdeaSchema = z.object({
 export type Idea = z.infer<typeof IdeaSchema>;
 
 /** How much one budget category matters (1–100) — a priority, never rupees. */
-export const BudgetWeightSchema = z.object({
+const BudgetWeightSchema = z.object({
   category: z.enum(BUDGET_CATEGORIES),
   weight: whole(AI_RANGES.weight),
   rationale: text(AI_TEXT_MAX.rationale),
@@ -37,7 +37,7 @@ export const BudgetWeightSchema = z.object({
 export type BudgetWeight = z.infer<typeof BudgetWeightSchema>;
 
 /** One planning task with its ideal lead time, duration and prerequisites. */
-export const AiTaskSchema = z.object({
+const AiTaskSchema = z.object({
   id: z.string().regex(taskId, "task ids are kebab-case"),
   title: text(AI_TEXT_MAX.taskTitle),
   category: z.enum(TASK_CATEGORIES),
@@ -49,7 +49,7 @@ export const AiTaskSchema = z.object({
 export type AiTask = z.infer<typeof AiTaskSchema>;
 
 /** What to ask one kind of vendor, the red flags, and how far ahead to book. */
-export const VendorGuideSchema = z.object({
+const VendorGuideSchema = z.object({
   category: z.enum(BUDGET_CATEGORIES),
   bookByWeeks: whole(AI_RANGES.bookByWeeks),
   questions: list(text(AI_TEXT_MAX.question), AI_COUNTS.questions),
@@ -59,7 +59,7 @@ export const VendorGuideSchema = z.object({
 export type VendorGuide = z.infer<typeof VendorGuideSchema>;
 
 /** One practical tip (sustainability, accessibility, culture or savings). */
-export const TipSchema = z.object({ kind: z.enum(TIP_KINDS), text: text(AI_TEXT_MAX.tip) });
+const TipSchema = z.object({ kind: z.enum(TIP_KINDS), text: text(AI_TEXT_MAX.tip) });
 /** A validated {@link TipSchema} value. */
 export type Tip = z.infer<typeof TipSchema>;
 

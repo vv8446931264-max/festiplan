@@ -113,7 +113,7 @@ export function attachSceneCanvas<Scene>(
 }
 
 /** A canvas for a scene: decorative, absolutely filling its parent, fading in on first frame. */
-export function createSceneCanvas(doc: Document): HTMLCanvasElement {
+function createSceneCanvas(doc: Document): HTMLCanvasElement {
   const canvas = doc.createElement("canvas");
   canvas.setAttribute("aria-hidden", "true");
   canvas.setAttribute("role", "presentation");

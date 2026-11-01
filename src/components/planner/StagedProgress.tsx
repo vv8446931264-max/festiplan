@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 /** The five stages of the plan request, shown while the server works. */
-export const STAGES = [
+const STAGES = [
   "Reading the vibe",
   "Drafting concepts",
   "Balancing ₹",

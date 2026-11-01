@@ -19,7 +19,7 @@ import { compileThenStart, createGatedLoop, createRenderer, watchContextLoss } f
 import type { Tier } from "./tier";
 
 /** Particles (rupees) per tier (docs/DESIGN.md §6). */
-export const FLOW_PARTICLES = { high: 600, low: 250 } as const;
+const FLOW_PARTICLES = { high: 600, low: 250 } as const;
 
 /** Options for {@link createBudgetFlowScene}. */
 export type BudgetFlowOptions = { tier: Exclude<Tier, "off">; onFirstFrame?: () => void };

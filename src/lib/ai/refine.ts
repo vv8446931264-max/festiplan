@@ -10,7 +10,7 @@ import { SYSTEM_REFINE, dataBlock, languageName } from "./prompts";
 export type RefineDeps = { ai?: AiHandle | null; timeoutMs?: number };
 
 /** Deadline for one streamed answer, first token to last. */
-export const REFINE_TIMEOUT_MS = 30_000;
+const REFINE_TIMEOUT_MS = 30_000;
 // Defined in the dependency-free answer-source.ts, so the browser can spot it without this module.
 export { TEMPLATE_ANSWER_PREFIX };
 

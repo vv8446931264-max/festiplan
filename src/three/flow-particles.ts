@@ -37,7 +37,7 @@ export type FlowParticles = {
 };
 
 /** Translate column indices when the category list changes order or length. */
-export function remapColumns(
+function remapColumns(
   prev: ParticleAssignment,
   from: readonly string[],
   to: readonly string[],

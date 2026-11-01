@@ -3,8 +3,8 @@ import { vi } from "vitest";
 import { useAutosave } from "@/components/plan/useAutosave";
 import { jsonResponse, requestBody } from "./fetch-stubs";
 
-export const PLAN_ID = "plan123";
-export const EDIT_KEY = "k".repeat(43);
+const PLAN_ID = "plan123";
+const EDIT_KEY = "k".repeat(43);
 /** The autosave debounce (SAVE_DELAY_MS in useAutosave). */
 export const DEBOUNCE_MS = 700;
 

@@ -28,7 +28,7 @@ export type PlanDeps = {
 };
 
 /** Deadline for both attempts together; Cloud Run allows 90 s per request. */
-export const PLAN_TIMEOUT_MS = 50_000;
+const PLAN_TIMEOUT_MS = 50_000;
 const PLAN_CACHE_ENTRIES = 50;
 const PLAN_CACHE_TTL_MS = 60 * 60 * 1000;
 const sharedCache = new TtlCache<AiPlan>(PLAN_CACHE_ENTRIES, PLAN_CACHE_TTL_MS);

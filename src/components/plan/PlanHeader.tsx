@@ -111,7 +111,7 @@ function Fact({ term, value }: { term: string; value: string }) {
 }
 
 /** Honest label for where the ideas came from. */
-export function SourceBadge({ source, model }: { source: PublicPlan["source"]; model: string }) {
+function SourceBadge({ source, model }: { source: PublicPlan["source"]; model: string }) {
   if (source === "template") {
     return (
       <span className="eyebrow rounded-full border border-gold px-3 py-1 text-gold">

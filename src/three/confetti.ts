@@ -15,9 +15,9 @@ import { hash01 } from "@/lib/engine/particles";
 import type { Tier } from "./tier";
 
 /** Quads per burst (docs/DESIGN.md §6). */
-export const CONFETTI_COUNT = { high: 1200, low: 400 } as const;
+const CONFETTI_COUNT = { high: 1200, low: 400 } as const;
 /** Seconds until the burst has fallen away and frees itself. */
-export const CONFETTI_LIFETIME = 3.2;
+const CONFETTI_LIFETIME = 3.2;
 
 const FESTIVE = ["#ffbf02", "#ff7a2e", "#cd197d", "#a23bc4", "#ffedd7", "#e9500e"];
 const GRAVITY = -7.5;
